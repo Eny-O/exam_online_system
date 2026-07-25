@@ -328,8 +328,8 @@
 import { ref, reactive, watch } from "vue";
 import { Plus, Delete } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
-import QuestionSelector from "@/views/teacher/ExamTask/components/QuestionSelector.vue";
-import QuestionEditor from "@/views/teacher/ExamTask/components/QuestionEditor.vue";
+import QuestionSelector from "@/views/teacher/QuestionManagement/components/QuestionSelector.vue";
+import QuestionEditor from "@/views/teacher/QuestionManagement/components/QuestionEditor.vue";
 
 // 定义事件
 const emit = defineEmits(["success"]);

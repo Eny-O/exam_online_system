@@ -164,7 +164,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { Search, Plus } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import NewExamDrawer from "@/views/teacher/ExamTask/components/NewExamDrawer.vue";
+import NewExamDrawer from "./NewExamDrawer.vue";
 import { useRouter } from "vue-router";
 
 //初始化路由
