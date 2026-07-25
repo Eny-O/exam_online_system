@@ -7,6 +7,9 @@ import lombok.Data;
 @Schema(description = "权限信息展示对象")
 public class PermissionVO {
 
+    @Schema(description = "主键ID", example = "1")
+    private Integer id;
+
     @Schema(description = "父级ID（顶级菜单为0）", example = "0")
     private Integer parentId;
 
