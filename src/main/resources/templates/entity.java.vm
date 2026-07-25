@@ -1,0 +1,25 @@
+package ${package.Entity};
+
+#foreach($pkg in ${table.importPackages})
+import ${pkg};
+#end
+
+/**
+ * <p>
+ * $!{table.comment}
+ * </p>
+ *
+ * @author ${author}
+ * @since ${date}
+ */
+#if(${table.convert})
+@TableName("${table.name}")
+#end
+@Data
+public class ${table.entityName} #if(${superEntityClass})extends ${superEntityClass}#end {
+#foreach($field in ${table.fields})
+
+private ${field.propertyType} ${field.propertyName}; // $!{field.comment}
+#end
+
+}
