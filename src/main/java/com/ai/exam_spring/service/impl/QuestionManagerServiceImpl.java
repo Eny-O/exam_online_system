@@ -17,6 +17,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 
+/**
+ * 题目管理服务实现
+ */
 @Service
 public class QuestionManagerServiceImpl extends ServiceImpl<QuestionManagerMapper, Question> implements IQuestionManagerService {
 
@@ -24,8 +27,7 @@ public class QuestionManagerServiceImpl extends ServiceImpl<QuestionManagerMappe
     private QuestionManagerMapper questionManagerMapper;
 
     /**
-     * 条件分页查询
-     * @return PageResult
+     * 根据题目内容、题型、难度条件分页查询
      */
     @Override
     public PageResult<QuestionVO> conditionPageQuery(QuestionQueryDTO queryDTO) {

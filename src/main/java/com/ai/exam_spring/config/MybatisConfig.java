@@ -6,14 +6,17 @@ import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerIntercept
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * MyBatis-Plus 配置
+ * <p>
+ * 注册分页插件，支持 MySQL 分页查询。
+ */
 @Configuration
 public class MybatisConfig {
 
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
-        // 初始化核心插件
         MybatisPlusInterceptor plusInterceptor = new MybatisPlusInterceptor();
-        // 添加分页插件
         plusInterceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
         return plusInterceptor;
     }

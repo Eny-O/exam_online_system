@@ -5,6 +5,7 @@ import com.ai.exam_spring.common.constant.JwtConstant;
 import com.ai.exam_spring.common.constant.RedisConstant;
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_spring.domain.enums.UserStatusEnum;
 import com.ai.exam_spring.domain.vo.PermissionVO;
 import com.ai.exam_spring.security.LoginUser;
 import com.ai.exam_spring.common.result.ResponseResult;
@@ -37,8 +38,13 @@ public class UserServiceImpl implements UserService {
     private RedisUtil redisUtil;
 
     /**
-     * 登录
-     * @param userLoginDTO
+     * 用户登录
+     * <p>
+     * 通过 Spring Security 认证后，将 LoginUser 存入 Redis 供后续 JWT 过滤器使用，
+     * 返回包含 Token 的 HashMap。
+     *
+     * @param userLoginDTO 登录请求参数
+     * @return 包含 token 键值对的 Map
      */
     @Override
     public HashMap<String,String> login(UserLoginDTO userLoginDTO) {
@@ -49,28 +55,35 @@ public class UserServiceImpl implements UserService {
         }
         log.info("认证成功");
         LoginUser loginUser = (LoginUser) authenticate.getPrincipal();
-        if (loginUser.getUser().getStatus() != 1) {
-            throw new BusinessException(ErrorCodeEnum.USER_FORBIDDEN);
+        // status: 1-启用, 2-禁用
+        if (loginUser.getUser().getStatus() == UserStatusEnum.DISABLED.getCode()) {
+            throw new BusinessException(ErrorCodeEnum.ACCOUNT_DISABLED);
         }
         String userId = loginUser.getUser().getId().toString();
         String token = JwtUtil.generateToken(userId, null);
-        redisUtil.set(RedisConstant.LOGIN_USER_PREFIX_KEY +userId,loginUser);
-        HashMap<String, String> hm = new HashMap<>();
-        hm.put(JwtConstant.TOKEN_HEADER,token);
-       return hm;
+        // 将 LoginUser 缓存到 Redis，JWT 过滤器通过此缓存还原用户身份
+        redisUtil.set(RedisConstant.LOGIN_USER_PREFIX_KEY + userId, loginUser);
+        HashMap<String, String> result = new HashMap<>();
+        result.put(JwtConstant.TOKEN_HEADER, token);
+       return result;
     }
 
     /**
-     * 登出
+     * 用户登出，清除 Redis 中的登录缓存
      */
     @Override
     public void logout() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof LoginUser loginUser) {
-            redisUtil.delete("login: " + loginUser.getUser().getId());
+            redisUtil.delete(RedisConstant.LOGIN_USER_PREFIX_KEY+ loginUser.getUser().getId());
         }
     }
 
+    /**
+     * 获取用户信息
+     * 从securityContextHolder中获取loginUser中的user和permission,并映射成userInfoVO
+     * @return 用户信息
+     */
     @Override
     public UserInfoVO getInfo() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -80,10 +93,7 @@ public class UserServiceImpl implements UserService {
         userInfoVO.setRealName(loginUser.getUser().getRealName());
         userInfoVO.setClassId(loginUser.getUser().getClassId());
         userInfoVO.setStatus(loginUser.getUser().getStatus());
-        // 创建权限VO列表
-        List<PermissionVO> permissionVOList;
-        //  将权限列表转换成权限VO列表
-        permissionVOList = loginUser.getPermissions().stream().map(permission -> {
+        List<PermissionVO> permissionVOList = loginUser.getPermissions().stream().map(permission -> {
             PermissionVO permissionVO = new PermissionVO();
             BeanUtil.copyProperties(permission, permissionVO);
             return permissionVO;

@@ -1,5 +1,8 @@
 package com.ai.exam_spring.common.constant;
 
+/**
+ * JWT 相关常量
+ */
 public class JwtConstant {
     public static final String TOKEN_HEADER = "token";
     public static final String TOKEN_PREFIX = "Bearer ";

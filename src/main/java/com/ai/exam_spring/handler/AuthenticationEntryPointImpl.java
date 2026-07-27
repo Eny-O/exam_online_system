@@ -1,5 +1,6 @@
 package com.ai.exam_spring.handler;
 
+import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.alibaba.fastjson2.JSON;
 import jakarta.servlet.ServletException;
@@ -11,11 +12,16 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+/**
+ * 未认证处理器
+ * <p>
+ * 当未登录用户访问需要认证的接口时，由 Spring Security 调用此处理器返回 401 响应。
+ */
 @Component
 public class AuthenticationEntryPointImpl implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-        ResponseResult result = ResponseResult.error("401", "认证失败请重新登录");
+        ResponseResult<Void> result = ResponseResult.error(ErrorCodeEnum.UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write(JSON.toJSONString(result));
     }

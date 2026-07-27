@@ -19,6 +19,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Spring Security 安全配置
+ * <p>
+ * 采用 JWT 无状态认证方案：关闭 CSRF 和 Session，通过 JwtAuthenticationTokenFilter 验证 Token，
+ * 未认证和权限不足分别由 AuthenticationEntryPoint 和 AccessDeniedHandler 处理。
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity()
@@ -46,15 +52,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // 关闭 CSRF
                 .csrf(AbstractHttpConfigurer::disable)
-                // 无状态会话
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // 异常处理
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
-                // 授权规则
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/user/login", "/user/logout",
                                 "/doc.html",
@@ -62,10 +64,8 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**").permitAll()
-                        .anyRequest().authenticated()); // 其他请求需要认证
-        //  添加过滤器
+                        .anyRequest().authenticated());
         http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
-        // 允许跨域
         http.cors(Customizer.withDefaults());
         return http.build();
     }

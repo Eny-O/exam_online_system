@@ -14,13 +14,19 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Spring Security 用户详情实现
+ * <p>
+ * 封装了 User 实体和权限列表，作为 JWT 认证通过后的安全上下文主体。
+ * 账号过期、锁定等状态暂不启用，统一返回 true。
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class LoginUser implements UserDetails {
 
-    private User user; //用户信息
-    private List<Permission> permissions; //权限信息
+    private User user;
+    private List<Permission> permissions;
 
     public LoginUser(User user, List<Permission> permissions) {
         this.user = user;
@@ -28,14 +34,12 @@ public class LoginUser implements UserDetails {
     }
 
     @JsonIgnore
-    private List<GrantedAuthority> authorities; //权限集合
+    private List<GrantedAuthority> authorities;
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 判断权限集合是否为空
         if (authorities != null) {
             return authorities;
         }
-        // 创建权限集合
         authorities = permissions.stream().map(permission -> new SimpleGrantedAuthority(permission.getPermCode())).collect(Collectors.toList());
         return authorities;
     }
@@ -50,6 +54,7 @@ public class LoginUser implements UserDetails {
         return user.getUsername();
     }
 
+    //TODO 账号过期、锁定、凭证过期、禁用等功能暂不启用
     @Override
     public boolean isAccountNonExpired() {
         return true;

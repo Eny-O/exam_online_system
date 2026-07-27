@@ -10,6 +10,9 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 
+/**
+ * 用户实体，对应 sys_user 表
+ */
 @Getter
 @Setter
 @TableName("sys_user")

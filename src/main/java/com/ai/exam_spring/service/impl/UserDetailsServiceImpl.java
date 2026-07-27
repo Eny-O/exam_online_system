@@ -31,14 +31,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        //  查询用户信息
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(User::getUsername, username);
         User user = userMapper.selectOne(queryWrapper);
         if (Objects.isNull(user)) {
             throw new UsernameNotFoundException("用户不存在");
         }
-        //  查询权限信息
         List<Permission> permissions = permissionMapper.getPermissionsByUserId(user.getId());
         return new LoginUser(user,permissions);
     }

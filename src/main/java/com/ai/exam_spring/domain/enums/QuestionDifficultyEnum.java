@@ -36,7 +36,8 @@ public enum QuestionDifficultyEnum {
      * 安全转换方法：将数据库/String值转为枚举对象
      *
      * @param code 数据库中的字符串值
-     * @return 对应的枚举对象，若找不到则返回 null (避免抛异常导致查询中断)
+     * @return 对应的枚举对象
+     * @throws IllegalArgumentException 当 code 无效时抛出
      */
     public static QuestionDifficultyEnum of(String code) {
         if (code == null || code.isEmpty()) {

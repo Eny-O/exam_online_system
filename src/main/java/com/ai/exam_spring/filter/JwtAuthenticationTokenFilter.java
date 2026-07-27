@@ -19,52 +19,50 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * JWT 认证过滤器
+ * <p>
+ * 在 Spring Security 过滤器链中拦截请求，从 Header 中提取 JWT Token 并验证。
+ * Token 无效或缺失时直接放行（不返回 401），由后续的 AuthenticationEntryPoint 统一处理未认证响应。
+ */
 @Component
 public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
 
     @Autowired
     private RedisUtil redisUtil;
 
-    /**
-     * 拦截请求，进行 JWT 认证
-     * @param request     请求对象
-     * @param response    响应对象
-     * @param filterChain 过滤器链
-     * @throws ServletException
-     * @throws IOException
-     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        //获取token
+        // 从请求头提取 Token
         String token = request.getHeader(JwtConstant.TOKEN_HEADER);
-        //判断token是否存在
+
+        // Token 缺失时直接放行，不在此处返回 401，
+        // 由 SecurityConfig 中注册的 AuthenticationEntryPoint 统一处理未认证响应
         if (!StringUtils.hasText(token)) {
-            //不存在放行
             filterChain.doFilter(request, response);
             return;
         }
-        //判断token是否合法
+
+        // Token 存在但校验失败（过期或签名错误），同样放行交由 AuthenticationEntryPoint 处理
         if (!JwtUtil.validateToken(token)){
-            //不合法放行
             filterChain.doFilter(request, response);
             return;
         }
-        //存在进行解析
+
+        // Token 合法，从中解析出用户 ID
         String userId = JwtUtil.getSubject(token);
 
-        //如果存在并且上下文没有用户信息，则设置用户信息
+        // 仅在 SecurityContext 中尚无认证信息时才填充，避免重复设置
         if (StringUtils.hasText(userId) && SecurityContextHolder.getContext().getAuthentication() == null) {
-            //从redis获取用户信息（key 格式与登录时存储保持一致："login" + userId）
+            // 根据 userId 从 Redis 中取出登录时缓存的 LoginUser（含用户信息和权限列表）
             LoginUser loginUser = redisUtil.get(RedisConstant.LOGIN_USER_PREFIX_KEY + userId, LoginUser.class);
-            //判断该用户是否存在
             if (loginUser != null){
-                //构建认证令牌，并设置到 Spring Security 上下文中
+                // 构建认证令牌并写入 SecurityContext，后续 Controller 可通过 SecurityContextHolder 获取当前用户
                 UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(loginUser, null, loginUser.getAuthorities());
                 authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
             }
         }
-        //放行
         filterChain.doFilter(request, response);
     }
 }

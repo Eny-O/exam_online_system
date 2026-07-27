@@ -5,8 +5,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.util.List;
 
+/**
+ * 用户信息展示对象
+ * <p>
+ * 用于登录后返回用户基本信息和权限列表，密码等敏感字段不包含在内。
+ */
 @Data
-@Schema(description = "用户信息展示对象") // 描述整个类的用途
+@Schema(description = "用户信息展示对象")
 public class UserInfoVO {
 
     @Schema(description = "用户名", example = "zhangsan")

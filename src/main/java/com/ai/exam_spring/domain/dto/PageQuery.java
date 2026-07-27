@@ -3,6 +3,11 @@ package com.ai.exam_spring.domain.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+/**
+ * 分页查询基础参数
+ * <p>
+ * 其他分页查询 DTO 可继承此类，统一提供 pageNum 和 pageSize 字段。
+ */
 @Data
 @Schema(description = "分页查询请求参数")
 public class PageQuery {

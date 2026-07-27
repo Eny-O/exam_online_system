@@ -3,6 +3,11 @@ package com.ai.exam_spring.domain.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+/**
+ * 权限信息展示对象
+ * <p>
+ * 用于前端动态路由和菜单渲染，包含权限编码、菜单路径、组件路径等字段。
+ */
 @Data
 @Schema(description = "权限信息展示对象")
 public class PermissionVO {

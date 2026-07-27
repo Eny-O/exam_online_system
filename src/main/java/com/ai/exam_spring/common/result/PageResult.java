@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.util.List;
 
+/**
+ * 分页结果对象
+ */
 @Data
 @Schema(description = "通用分页返回结果")
 public class PageResult<T> {

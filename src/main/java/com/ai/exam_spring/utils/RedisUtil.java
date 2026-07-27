@@ -22,7 +22,6 @@ public class RedisUtil {
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
-    // 注入 Spring Boot 自动配置的 ObjectMapper
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -191,15 +190,10 @@ public class RedisUtil {
      */
     public boolean hSetAll(String key, Map<String, Object> map) {
         try {
-            // 1. 创建一个新的 Map 来存放序列化后的数据
             Map<String, String> jsonMap = new java.util.HashMap<>();
-
-            // 2. 遍历原始 map，将值序列化后放入新的 map
             for (Map.Entry<String, Object> entry : map.entrySet()) {
                 jsonMap.put(entry.getKey(), objectMapper.writeValueAsString(entry.getValue()));
             }
-
-            // 3. 将新的 map 存入 Redis
             stringRedisTemplate.opsForHash().putAll(key, jsonMap);
             return true;
         } catch (JsonProcessingException e) {

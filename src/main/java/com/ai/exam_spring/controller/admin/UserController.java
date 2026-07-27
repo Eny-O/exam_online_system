@@ -27,11 +27,6 @@ public class UserController {
         return ResponseResult.success(userService.getInfo());
     }
 
-    /**
-     * 登录
-     * @param userLoginDTO
-     * @return
-     */
     @Operation(summary = "用户登录")
     @PostMapping("/login")
     public ResponseResult<HashMap<String,String>> login(@RequestBody UserLoginDTO userLoginDTO) {
@@ -39,10 +34,6 @@ public class UserController {
         return ResponseResult.success(userService.login(userLoginDTO));
     }
 
-    /**
-     * 登出
-     * @return
-     */
     @Operation(summary = "用户登出")
     @PostMapping("/logout")
     public ResponseResult<Void> logout() {

@@ -7,15 +7,23 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 
+/**
+ * 用户服务接口
+ */
 @Service
 public interface UserService {
     /**
-     * 登录
-     * @param userLoginDTO
+     * 用户登录，返回包含 Token 的 Map
      */
     HashMap<String,String> login(UserLoginDTO userLoginDTO);
 
+    /**
+     * 用户登出，清除 Redis 登录缓存
+     */
     void logout();
 
+    /**
+     * 获取当前登录用户信息
+     */
     UserInfoVO getInfo();
 }

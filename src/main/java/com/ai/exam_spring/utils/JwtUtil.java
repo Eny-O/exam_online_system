@@ -39,12 +39,12 @@ public class JwtUtil {
         Date expiration = new Date(now.getTime() + JwtConstant.EXPIRATION_TIME);
 
         return Jwts.builder()
-                .subject(subject)           // 设置主题 (sub)
-                .claims(claims)             // 添加自定义声明
-                .issuedAt(now)              // 设置签发时间 (iat)
-                .expiration(expiration)     // 设置过期时间 (exp)
-                .signWith(getSigningKey())  // 使用 HS256 算法签名（默认即 HS256）
-                .compact();                 // 压缩生成最终 Token 字符串
+                .subject(subject)
+                .claims(claims)
+                .issuedAt(now)
+                .expiration(expiration)
+                .signWith(getSigningKey())
+                .compact();
     }
 
     /**
@@ -53,11 +53,11 @@ public class JwtUtil {
      * @return 解析后的 Claims 对象
      */
     public static Claims parseToken(String token) {
-        return Jwts.parser()                  // 获取解析器
-                .verifyWith(getSigningKey())  // 设置验签密钥
-                .build()                      // 构建解析器
-                .parseSignedClaims(token)     // 解析并验证 Token
-                .getPayload();                // 获取载荷部分
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     /**
