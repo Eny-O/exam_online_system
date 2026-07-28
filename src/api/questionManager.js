@@ -24,3 +24,12 @@ export function updateQuestionComplete(data) {
 export function deleteQuestions(ids) {
   return request.delete("/questionManager/deleteQuestionById", { data: ids });
 }
+
+// 批量导入题目（Excel文件上传）
+export function importQuestions(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return request.post("/fileManager/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}

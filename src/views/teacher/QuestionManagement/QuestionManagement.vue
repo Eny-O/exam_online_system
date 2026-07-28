@@ -143,6 +143,55 @@
     :edit-data="currentEditData"
     @success="handleDrawerSuccess"
   />
+
+  <!-- 批量导入对话框 -->
+  <el-dialog
+    v-model="importDialogVisible"
+    title="批量导入题目"
+    width="500px"
+    destroy-on-close
+  >
+    <el-upload
+      drag
+      :auto-upload="false"
+      :limit="1"
+      accept=".xlsx"
+      :on-change="handleFileChange"
+      :on-remove="handleFileRemove"
+      :on-exceed="handleFileExceed"
+    >
+      <el-icon class="el-icon--upload"><Upload /></el-icon>
+      <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+      <template #tip>
+        <div class="el-upload__tip">仅支持 .xlsx 格式文件</div>
+      </template>
+    </el-upload>
+
+    <!-- 导入结果展示 -->
+    <el-alert
+      v-if="importResult"
+      type="success"
+      :closable="false"
+      style="margin-top: 16px"
+    >
+      成功导入 {{ importResult.successCount }} 道题目
+      <span v-if="importResult.failCount > 0"
+        >，{{ importResult.failCount }} 道失败</span
+      >
+    </el-alert>
+
+    <template #footer>
+      <el-button @click="importDialogVisible = false">关闭</el-button>
+      <el-button
+        type="primary"
+        :loading="importLoading"
+        :disabled="!importFile"
+        @click="handleConfirmImport"
+      >
+        确认导入
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -154,6 +203,7 @@ import {
   getQuestionPage,
   getQuestionCompleteById,
   deleteQuestions,
+  importQuestions,
 } from "@/api/questionManager";
 
 // 搜索表单
@@ -173,6 +223,12 @@ const currentEditData = ref(null);
 
 // 批量选中的行
 const selectedRows = ref([]);
+
+// 批量导入对话框
+const importDialogVisible = ref(false);
+const importFile = ref(null);
+const importResult = ref(null);
+const importLoading = ref(false);
 
 // 分页参数
 const pagination = reactive({
@@ -258,9 +314,47 @@ const handleReset = () => {
   fetchQuestionList();
 };
 
-// 批量导入
+// 批量导入 - 打开对话框
 const handleBatchImport = () => {
-  ElMessage.info("批量导入功能开发中...");
+  importFile.value = null;
+  importResult.value = null;
+  importDialogVisible.value = true;
+};
+
+// 文件选择变化
+const handleFileChange = (file) => {
+  importFile.value = file.raw;
+  importResult.value = null;
+};
+
+// 文件超出限制时的提示
+const handleFileExceed = () => {
+  ElMessage.warning("只能上传一个文件，请先移除已选文件");
+};
+
+// 文件移除时清除引用
+const handleFileRemove = () => {
+  importFile.value = null;
+  importResult.value = null;
+};
+
+// 确认上传
+const handleConfirmImport = async () => {
+  if (!importFile.value) {
+    ElMessage.warning("请先选择文件");
+    return;
+  }
+  importLoading.value = true;
+  try {
+    const res = await importQuestions(importFile.value);
+    importResult.value = res.data;
+    ElMessage.success(`导入成功 ${res.data.successCount} 道题目`);
+    fetchQuestionList();
+  } catch (error) {
+    ElMessage.error(error.message || "导入失败");
+  } finally {
+    importLoading.value = false;
+  }
 };
 
 // 新增题目
