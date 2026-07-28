@@ -1,8 +1,8 @@
-NEW_FILE_CODE
 <script setup>
 import { ref, reactive, watch } from "vue";
 import { Plus, Delete } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
+import { addQuestionComplete, updateQuestionComplete } from "@/api/questionManager";
 
 const props = defineProps({
   visible: {
@@ -23,6 +23,7 @@ const submitting = ref(false);
 
 // 表单数据
 const formData = reactive({
+  id: null,
   content: "",
   type: "single",
   difficulty: "medium",
@@ -52,13 +53,21 @@ watch(
   (val) => {
     drawerVisible.value = val;
     if (val) {
-      resetForm();
       if (props.editData) {
-        // 编辑模式，填充数据
-        Object.assign(formData, props.editData);
+        // 编辑模式，填充完整数据（含选项）
+        Object.assign(formData, {
+          id: props.editData.id,
+          content: props.editData.content,
+          type: props.editData.type,
+          difficulty: props.editData.difficulty,
+          knowledgePoint: props.editData.knowledgePoint,
+          answer: props.editData.answer,
+          analysis: props.editData.analysis,
+          options: props.editData.options ? [...props.editData.options] : [],
+        });
       } else {
-        // 新增模式，初始化选项
-        initOptions();
+        // 新增模式，重置并初始化选项
+        resetForm();
       }
     }
   }
@@ -145,16 +154,37 @@ const handleSubmit = async () => {
 
     submitting.value = true;
 
-    // 模拟提交延迟
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // 构造提交数据，新增时不传 id
+    const submitData = {
+      content: formData.content,
+      type: formData.type,
+      difficulty: formData.difficulty,
+      knowledgePoint: formData.knowledgePoint,
+      answer: formData.answer,
+      analysis: formData.analysis,
+      options: formData.options.map((opt) => ({
+        label: opt.label,
+        content: opt.content,
+      })),
+    };
 
-    console.log("提交的表单数据:", { ...formData });
+    // 编辑时带上 id
+    if (formData.id) {
+      submitData.id = formData.id;
+    }
 
-    ElMessage.success(props.editData ? "修改成功" : "新增成功");
+    if (formData.id) {
+      await updateQuestionComplete(submitData);
+      ElMessage.success("修改成功");
+    } else {
+      await addQuestionComplete(submitData);
+      ElMessage.success("新增成功");
+    }
+
     drawerVisible.value = false;
     emit("success");
   } catch (error) {
-    console.error("表单验证失败:", error);
+    console.error("提交失败:", error);
   } finally {
     submitting.value = false;
   }
@@ -170,6 +200,7 @@ const resetForm = () => {
   if (formRef.value) {
     formRef.value.resetFields();
   }
+  formData.id = null;
   formData.content = "";
   formData.type = "single";
   formData.difficulty = "medium";

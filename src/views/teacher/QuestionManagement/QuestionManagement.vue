@@ -62,6 +62,15 @@
         <el-icon><Plus /></el-icon>
         新增题目
       </el-button>
+      <el-button
+        type="danger"
+        plain
+        @click="handleBatchDelete"
+        :disabled="selectedRows.length === 0"
+      >
+        <el-icon><Delete /></el-icon>
+        批量删除
+      </el-button>
     </div>
 
     <!-- 数据表格 -->
@@ -71,7 +80,10 @@
         v-loading="loading"
         stripe
         style="width: 100%"
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column type="selection" width="50" />
+
         <el-table-column
           prop="content"
           label="题干"
@@ -135,10 +147,14 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
-import { Search, Refresh, Upload, Plus } from "@element-plus/icons-vue";
+import { Search, Refresh, Upload, Plus, Delete } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import QuestionDrawer from "@/views/teacher/QuestionManagement/components/QuestionDrawer.vue";
-import { getQuestionPage } from "@/api/questionManager";
+import {
+  getQuestionPage,
+  getQuestionCompleteById,
+  deleteQuestions,
+} from "@/api/questionManager";
 
 // 搜索表单
 const searchForm = reactive({
@@ -154,6 +170,9 @@ const loading = ref(false);
 // 抽屉显示状态
 const drawerVisible = ref(false);
 const currentEditData = ref(null);
+
+// 批量选中的行
+const selectedRows = ref([]);
 
 // 分页参数
 const pagination = reactive({
@@ -250,10 +269,15 @@ const handleAddQuestion = () => {
   drawerVisible.value = true;
 };
 
-// 编辑
-const handleEdit = (row) => {
-  currentEditData.value = { ...row };
-  drawerVisible.value = true;
+// 编辑 - 调用详情接口获取完整数据（含选项）后打开抽屉
+const handleEdit = async (row) => {
+  try {
+    const res = await getQuestionCompleteById(row.id);
+    currentEditData.value = res.data;
+    drawerVisible.value = true;
+  } catch (error) {
+    ElMessage.error("获取题目详情失败");
+  }
 };
 
 // 删除
@@ -267,9 +291,50 @@ const handleDelete = (row) => {
       type: "warning",
     }
   )
-    .then(() => {
-      ElMessage.success("删除成功");
-      fetchQuestionList();
+    .then(async () => {
+      try {
+        await deleteQuestions([row.id]);
+        ElMessage.success("删除成功");
+        fetchQuestionList();
+      } catch (error) {
+        ElMessage.error("删除失败");
+      }
+    })
+    .catch(() => {
+      ElMessage.info("已取消删除");
+    });
+};
+
+// 表格选择变化
+const handleSelectionChange = (rows) => {
+  selectedRows.value = rows;
+};
+
+// 批量删除
+const handleBatchDelete = () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning("请先选择要删除的题目");
+    return;
+  }
+  ElMessageBox.confirm(
+    `确定要删除选中的 ${selectedRows.value.length} 道题目吗？`,
+    "警告",
+    {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    }
+  )
+    .then(async () => {
+      try {
+        const ids = selectedRows.value.map((row) => row.id);
+        await deleteQuestions(ids);
+        ElMessage.success("批量删除成功");
+        selectedRows.value = [];
+        fetchQuestionList();
+      } catch (error) {
+        ElMessage.error("批量删除失败");
+      }
     })
     .catch(() => {
       ElMessage.info("已取消删除");
