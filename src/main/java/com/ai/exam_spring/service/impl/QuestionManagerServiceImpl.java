@@ -14,17 +14,15 @@ import com.ai.exam_spring.domain.vo.QuestionVO;
 import com.ai.exam_spring.mapper.QuestionManagerMapper;
 import com.ai.exam_spring.domain.vo.QuestionCompleteVO;
 import com.ai.exam_spring.mapper.QuestionOptionMapper;
-import com.ai.exam_spring.service.IQuestionManagerService;
+import com.ai.exam_spring.service.QuestionManagerService;
 import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -32,11 +30,14 @@ import java.util.List;
  * 题目管理服务实现
  */
 @Service
-public class QuestionManagerServiceImpl extends ServiceImpl<QuestionManagerMapper, Question> implements IQuestionManagerService {
+public class QuestionManagerServiceImpl implements QuestionManagerService {
 
+    @Autowired
+    private QuestionManagerMapper questionManagerMapper;
 
     @Autowired
     private QuestionOptionMapper questionOptionMapper;
+
 
     /**
      * 根据题目内容、题型、难度条件分页查询
@@ -49,7 +50,7 @@ public class QuestionManagerServiceImpl extends ServiceImpl<QuestionManagerMappe
                 .eq(StringUtils.isNotBlank(queryDTO.getType()), Question::getType, queryDTO.getType())
                 .eq(StringUtils.isNotBlank(queryDTO.getDifficulty()), Question::getDifficulty, queryDTO.getDifficulty())
                 .orderByDesc(Question::getCreateTime);
-        Page<Question> questionPage = baseMapper.selectPage(page, wrapper);
+        Page<Question> questionPage = questionManagerMapper.selectPage(page, wrapper);
         List<QuestionVO> questionVOList = questionPage.getRecords().stream().map(question -> {
             QuestionVO questionVO = new QuestionVO();
             BeanUtil.copyProperties(question, questionVO);
@@ -78,13 +79,12 @@ public class QuestionManagerServiceImpl extends ServiceImpl<QuestionManagerMappe
         }
         question.setCreatorId(Integer.valueOf(currentUserId));
         if (question.getId() == null) {
-            baseMapper.insert(question);
+            questionManagerMapper.insert(question);
         } else {
-            baseMapper.updateById(question);
+            questionManagerMapper.updateById(question);
             //TODO 当为简答或判断题时,options可能为空,导致原本的数据被删除了
             questionOptionMapper.delete(new LambdaQueryWrapper<QuestionOption>().eq(QuestionOption::getQuestionId,question.getId()));
         }
-
         List<QuestionOptionDTO> options = questionCompleteDTO.getOptions();
         if (options != null && !options.isEmpty()) {
             options.forEach(questionOptionDTO -> {
@@ -101,7 +101,7 @@ public class QuestionManagerServiceImpl extends ServiceImpl<QuestionManagerMappe
      */
     @Override
     public QuestionCompleteVO getQuestionComplete(Integer id) {
-        Question question = baseMapper.selectById(id);
+        Question question = questionManagerMapper.selectById(id);
         List<QuestionOption> optionList = questionOptionMapper.selectList(new LambdaQueryWrapper<QuestionOption>().eq(QuestionOption::getQuestionId, id));
         QuestionCompleteVO questionCompleteVO = new QuestionCompleteVO();
         BeanUtil.copyProperties(question, questionCompleteVO);
@@ -125,7 +125,7 @@ public class QuestionManagerServiceImpl extends ServiceImpl<QuestionManagerMappe
         //先删除选项
         questionOptionMapper.delete(new LambdaQueryWrapper<QuestionOption>().in(QuestionOption::getQuestionId,ids));
         //后删除题目
-        this.removeByIds(ids);
+        questionManagerMapper.deleteByIds(ids);
     }
 
 }

@@ -107,6 +107,13 @@
 
         <!-- ================== 工具类 ================== -->
 
+        <!-- Apache POI：Excel 读写（poi-ooxml 已包含 poi 核心） -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
         <!-- 阿里 FastJSON2 核心库 (仅作为工具类使用，不影响 Spring MVC 默认序列化) -->
         <dependency>
             <groupId>com.alibaba.fastjson2</groupId>

@@ -63,6 +63,12 @@ public class ResponseResult<T> {
     public static <T> ResponseResult<T> error(String message) {
         return new ResponseResult<>(ErrorCodeEnum.OPERATION_FAILED.getCode(), message);
     }
+    /**
+     * 失败响应（自定义错误码，自定义消息）
+     */
+    public static <T> ResponseResult<T> error(String code,String message) {
+        return new ResponseResult<>(code, message);
+    }
 
     /**
      * 失败响应（指定错误码枚举）

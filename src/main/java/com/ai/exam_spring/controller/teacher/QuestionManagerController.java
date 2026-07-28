@@ -6,7 +6,7 @@ import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.domain.vo.QuestionCompleteVO;
 import com.ai.exam_spring.domain.vo.QuestionVO;
-import com.ai.exam_spring.service.IQuestionManagerService;
+import com.ai.exam_spring.service.QuestionManagerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import java.util.List;
 public class QuestionManagerController {
 
     @Autowired
-    private IQuestionManagerService questionManagerService;
+    private QuestionManagerService questionManagerService;
 
     @Operation(summary = "分页查询题目列表", description = "支持按题目内容,题型和难度进行条件查询")
     @GetMapping("/page")

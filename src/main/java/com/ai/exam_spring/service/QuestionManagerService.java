@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * 题目管理服务接口
  */
-public interface IQuestionManagerService extends IService<Question> {
+public interface QuestionManagerService {
     /**
      * 条件分页查询题目列表
      */
@@ -24,7 +24,13 @@ public interface IQuestionManagerService extends IService<Question> {
      */
     void addQuestionComplete(QuestionCompleteDTO questionCompleteDTO);
 
+    /**
+     * 根据题目ID查询完整题目
+     */
     QuestionCompleteVO getQuestionComplete(Integer id);
 
+    /**
+     * 批量删除完整题目
+     */
     void removeQuestionCompleteByIds(List<Integer> ids);
 }
