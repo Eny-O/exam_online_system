@@ -1,5 +1,7 @@
 package com.ai.exam_spring.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -19,8 +21,9 @@ import java.time.LocalDateTime;
 @Schema(description = "用户实体对象")
 public class User {
 
+    @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "用户ID", example = "1")
-    private Long id;
+    private Integer id;
 
     @Schema(description = "用户名", example = "zhangsan")
     private String username;

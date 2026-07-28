@@ -4,9 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/**
- * 查询题目参数
- */
+
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Schema(description = "题目查询请求参数")

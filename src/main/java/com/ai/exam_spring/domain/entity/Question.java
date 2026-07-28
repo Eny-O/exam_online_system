@@ -1,5 +1,7 @@
 package com.ai.exam_spring.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -21,7 +23,7 @@ import java.time.LocalDateTime;
 @Setter
 @Schema(description = "题目实体对象")
 public class Question {
-
+    @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "题目ID", example = "1001")
     private Integer id;
 

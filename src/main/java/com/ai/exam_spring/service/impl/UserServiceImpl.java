@@ -14,6 +14,7 @@ import com.ai.exam_spring.domain.vo.UserInfoVO;
 import com.ai.exam_spring.service.UserService;
 import com.ai.exam_spring.utils.JwtUtil;
 import com.ai.exam_spring.utils.RedisUtil;
+import com.ai.exam_spring.utils.SecurityUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -73,10 +74,7 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public void logout() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof LoginUser loginUser) {
-            redisUtil.delete(RedisConstant.LOGIN_USER_PREFIX_KEY+ loginUser.getUser().getId());
-        }
+        redisUtil.delete(RedisConstant.LOGIN_USER_PREFIX_KEY+ SecurityUtil.getCurrentUserId());
     }
 
     /**

@@ -12,5 +12,5 @@ public interface PermissionMapper extends BaseMapper<Permission> {
     /**
      * 根据用户ID查询权限列表（含菜单和按钮）
      */
-    List<Permission> getPermissionsByUserId(Long userId);
+    List<Permission> getPermissionsByUserId(Integer userId);
 }

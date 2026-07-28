@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Schema(description = "题目列表展示对象")
 public class QuestionVO {
     @Schema(description = "题目ID")
-    private Integer id;
+    private Long id;
 
     @Schema(description = "题干内容")
     private String content;

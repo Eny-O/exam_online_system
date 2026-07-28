@@ -1,6 +1,8 @@
 package com.ai.exam_spring.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -21,12 +23,12 @@ import lombok.Setter;
 @Schema(description = "题目选项实体对象")
 public class QuestionOption {
 
+    @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "选项主键ID", example = "1")
-    private Long id;
+    private Integer id;
 
     @Schema(description = "所属题目ID", example = "1001")
-    @TableField("question_id")
-    private Long questionId;
+    private Integer questionId;
 
     @Schema(description = "选项标签（A/B/C/D/E/F/G/H）", example = "A")
     private String label;
