@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ai.exam_spring.mapper.PaperMapper">
+
+    <select id="pagePaper" resultType="com.ai.exam_spring.domain.vo.PaperVO">
+        SELECT
+            p.id,
+            p.name,
+            p.total_score AS totalScore,
+            p.description,
+            s.real_name AS teacherName,
+            p.create_time AS createTime,
+            p.update_time AS updateTime
+        FROM paper p
+                 LEFT JOIN sys_user s ON p.creator_id = s.id
+            ${ew.customSqlSegment}
+    </select>
+
+</mapper>
