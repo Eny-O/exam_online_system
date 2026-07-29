@@ -25,14 +25,21 @@ public enum ErrorCodeEnum {
     USER_NOT_LOGIN("1004", "用户未登录"),
     PERMISSION_DENIED("1005", "无权限"),
     ACCOUNT_DISABLED("1006", "账号已被禁用"),
+
+    // 题目错误码
     QUESTION_NOT_FOUND("2001", "题目不存在"),
+
+    // 考试错误码
     EXAM_NOT_FOUND("3001", "考试不存在"),
 
     // 文件与导入错误码
     FILE_FORMAT_ERROR("4001", "仅支持 .xlsx 格式文件"),
     FILE_EMPTY("4002", "上传文件为空"),
     FILE_PARSE_ERROR("4003", "文件解析失败，请检查文件内容"),
-    FILE_CONTENT_REQUIRED_FIELD_EMPTY("4004", "文件内容有必填项为空");
+    FILE_CONTENT_REQUIRED_FIELD_EMPTY("4004", "文件内容有必填项为空"),
+
+    // 试卷错误码
+    PAPER_NOT_EMPTY("5001", "试卷不能为空");
 
 
     private final String code;

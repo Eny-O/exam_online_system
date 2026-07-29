@@ -20,10 +20,10 @@ public class GenerateEntity {
                 )
                 .packageConfig(builder -> builder
                         .parent("com.ai.exam_spring")         // 父包名
-                        .entity("entity")                     // 实体类包
+                        .entity("domain.entity")                     // 实体类包
                 )
                 .strategyConfig(builder -> builder
-                        .addInclude("question_option")
+                        .addInclude("paper")
                         .entityBuilder()
                         .enableLombok()                   // 用 Lombok 简化 getter/setter
                         .enableTableFieldAnnotation()     // 加 @TableField 注解

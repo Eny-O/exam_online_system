@@ -9,8 +9,6 @@ import ${pkg};
  * $!{table.comment}
  * </p>
  *
- * @author ${author}
- * @since ${date}
  */
 #if(${table.convert})
 @TableName("${table.name}")
