@@ -42,6 +42,7 @@
       :data="questionList"
       border
       stripe
+      v-loading="loading"
       height="400"
       @selection-change="handleSelectionChange"
     >
@@ -111,6 +112,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import { ElMessage } from "element-plus";
+import { getQuestionPage } from "@/api/questionManager";
 
 const props = defineProps({
   modelValue: {
@@ -148,42 +150,54 @@ const pagination = reactive({
 const questionList = ref([]);
 const selectedQuestions = ref([]);
 const tableRef = ref(null);
+const loading = ref(false);
 
 // 模拟获取题库数据
 const fetchQuestionList = async () => {
-  // TODO: 替换为真实的 API 调用
-  console.log("Fetching questions with params:", {
-    ...searchForm,
-    ...pagination,
-  });
-
-  // Mock 数据
-  const mockData = Array.from({ length: pagination.pageSize }).map(
-    (_, index) => ({
-      id: (pagination.page - 1) * pagination.pageSize + index + 1,
-      content: `这是一道关于 Vue3 组合式 API 的${
-        index % 2 === 0 ? "单选" : "多选"
-      }测试题目...`,
-      type: index % 3 === 0 ? "single" : index % 3 === 1 ? "multiple" : "judge",
-      difficulty: ["easy", "medium", "hard"][index % 3],
-      score: index % 2 === 0 ? 5 : 10,
-    })
-  );
-
-  questionList.value = mockData;
-  pagination.total = 50; // 假设总数
-
-  // 恢复勾选状态（如果有关联逻辑）
-  setTimeout(() => {
-    if (tableRef.value && selectedQuestions.value.length > 0) {
-      questionList.value.forEach((row) => {
-        if (selectedQuestions.value.some((q) => q.id === row.id)) {
-          tableRef.value.toggleRowSelection(row, true);
-        }
-      });
-    }
-  }, 0);
+  loading.value = true;
+  try {
+    const res = await getQuestionPage({
+      pageNum: pagination.currentPage,
+      pageSize: pagination.pageSize,
+      content: searchForm.content,
+      type: searchForm.type,
+      difficulty: searchForm.difficulty,
+    });
+    questionList.value = res.data.records;
+    pagination.total = res.data.total;
+  } catch (error) {
+    ElMessage.error(error.message || "获取题目列表失败");
+  } finally {
+    loading.value = false;
+  }
 };
+
+// Mock 数据
+const mockData = Array.from({ length: pagination.pageSize }).map(
+  (_, index) => ({
+    id: (pagination.page - 1) * pagination.pageSize + index + 1,
+    content: `这是一道关于 Vue3 组合式 API 的${
+      index % 2 === 0 ? "单选" : "多选"
+    }测试题目...`,
+    type: index % 3 === 0 ? "single" : index % 3 === 1 ? "multiple" : "judge",
+    difficulty: ["easy", "medium", "hard"][index % 3],
+    score: index % 2 === 0 ? 5 : 10,
+  })
+);
+
+questionList.value = mockData;
+pagination.total = 50; // 假设总数
+
+// 恢复勾选状态（如果有关联逻辑）
+setTimeout(() => {
+  if (tableRef.value && selectedQuestions.value.length > 0) {
+    questionList.value.forEach((row) => {
+      if (selectedQuestions.value.some((q) => q.id === row.id)) {
+        tableRef.value.toggleRowSelection(row, true);
+      }
+    });
+  }
+}, 0);
 
 // 搜索与重置
 const handleSearch = () => {
