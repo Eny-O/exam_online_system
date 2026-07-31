@@ -1,8 +1,6 @@
 package com.ai.exam_spring.domain.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.Getter;
@@ -48,9 +46,11 @@ public class Question {
     @Schema(description = "题目创建者ID", example = "1")
     private Integer creatorId;
 
+    @TableField(fill = FieldFill.INSERT)
     @Schema(description = "题目创建时间", example = "2024-01-01 10:00:00")
     private LocalDateTime createTime;
 
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "题目更新时间", example = "2024-06-01 12:00:00")
     private LocalDateTime updateTime;
 }

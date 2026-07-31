@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.ai.exam_spring.mapper.PaperMapper">
+<mapper namespace="com.ai.exam_spring.mapper.PaperManagementMapper">
 
     <select id="pagePaper" resultType="com.ai.exam_spring.domain.vo.PaperVO">
         SELECT
             p.id,
             p.name,
+            p.exam_time  AS examTime,
             p.total_score AS totalScore,
             p.description,
             s.real_name AS teacherName,

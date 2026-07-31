@@ -1,16 +1,11 @@
 package com.ai.exam_spring.domain.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
-
 
 /**
  * 用户实体，对应 sys_user 表
@@ -41,9 +36,12 @@ public class User {
     @Schema(description = "用户状态：1-启用，2-禁用", example = "1")
     private Integer status;
 
+    @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建时间", example = "2024-01-01 10:00:00")
     private LocalDateTime createTime;
 
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间", example = "2024-06-01 12:00:00")
     private LocalDateTime updateTime;
+
 }

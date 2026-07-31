@@ -15,7 +15,7 @@ import org.apache.ibatis.annotations.Param;
  * @author HP
  * @since 2026-07-28
  */
-public interface PaperMapper extends BaseMapper<Paper> {
+public interface PaperManagementMapper extends BaseMapper<Paper> {
 
     Page<PaperVO> pagePaper(Page<PaperVO> page, @Param("ew")QueryWrapper<Paper> wrapper);
 }

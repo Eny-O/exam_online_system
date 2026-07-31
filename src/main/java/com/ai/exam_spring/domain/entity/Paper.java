@@ -1,15 +1,9 @@
 package com.ai.exam_spring.domain.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -23,11 +17,15 @@ import java.time.LocalDateTime;
 @Setter
 @Schema(description = "试卷的实体对象")
 public class Paper {
+    @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键id")
-    private Long id;
+    private Integer id;
 
     @Schema(description = "试卷名称")
     private String name;
+
+    @Schema(description = "考试时间")
+    private Integer examTime;
 
     @Schema(description = "总分")
     private Integer totalScore;
@@ -36,11 +34,13 @@ public class Paper {
     private String description;
 
     @Schema(description = "创建教师ID")
-    private Long creatorId;
+    private Integer creatorId;
 
+    @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
 

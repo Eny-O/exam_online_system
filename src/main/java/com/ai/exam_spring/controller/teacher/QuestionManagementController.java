@@ -6,7 +6,7 @@ import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.domain.vo.QuestionCompleteVO;
 import com.ai.exam_spring.domain.vo.QuestionVO;
-import com.ai.exam_spring.service.QuestionManagerService;
+import com.ai.exam_spring.service.QuestionManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -20,16 +20,16 @@ import java.util.List;
 @RestController
 @RequestMapping("/questionManager")
 @Slf4j
-public class QuestionManagerController {
+public class QuestionManagementController {
 
     @Autowired
-    private QuestionManagerService questionManagerService;
+    private QuestionManagementService questionManagementService;
 
     @Operation(summary = "分页查询题目列表", description = "支持按题目内容,题型和难度进行条件查询")
     @GetMapping("/page")
     public ResponseResult<PageResult<QuestionVO>> page(@ModelAttribute QuestionQueryDTO queryDTO){
         log.info("分页查询题目列表");
-        PageResult<QuestionVO> pageResult = questionManagerService.conditionPageQuery(queryDTO);
+        PageResult<QuestionVO> pageResult = questionManagementService.conditionPageQuery(queryDTO);
         return ResponseResult.success(pageResult);
     }
 
@@ -37,14 +37,14 @@ public class QuestionManagerController {
     @PostMapping("/addQuestionComplete")
     public ResponseResult<Void> addQuestionComplete(@Validated @RequestBody QuestionCompleteDTO questionCompleteDTO){
         log.info("添加题目: {}", questionCompleteDTO);
-        questionManagerService.addQuestionComplete(questionCompleteDTO);
+        questionManagementService.addQuestionComplete(questionCompleteDTO);
         return ResponseResult.success();
     }
     @Operation(summary = "更新题目", description = "更新完整题目")
     @PutMapping("/updateQuestionComplete")
     public ResponseResult<Void> updateQuestionComplete(@Validated @RequestBody QuestionCompleteDTO questionCompleteDTO){
         log.info("更新题目: {}", questionCompleteDTO);
-        questionManagerService.addQuestionComplete(questionCompleteDTO);
+        questionManagementService.addQuestionComplete(questionCompleteDTO);
         return ResponseResult.success();
     }
 
@@ -52,7 +52,7 @@ public class QuestionManagerController {
     @GetMapping("/getQuestionCompleteById/{id}")
     public ResponseResult<QuestionCompleteVO> getQuestionById(@PathVariable Integer id){
         log.info("查询题目: {}", id);
-        QuestionCompleteVO questionCompleteVO = questionManagerService.getQuestionComplete(id);
+        QuestionCompleteVO questionCompleteVO = questionManagementService.getQuestionComplete(id);
         return ResponseResult.success(questionCompleteVO);
     }
 
@@ -60,7 +60,7 @@ public class QuestionManagerController {
     @DeleteMapping("/deleteQuestionById")
     public ResponseResult<Void> deleteQuestionById(@RequestBody List<Integer> ids){
         log.info("删除题目: {}", ids);
-        questionManagerService.removeQuestionCompleteByIds(ids);
+        questionManagementService.removeQuestionCompleteByIds(ids);
         return ResponseResult.success();
     }
 }

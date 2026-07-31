@@ -5,8 +5,8 @@ import com.ai.exam_spring.common.exception.BusinessException;
 import com.ai.exam_spring.domain.dto.QuestionCompleteDTO;
 import com.ai.exam_spring.domain.dto.QuestionOptionDTO;
 import com.ai.exam_spring.domain.vo.ImportResultVO;
-import com.ai.exam_spring.service.FileManagerService;
-import com.ai.exam_spring.service.QuestionManagerService;
+import com.ai.exam_spring.service.FileManagementService;
+import com.ai.exam_spring.service.QuestionManagementService;
 import com.ai.exam_spring.utils.ExcelUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
@@ -24,11 +24,11 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class FileManagerServiceImpl implements FileManagerService {
+public class FileManagementServiceImpl implements FileManagementService {
 
 
     @Autowired
-    private QuestionManagerService questionManagerService;
+    private QuestionManagementService questionManagementService;
 
     /**
      * 将上传的文件用poi读取，并保存到数据库中

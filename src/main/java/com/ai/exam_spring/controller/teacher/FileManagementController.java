@@ -2,7 +2,7 @@ package com.ai.exam_spring.controller.teacher;
 
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.domain.vo.ImportResultVO;
-import com.ai.exam_spring.service.FileManagerService;
+import com.ai.exam_spring.service.FileManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -14,16 +14,16 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/fileManager")
 @Slf4j
-public class FileManagerController {
+public class FileManagementController {
 
     @Autowired
-    private FileManagerService fileManagerService;
+    private FileManagementService fileManagementService;
 
     @Operation(summary = "上传文件")
     @PostMapping(value = "/upload")
     public ResponseResult<ImportResultVO> upload(@RequestPart @RequestParam("file")MultipartFile file){
         log.info("上传文件");
-        return ResponseResult.success(fileManagerService.uploadFile(file));
+        return ResponseResult.success(fileManagementService.uploadFile(file));
     }
 
 }

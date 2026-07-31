@@ -6,5 +6,5 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 /**
  * 题目表 Mapper 接口
  */
-public interface QuestionManagerMapper extends BaseMapper<Question> {
+public interface QuestionManagementMapper extends BaseMapper<Question> {
 }

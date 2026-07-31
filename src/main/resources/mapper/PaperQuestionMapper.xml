@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ai.exam_spring.mapper.PaperQuestionMapper">
+
+    <insert id="insertBatch" >
+        insert into paper_question (paper_id, question_id, sort_order, score,create_time,update_time) values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.paperId},#{item.questionId},#{item.sortOrder},#{item.score},now(),now())
+        </foreach>
+    </insert>
+</mapper>

@@ -14,6 +14,9 @@ public class PaperVO {
     @Schema(description = "试卷名称")
     private String name;
 
+    @Schema(description = "考试时间")
+    private Integer examTime;
+
     @Schema(description = "总分")
     private Integer totalScore;
 

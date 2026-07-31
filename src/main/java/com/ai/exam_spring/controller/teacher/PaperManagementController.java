@@ -2,10 +2,10 @@ package com.ai.exam_spring.controller.teacher;
 
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
+import com.ai.exam_spring.domain.dto.PaperContentDTO;
 import com.ai.exam_spring.domain.dto.PaperQueryDTO;
-import com.ai.exam_spring.domain.entity.Paper;
 import com.ai.exam_spring.domain.vo.PaperVO;
-import com.ai.exam_spring.service.IPaperService;
+import com.ai.exam_spring.service.IPaperManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -24,10 +24,10 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @Slf4j
 @RequestMapping("/paperManager")
-public class PaperController {
+public class PaperManagementController {
 
     @Autowired
-    private IPaperService  paperService;
+    private IPaperManagementService paperService;
 
     @Operation(summary = "分页条件查询试卷")
     @GetMapping("/page")
@@ -36,5 +36,14 @@ public class PaperController {
         PageResult<PaperVO> pageResult = paperService.pagePaper(paperQueryDTO);
         return ResponseResult.success(pageResult);
     }
+
+    @Operation(summary = "添加试卷")
+    @PostMapping("/addPaper")
+    public ResponseResult<Void> addPaper(@RequestBody PaperContentDTO paperContentDTO) {
+        log.info("保存试卷: {}", paperContentDTO);
+        paperService.addPaper(paperContentDTO);
+        return ResponseResult.success("保存成功");
+    }
+
 
 }
