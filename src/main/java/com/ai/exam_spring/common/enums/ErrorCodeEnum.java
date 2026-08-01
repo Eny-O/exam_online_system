@@ -25,9 +25,11 @@ public enum ErrorCodeEnum {
     USER_NOT_LOGIN("1004", "用户未登录"),
     PERMISSION_DENIED("1005", "无权限"),
     ACCOUNT_DISABLED("1006", "账号已被禁用"),
+    PLEASE_FLUSH_AFTER_RETRY("1007", "请刷新页面后重试"),
 
     // 题目错误码
     QUESTION_NOT_FOUND("2001", "题目不存在"),
+    QUESTION_REFERENCE_PAPER("2002", "题目关联了试卷"),
 
     // 考试错误码
     EXAM_NOT_FOUND("3001", "考试不存在"),
@@ -39,8 +41,10 @@ public enum ErrorCodeEnum {
     FILE_CONTENT_REQUIRED_FIELD_EMPTY("4004", "文件内容有必填项为空"),
 
     // 试卷错误码
-    PAPER_NOT_EMPTY("5001", "试卷不能为空");
-
+    PAPER_NOT_EMPTY("5001", "试卷不能为空"),
+    PAPER_NOT_EXIST("5002","试卷不存在"),
+    PAPER_ALREADY_ENABLE_NOT_UPDATE("5003",  "试卷已启用不能更改"),
+    PAPER_ALREADY_ENABLE_NOT_DELETE("5004", "试卷已启用不能删除");
 
     private final String code;
     private final String message;

@@ -31,4 +31,9 @@ public interface QuestionManagementService {
      * 批量删除完整题目
      */
     void removeQuestionCompleteByIds(List<Integer> ids);
+
+    /**
+     * 批量查询完整题目
+     */
+    List<QuestionCompleteVO> getQuestionCompleteByIds(List<Integer> ids);
 }

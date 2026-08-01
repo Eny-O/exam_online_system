@@ -11,10 +11,10 @@ import java.util.List;
  * <p>
  * 继承 QuestionVO 的基本字段，额外包含编辑所需的完整信息。
  */
-@Data
 @EqualsAndHashCode(callSuper = true)
+@Data
 @Schema(description = "题目完整信息展示对象")
-public class QuestionCompleteVO extends QuestionVO {
+public class QuestionCompleteVO extends BaseQuestionVO  {
 
     @Schema(description = "正确答案")
     private String answer;

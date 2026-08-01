@@ -1,6 +1,8 @@
 package com.ai.exam_spring.handler;
 
+import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.stereotype.Component;
 
@@ -9,6 +11,7 @@ import java.time.LocalDateTime;
  * 自定义元数据对象处理器
  * 实现基于mybatis的创建时间和更新时间的自动填充
  */
+@Slf4j
 @Component
 public class MyMetaObjectHandler implements MetaObjectHandler {
 
@@ -27,6 +30,10 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
     public void insertFill(MetaObject metaObject) {
         this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
         this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
+
+        Integer currentUserId = parseCurrentUserId();
+        this.strictInsertFill(metaObject, "creatorId", Integer.class, currentUserId);
+        this.strictInsertFill(metaObject, "updaterId", Integer.class, currentUserId);
     }
 
     /**
@@ -36,5 +43,23 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
     @Override
     public void updateFill(MetaObject metaObject) {
         this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
+
+        Integer currentUserId = parseCurrentUserId();
+        this.strictUpdateFill(metaObject, "updaterId", Integer.class, currentUserId);
+    }
+
+    /**
+     * 将 SecurityUtil 返回的 String 类型用户ID 转为 Integer，
+     * 与实体类字段类型保持一致，strictInsertFill/strictUpdateFill 才能匹配成功。
+     */
+    private Integer parseCurrentUserId() {
+        String userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) return null;
+        try {
+            return Integer.parseInt(userId);
+        } catch (NumberFormatException e) {
+            log.warn("当前用户ID格式异常, userId={}", userId, e);
+            return null;
+        }
     }
 }

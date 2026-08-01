@@ -14,6 +14,8 @@ import com.ai.exam_spring.domain.vo.QuestionVO;
 import com.ai.exam_spring.mapper.QuestionManagementMapper;
 import com.ai.exam_spring.domain.vo.QuestionCompleteVO;
 import com.ai.exam_spring.mapper.QuestionOptionMapper;
+import com.ai.exam_spring.service.ExamValidationService;
+import com.ai.exam_spring.service.IPaperManagementService;
 import com.ai.exam_spring.service.QuestionManagementService;
 import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
@@ -23,7 +25,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 
 /**
@@ -37,6 +42,9 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
 
     @Autowired
     private QuestionOptionMapper questionOptionMapper;
+
+    @Autowired
+    private ExamValidationService examValidationService;
 
 
     /**
@@ -102,7 +110,8 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
     @Override
     public QuestionCompleteVO getQuestionComplete(Integer id) {
         Question question = questionManagementMapper.selectById(id);
-        List<QuestionOption> optionList = questionOptionMapper.selectList(new LambdaQueryWrapper<QuestionOption>().eq(QuestionOption::getQuestionId, id));
+        List<QuestionOption> optionList = questionOptionMapper.selectList(
+                new LambdaQueryWrapper<QuestionOption>().eq(QuestionOption::getQuestionId, id));
         QuestionCompleteVO questionCompleteVO = new QuestionCompleteVO();
         BeanUtil.copyProperties(question, questionCompleteVO);
         List<QuestionOptionVO> questionOptionVOS = optionList.stream().map(option -> {
@@ -122,10 +131,51 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
     @Override
     public void removeQuestionCompleteByIds(List<Integer> ids) {
         if (ids == null || ids.isEmpty()) return;
+        boolean isDelete = examValidationService.validateQuestionsReferenceAnyPaper(ids);
+        if (!isDelete) throw new BusinessException(ErrorCodeEnum.QUESTION_REFERENCE_PAPER);
         //先删除选项
         questionOptionMapper.delete(new LambdaQueryWrapper<QuestionOption>().in(QuestionOption::getQuestionId,ids));
         //后删除题目
         questionManagementMapper.deleteByIds(ids);
+    }
+
+    /**
+     * 批量查询完整题目
+     * @param ids
+     * @return List<QuestionCompleteVO>
+     */
+    @Override
+    public List<QuestionCompleteVO> getQuestionCompleteByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) return Collections.emptyList();
+        List<Question> questions = questionManagementMapper.selectByIds(ids);
+        if (questions == null || questions.isEmpty()) return Collections.emptyList();
+        List<Integer> idList = questions.stream().map(Question::getId).toList();
+        // 获取所有选项
+        List<QuestionOption> allOptions = questionOptionMapper.selectList(
+                new LambdaQueryWrapper<QuestionOption>().in(QuestionOption::getQuestionId,idList));
+        Map<Integer, List<QuestionOption>> map = Collections.emptyMap();
+        if (allOptions != null && !allOptions.isEmpty()) {
+            // 映射题目与其对应的选项
+            map = allOptions.stream().collect(Collectors.groupingBy(QuestionOption::getQuestionId));
+        }
+        Map<Integer, List<QuestionOption>> questionOptiionsMap = map;
+
+        // 将questions转换为QuestionCompleteVOS,并将选项转换为QuestionOptionVOS,并返回完整的题目列表
+        return questions.stream().map(question -> {
+            QuestionCompleteVO questionCompleteVO = new QuestionCompleteVO();
+            BeanUtil.copyProperties(question, questionCompleteVO);
+            // 拿到选项
+            List<QuestionOption> questionOptions = questionOptiionsMap.getOrDefault(question.getId(), Collections.emptyList());
+            if (questionOptions.isEmpty()) return questionCompleteVO;
+            // 将questionOptions转换为QuestionOptionVOS
+            List<QuestionOptionVO> questionOptionVOS = questionOptions.stream().map(questionOption -> {
+                QuestionOptionVO questionOptionVO = new QuestionOptionVO();
+                BeanUtil.copyProperties(questionOption, questionOptionVO);
+                return questionOptionVO;
+            }).toList();
+            questionCompleteVO.setOptions(questionOptionVOS);
+            return questionCompleteVO;
+        }).toList();
     }
 
 }

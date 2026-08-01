@@ -8,6 +8,9 @@ import java.util.List;
 @Data
 @Schema(description = "试卷内容信息请求对象")
 public class PaperContentDTO {
+    @Schema(description = "试卷ID(新增不填,更新要填)")
+    private Integer id;
+
     @Schema(description = "试卷名称")
     private String name;
 

@@ -4,6 +4,7 @@ import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.domain.dto.PaperContentDTO;
 import com.ai.exam_spring.domain.dto.PaperQueryDTO;
+import com.ai.exam_spring.domain.vo.PaperContentVO;
 import com.ai.exam_spring.domain.vo.PaperVO;
 import com.ai.exam_spring.service.IPaperManagementService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,6 +12,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * <p>
@@ -42,7 +45,31 @@ public class PaperManagementController {
     public ResponseResult<Void> addPaper(@RequestBody PaperContentDTO paperContentDTO) {
         log.info("保存试卷: {}", paperContentDTO);
         paperService.addPaper(paperContentDTO);
-        return ResponseResult.success("保存成功");
+        return ResponseResult.success();
+    }
+
+    @Operation(summary = "更新试卷")
+    @PutMapping("/updatePaper")
+    public ResponseResult<Void> updatePaper(@RequestBody PaperContentDTO paperContentDTO) {
+        log.info("更新试卷: {}", paperContentDTO);
+        paperService.addPaper(paperContentDTO);
+        return ResponseResult.success();
+    }
+
+    @Operation(summary = "查询试卷(ById)")
+    @GetMapping("queryPaperById/{id}")
+    public ResponseResult<PaperContentVO> queryPaperById(@PathVariable Integer id) {
+        log.info("查询试卷: {}", id);
+        PaperContentVO paperContentVO = paperService.getPaperById(id);
+        return ResponseResult.success(paperContentVO);
+    }
+
+    @Operation(summary = "批量删除试卷")
+    @DeleteMapping("deletePaperById")
+    public ResponseResult<Void> deletePaperByIds(@RequestBody List<Integer> ids) {
+        log.info("批量删除试卷: {}", ids);
+        paperService.removePaperByIds(ids);
+        return ResponseResult.success();
     }
 
 

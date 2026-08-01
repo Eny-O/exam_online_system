@@ -7,21 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Schema(description = "试卷信息展示对象")
-public class PaperVO {
-    @Schema(description = "主键id")
-    private Long id;
-
-    @Schema(description = "试卷名称")
-    private String name;
-
-    @Schema(description = "考试时间")
-    private Integer examTime;
-
-    @Schema(description = "总分")
-    private Integer totalScore;
-
-    @Schema(description = "试卷描述")
-    private String description;
+public class PaperVO extends BasePaperVO{
 
     @Schema(description = "创建教师姓名")
     private String teacherName;

@@ -4,8 +4,12 @@ import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.domain.dto.PaperContentDTO;
 import com.ai.exam_spring.domain.dto.PaperQueryDTO;
 import com.ai.exam_spring.domain.entity.Paper;
+import com.ai.exam_spring.domain.vo.PaperContentVO;
+import com.ai.exam_spring.domain.vo.PaperQuestionVO;
 import com.ai.exam_spring.domain.vo.PaperVO;
 import com.baomidou.mybatisplus.extension.service.IService;
+
+import java.util.List;
 
 /**
  * <p>
@@ -20,4 +24,8 @@ public interface IPaperManagementService extends IService<Paper> {
      PageResult<PaperVO> pagePaper(PaperQueryDTO paperQueryDTO);
 
     void addPaper(PaperContentDTO paperContentDTO);
+
+    PaperContentVO getPaperById(Integer id);
+
+    void removePaperByIds(List<Integer> id);
 }
