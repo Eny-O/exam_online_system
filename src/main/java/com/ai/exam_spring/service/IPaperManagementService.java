@@ -3,6 +3,7 @@ package com.ai.exam_spring.service;
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.domain.dto.PaperContentDTO;
 import com.ai.exam_spring.domain.dto.PaperQueryDTO;
+import com.ai.exam_spring.domain.dto.PaperStatusDTO;
 import com.ai.exam_spring.domain.entity.Paper;
 import com.ai.exam_spring.domain.vo.PaperContentVO;
 import com.ai.exam_spring.domain.vo.PaperQuestionVO;
@@ -28,4 +29,6 @@ public interface IPaperManagementService extends IService<Paper> {
     PaperContentVO getPaperById(Integer id);
 
     void removePaperByIds(List<Integer> id);
+
+    void updatePaperStatus(PaperStatusDTO paperStatusDTO);
 }

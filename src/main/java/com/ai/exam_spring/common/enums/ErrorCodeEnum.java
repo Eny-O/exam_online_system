@@ -26,6 +26,7 @@ public enum ErrorCodeEnum {
     PERMISSION_DENIED("1005", "无权限"),
     ACCOUNT_DISABLED("1006", "账号已被禁用"),
     PLEASE_FLUSH_AFTER_RETRY("1007", "请刷新页面后重试"),
+    PARAM_ERROR("1008", "参数错误"),
 
     // 题目错误码
     QUESTION_NOT_FOUND("2001", "题目不存在"),
@@ -44,7 +45,8 @@ public enum ErrorCodeEnum {
     PAPER_NOT_EMPTY("5001", "试卷不能为空"),
     PAPER_NOT_EXIST("5002","试卷不存在"),
     PAPER_ALREADY_ENABLE_NOT_UPDATE("5003",  "试卷已启用不能更改"),
-    PAPER_ALREADY_ENABLE_NOT_DELETE("5004", "试卷已启用不能删除");
+    PAPER_ALREADY_ENABLE_NOT_DELETE("5004", "试卷已启用不能删除"),
+    PAPER_STATUS_TRANSFER_NOT_ALLOWED("5005", "试卷状态转换不允许");
 
     private final String code;
     private final String message;

@@ -1,5 +1,7 @@
 package com.ai.exam_spring.common.status;
 
+import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 import java.util.List;
@@ -8,9 +10,11 @@ import java.util.List;
 public enum PaperStatus {
 
     DRAFT(0,"草稿"),
-    PEDING_ENABLE(1,"待启用"),
+    PENDING_ENABLE(1,"待启用"),
     ALREADY_ENABLE(2,"已启用");
 
+    @EnumValue
+    @JsonValue
     private final Integer code;
     private final String message;
 
@@ -21,9 +25,9 @@ public enum PaperStatus {
 
     public List<PaperStatus> getAllowedTargets() {
         return switch (this) {
-            case DRAFT -> List.of(PEDING_ENABLE);
-            case PEDING_ENABLE -> List.of(ALREADY_ENABLE, DRAFT);
-            case ALREADY_ENABLE -> List.of(PEDING_ENABLE);
+            case DRAFT -> List.of(PENDING_ENABLE);
+            case PENDING_ENABLE -> List.of(ALREADY_ENABLE, DRAFT);
+            case ALREADY_ENABLE -> List.of(PENDING_ENABLE);
             default -> throw new IllegalStateException("未知状态 " + this);
         };
     }

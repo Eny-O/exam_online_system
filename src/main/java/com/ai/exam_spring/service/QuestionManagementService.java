@@ -20,7 +20,7 @@ public interface QuestionManagementService {
     /**
      * 添加完整题目
      */
-    void addQuestionComplete(QuestionCompleteDTO questionCompleteDTO);
+    Integer addQuestionComplete(QuestionCompleteDTO questionCompleteDTO);
 
     /**
      * 根据题目ID查询完整题目

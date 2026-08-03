@@ -8,6 +8,7 @@ import com.ai.exam_spring.common.status.PaperStatus;
 import com.ai.exam_spring.domain.dto.PaperContentDTO;
 import com.ai.exam_spring.domain.dto.PaperQueryDTO;
 import com.ai.exam_spring.domain.dto.PaperQuestionDTO;
+import com.ai.exam_spring.domain.dto.PaperStatusDTO;
 import com.ai.exam_spring.domain.entity.Paper;
 import com.ai.exam_spring.domain.entity.PaperQuestion;
 import com.ai.exam_spring.domain.vo.PaperContentVO;
@@ -21,6 +22,7 @@ import com.ai.exam_spring.service.QuestionManagementService;
 import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -82,7 +84,7 @@ public class PaperManagementManagementServiceImpl extends ServiceImpl<PaperManag
             Paper existPaper = baseMapper.selectById(paper.getId());
             if (existPaper ==  null) throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
             // 状态为已启用的试卷不能更新,确保原子性
-            if (Objects.equals(existPaper.getStatus(), PaperStatus.ALREADY_ENABLE.getCode())) {
+            if (Objects.equals(existPaper.getStatus(), PaperStatus.ALREADY_ENABLE)) {
                 throw new BusinessException(ErrorCodeEnum.PAPER_ALREADY_ENABLE_NOT_UPDATE);
             }
             paper.setVersion(existPaper.getVersion());
@@ -98,8 +100,14 @@ public class PaperManagementManagementServiceImpl extends ServiceImpl<PaperManag
         // 新增试卷题目关联表数据
         Integer BackPaperId = paper.getId();
         List<PaperQuestionDTO> paperQuestionDTOS = paperContentDTO.getQuestions();
-        // 题目列表为空则不新增试卷题目关联表数据
-        if (paperQuestionDTOS == null || paperQuestionDTOS.isEmpty()) return;
+        // 题目列表为空则不新增试卷题目关联表数据,并将状态设为草稿
+        if (paperQuestionDTOS == null || paperQuestionDTOS.isEmpty()) {
+            baseMapper.update(
+                    new LambdaUpdateWrapper<Paper>()
+                            .set(Paper::getStatus, PaperStatus.DRAFT)
+                            .eq(Paper::getId, BackPaperId));
+            return;
+        }
         List<PaperQuestion> paperQuestions = paperQuestionDTOS.stream().map(paperQuestionDTO -> {
             PaperQuestion paperQuestion = new PaperQuestion();
             BeanUtil.copyProperties(paperQuestionDTO, paperQuestion);
@@ -168,12 +176,33 @@ public class PaperManagementManagementServiceImpl extends ServiceImpl<PaperManag
         Long deferenceCow = baseMapper.selectCount(
                 new LambdaQueryWrapper<Paper>()
                         .in(Paper::getId, ids)
-                        .eq(Paper::getStatus, PaperStatus.ALREADY_ENABLE.getCode()));
+                        .eq(Paper::getStatus, PaperStatus.ALREADY_ENABLE));
         if (deferenceCow > 0) throw new BusinessException(ErrorCodeEnum.PAPER_ALREADY_ENABLE_NOT_DELETE);
         paperQuestionMapper.delete(new LambdaQueryWrapper<PaperQuestion>().in(PaperQuestion::getPaperId, ids));
         int i = baseMapper.delete(new LambdaQueryWrapper<Paper>()
                 .in(Paper::getId,ids)
-                .ne(Paper::getStatus, PaperStatus.ALREADY_ENABLE.getCode()));//  状态为已启用的试卷不能删除,确保原子性
+                .ne(Paper::getStatus, PaperStatus.ALREADY_ENABLE));//  状态为已启用的试卷不能删除,确保原子性
         if (i <= 0) throw new BusinessException(ErrorCodeEnum.PLEASE_FLUSH_AFTER_RETRY);
+    }
+
+    /**
+     * 修改试卷状态
+     * @param paperStatusDTO
+     * TODO 后续完成试卷基本业务后,添加试卷是否被引用的判断
+     */
+    @Override
+    public void updatePaperStatus(PaperStatusDTO paperStatusDTO) {
+        Paper paper = baseMapper.selectById(paperStatusDTO.getId());
+        if (paper == null) throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
+        PaperStatus existStatus = paper.getStatus();
+        if (existStatus == null) throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        PaperStatus targetStatus = paperStatusDTO.getStatus();
+        if (!existStatus.canTransferTo(targetStatus)) throw new BusinessException(ErrorCodeEnum.PAPER_STATUS_TRANSFER_NOT_ALLOWED);
+        int i = baseMapper.update(
+                new LambdaUpdateWrapper<Paper>()
+                        .set(Paper::getStatus, targetStatus)
+                        .eq(Paper::getId, paperStatusDTO.getId())
+                        .eq(Paper::getStatus, existStatus));
+        if (i <= 0) throw new BusinessException(ErrorCodeEnum.OPERATION_FAILED);
     }
 }

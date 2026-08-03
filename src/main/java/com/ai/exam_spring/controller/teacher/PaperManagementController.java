@@ -4,6 +4,7 @@ import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.domain.dto.PaperContentDTO;
 import com.ai.exam_spring.domain.dto.PaperQueryDTO;
+import com.ai.exam_spring.domain.dto.PaperStatusDTO;
 import com.ai.exam_spring.domain.vo.PaperContentVO;
 import com.ai.exam_spring.domain.vo.PaperVO;
 import com.ai.exam_spring.service.IPaperManagementService;
@@ -69,6 +70,14 @@ public class PaperManagementController {
     public ResponseResult<Void> deletePaperByIds(@RequestBody List<Integer> ids) {
         log.info("批量删除试卷: {}", ids);
         paperService.removePaperByIds(ids);
+        return ResponseResult.success();
+    }
+
+    @Operation(summary = "更新试卷状态")
+    @PutMapping("/updatePaperStatus")
+    public ResponseResult<Void> updatePaperStatus(@RequestBody PaperStatusDTO paperStatusDTO) {
+        log.info("更新试卷状态: {}", paperStatusDTO);
+        paperService.updatePaperStatus(paperStatusDTO);
         return ResponseResult.success();
     }
 

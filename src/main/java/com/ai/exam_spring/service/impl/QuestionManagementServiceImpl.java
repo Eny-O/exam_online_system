@@ -78,7 +78,7 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public void addQuestionComplete(QuestionCompleteDTO questionCompleteDTO) {
+    public Integer addQuestionComplete(QuestionCompleteDTO questionCompleteDTO) {
         Question question = new Question();
         BeanUtil.copyProperties(questionCompleteDTO, question);
         String currentUserId = SecurityUtil.getCurrentUserId();
@@ -90,7 +90,7 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
             questionManagementMapper.insert(question);
         } else {
             questionManagementMapper.updateById(question);
-            //TODO 当为简答或判断题时,options可能为空,导致原本的数据被删除了
+            //TODO 更新时如果前端传了部分 options（比如漏传了），旧数据已经被删了，新数据又不完整，虽然事务保证了一致性，但结果可能不符合预期。
             questionOptionMapper.delete(new LambdaQueryWrapper<QuestionOption>().eq(QuestionOption::getQuestionId,question.getId()));
         }
         List<QuestionOptionDTO> options = questionCompleteDTO.getOptions();
@@ -102,6 +102,7 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
                 questionOptionMapper.insert(questionOption);
             });
         }
+        return question.getId();
     }
     /**
      * 根据题目ID查询完整题目

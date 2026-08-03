@@ -1,9 +1,12 @@
 package com.ai.exam_spring.domain.entity;
 
+import com.ai.exam_spring.common.status.PaperStatus;
 import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.ibatis.type.EnumOrdinalTypeHandler;
+
 import java.time.LocalDateTime;
 
 /**
@@ -12,7 +15,6 @@ import java.time.LocalDateTime;
  * </p>
  *
  */
-@TableName("paper")
 @Getter
 @Setter
 @Schema(description = "试卷的实体对象")
@@ -42,7 +44,7 @@ public class Paper {
     private Integer updaterId;
 
     @Schema(description = "试卷状态:0为草稿,1为待启用,2为已启用")
-    private Integer status = 0;
+    private PaperStatus status = PaperStatus.PENDING_ENABLE;
 
     @Schema(description = "版本号")
     @Version

@@ -35,10 +35,10 @@ public class QuestionManagementController {
 
     @Operation(summary = "添加题目", description = "添加完整题目")
     @PostMapping("/addQuestionComplete")
-    public ResponseResult<Void> addQuestionComplete(@Validated @RequestBody QuestionCompleteDTO questionCompleteDTO){
+    public ResponseResult<Integer> addQuestionComplete(@Validated @RequestBody QuestionCompleteDTO questionCompleteDTO){
         log.info("添加题目: {}", questionCompleteDTO);
-        questionManagementService.addQuestionComplete(questionCompleteDTO);
-        return ResponseResult.success();
+        Integer id = questionManagementService.addQuestionComplete(questionCompleteDTO);
+        return ResponseResult.success(id);
     }
     @Operation(summary = "更新题目", description = "更新完整题目")
     @PutMapping("/updateQuestionComplete")

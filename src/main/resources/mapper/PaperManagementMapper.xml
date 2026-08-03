@@ -10,6 +10,7 @@
             p.total_score AS totalScore,
             p.description,
             s.real_name AS teacherName,
+            p.status,
             p.create_time AS createTime,
             p.update_time AS updateTime
         FROM paper p
