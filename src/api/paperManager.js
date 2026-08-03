@@ -5,9 +5,9 @@ export function getPaperPage(params) {
   return request.get("/paperManager/page", { params });
 }
 
-// 根据ID查询试卷详情
+// 根据ID查询试卷详情（含题目、选项、答案）
 export function getPaperById(id) {
-  return request.get(`/paperManager/getPaperById/${id}`);
+  return request.get(`/paperManager/queryPaperById/${id}`);
 }
 
 // 新增试卷
@@ -33,4 +33,9 @@ export function savePaperQuestions(paperId, data) {
 // 获取试卷的题目列表（含选项、答案）
 export function getPaperQuestions(paperId) {
   return request.get(`/paperManager/${paperId}/questions`);
+}
+
+// 更新试卷状态（0草稿 1待启用 2已启用）
+export function updatePaperStatus(id, status) {
+  return request.put(`/paperManager/updatePaperStatus`, { id, status });
 }

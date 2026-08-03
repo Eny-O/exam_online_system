@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
@@ -12,10 +12,15 @@ import {
   ArrowRight,
 } from "@element-plus/icons-vue";
 import {
+  addPaper,
+  updatePaper,
   getPaperById,
-  getPaperQuestions,
   savePaperQuestions,
 } from "@/api/paperManager";
+import {
+  getQuestionCompleteById,
+  addQuestionComplete,
+} from "@/api/questionManager";
 import {
   questionBankTarget,
   questionBankResult,
@@ -43,6 +48,14 @@ const activePanels = ref([]);
 const nextGroupId = ref(1);
 const nextQuestionSeq = ref(1);
 const showQuestionBank = ref(false); // 题库选题弹窗
+const hasUnsavedChanges = ref(false); // 是否有未保存的编辑
+
+// 页面关闭/刷新前的离开提示
+const beforeUnloadHandler = (e) => {
+  if (hasUnsavedChanges.value) {
+    e.preventDefault();
+  }
+};
 
 // ===== 题目勾选（批量删除用） =====
 const checkedIds = ref(new Set());
@@ -86,6 +99,18 @@ const typeStats = computed(() => {
   }));
 });
 
+// 全局题号映射：questionId -> 全局序号（跨分组连续编号）
+const globalQuestionSeq = computed(() => {
+  const map = {};
+  let seq = 1;
+  questionList.value.forEach((group) => {
+    group.questions.forEach((q) => {
+      map[q.id] = seq++;
+    });
+  });
+  return map;
+});
+
 // ===== 获取试卷数据 =====
 const fetchPaperData = async () => {
   loading.value = true;
@@ -95,40 +120,55 @@ const fetchPaperData = async () => {
       paperData.value = {
         id: null,
         name: route.query.name || "",
-        totalTime: Number(route.query.totalTime) || 120,
+        totalTime: Number(route.query.examTime) || 120,
         description: route.query.description || "",
       };
       return;
     }
 
+    // 编辑已有试卷：调用 queryPaperById，返回 PaperContentVO（含题目、选项、答案）
     const res = await getPaperById(route.params.id);
-    paperData.value = res.data;
-    // 尝试加载已有题目
-    try {
-      const qRes = await getPaperQuestions(route.params.id);
-      if (qRes.data && qRes.data.length > 0) {
-        // 按题型分组
-        const groupMap = {};
-        qRes.data.forEach((q) => {
+    const raw = res.data;
+    paperData.value = {
+      id: raw.id,
+      name: raw.name,
+      totalTime: raw.examTime || 120,
+      description: raw.description || "",
+    };
+
+    // 从 PaperContentVO.paperQuestionVOS 中加载题目（按题型分组）
+    // API 返回结构: paperQuestionVOS: [{ sortOrder, score, questionCompleteVO: { id, content, type, ... } }]
+    const paperQuestions = raw.paperQuestionVOS;
+    if (paperQuestions && paperQuestions.length > 0) {
+      const groupMap = {};
+      // 按 sortOrder 排序确保题目顺序正确
+      paperQuestions
+        .slice()
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .forEach((pq) => {
+          const q = pq.questionCompleteVO;
+          if (!q) return;
           if (!groupMap[q.type]) {
             groupMap[q.type] = {
               id: nextGroupId.value++,
               type: q.type,
-              score: q.score || 1,
+              score: pq.score || 1, // 从 paperQuestion 包装对象取每题分数
               questions: [],
             };
           }
           groupMap[q.type].questions.push({
-            ...q,
             id: q.id,
-            seq: groupMap[q.type].questions.length + 1,
+            content: q.content,
+            type: q.type,
+            options: q.options || [],
+            answer: q.answer || "",
+            analysis: q.analysis || "",
+            knowledgePoint: q.knowledgePoint || "",
+            difficulty: q.difficulty || "",
           });
         });
-        questionList.value = Object.values(groupMap);
-        activePanels.value = questionList.value.map((g) => g.id);
-      }
-    } catch {
-      // 题目接口不可用时忽略
+      questionList.value = Object.values(groupMap);
+      activePanels.value = questionList.value.map((g) => g.id);
     }
   } catch (error) {
     console.warn("后端接口不可用，使用模拟数据");
@@ -204,6 +244,7 @@ const confirmAddType = () => {
     }
   });
   addDialogVisible.value = false;
+  hasUnsavedChanges.value = true;
   ElMessage.success("添加成功");
 };
 
@@ -219,6 +260,7 @@ const deleteQuestionType = (groupId) => {
     .then(() => {
       questionList.value = questionList.value.filter((g) => g.id !== groupId);
       activePanels.value = activePanels.value.filter((id) => id !== groupId);
+      hasUnsavedChanges.value = true;
       ElMessage.success("删除成功");
     })
     .catch(() => {});
@@ -238,6 +280,7 @@ const deleteQuestion = (groupId, questionId) => {
     questionList.value = questionList.value.filter((g) => g.id !== groupId);
     activePanels.value = activePanels.value.filter((id) => id !== groupId);
   }
+  hasUnsavedChanges.value = true;
   ElMessage.success("题目已删除");
 };
 
@@ -252,15 +295,182 @@ const editTypeScore = (group) => {
   })
     .then(({ value }) => {
       group.score = parseFloat(value);
+      hasUnsavedChanges.value = true;
       ElMessage.success("修改成功");
     })
     .catch(() => {});
 };
 
-// ===== 手动录入 =====
+// ===== 手动录入抽屉 =====
+const manualDrawerVisible = ref(false);
+const manualGroupId = ref(null);
+const manualFormRef = ref(null);
+const manualSubmitting = ref(false);
+
+const manualForm = reactive({
+  content: "",
+  difficulty: "medium",
+  knowledgePoint: "",
+  options: [],
+  answer: "",
+  analysis: "",
+});
+
+const manualRules = {
+  content: [
+    { required: true, message: "请输入题目内容", trigger: "blur" },
+    { min: 5, message: "题目内容至少5个字符", trigger: "blur" },
+  ],
+  answer: [{ required: true, message: "请输入正确答案", trigger: "blur" }],
+};
+
+// 当前手动录入的目标分组
+const manualTargetGroup = computed(() =>
+  questionList.value.find((g) => g.id === manualGroupId.value)
+);
+
+// 初始化选项（默认 A/B/C/D）
+const manualInitOptions = () => {
+  manualForm.options = [
+    { label: "A", content: "" },
+    { label: "B", content: "" },
+    { label: "C", content: "" },
+    { label: "D", content: "" },
+  ];
+  manualForm.answer = "";
+};
+
+// 添加选项
+const manualAddOption = () => {
+  const labels = ["A", "B", "C", "D", "E", "F", "G", "H"];
+  const nextLabel = labels[manualForm.options.length];
+  if (nextLabel) {
+    manualForm.options.push({ label: nextLabel, content: "" });
+  } else {
+    ElMessage.warning("最多只能添加8个选项");
+  }
+};
+
+// 删除选项
+const manualDeleteOption = (index) => {
+  if (manualForm.options.length <= 2) {
+    ElMessage.warning("至少保留2个选项");
+    return;
+  }
+  manualForm.options.splice(index, 1);
+  const labels = ["A", "B", "C", "D", "E", "F", "G", "H"];
+  manualForm.options.forEach((opt, idx) => {
+    opt.label = labels[idx];
+  });
+};
+
+// 多选答案转换：字符串 -> 数组
+const manualGetMultipleAnswerArray = () => {
+  if (manualTargetGroup.value?.type === "multiple" && manualForm.answer) {
+    return manualForm.answer.split(",").map((item) => item.trim());
+  }
+  return [];
+};
+
+// 多选答案转换：数组 -> 字符串
+const manualSetMultipleAnswer = (checkedValues) => {
+  manualForm.answer = checkedValues.join(",");
+};
+
+// 重置手动录入表单
+const resetManualForm = () => {
+  if (manualFormRef.value) {
+    manualFormRef.value.resetFields();
+  }
+  manualForm.content = "";
+  manualForm.difficulty = "medium";
+  manualForm.knowledgePoint = "";
+  manualForm.answer = "";
+  manualForm.analysis = "";
+  manualInitOptions();
+};
+
+// 打开手动录入抽屉
 const manualEntry = (groupId) => {
-  ElMessage.info("手动录入功能开发中");
-  // TODO: 打开手动录入弹窗
+  const group = questionList.value.find((g) => g.id === groupId);
+  if (!group) return;
+  manualGroupId.value = groupId;
+  resetManualForm();
+  manualDrawerVisible.value = true;
+};
+
+// 提交手动录入
+const handleManualSubmit = async () => {
+  if (!manualFormRef.value) return;
+  try {
+    await manualFormRef.value.validate();
+  } catch {
+    return;
+  }
+
+  const groupType = manualTargetGroup.value?.type;
+
+  // 单选/多选题需校验选项内容非空
+  if (groupType === "single" || groupType === "multiple") {
+    const hasEmpty = manualForm.options.some((opt) => !opt.content.trim());
+    if (hasEmpty) {
+      ElMessage.warning("请填写所有选项内容");
+      return;
+    }
+  }
+
+  manualSubmitting.value = true;
+  try {
+    // 构造与后端 QuestionCompleteDTO 一致的数据
+    const submitData = {
+      content: manualForm.content,
+      type: groupType,
+      difficulty: manualForm.difficulty,
+      knowledgePoint: manualForm.knowledgePoint,
+      options:
+        groupType === "single" || groupType === "multiple"
+          ? manualForm.options.map((opt) => ({
+              label: opt.label,
+              content: opt.content,
+            }))
+          : [],
+      answer: manualForm.answer,
+      analysis: manualForm.analysis,
+    };
+
+    // 调用后端入库，获取真实题目 id
+    const res = await addQuestionComplete(submitData);
+    const realId = res.data;
+
+    const newQuestion = {
+      id: realId,
+      content: manualForm.content,
+      type: groupType,
+      difficulty: manualForm.difficulty,
+      knowledgePoint: manualForm.knowledgePoint,
+      options: submitData.options,
+      answer: manualForm.answer,
+      analysis: manualForm.analysis,
+    };
+
+    manualTargetGroup.value.questions.push(newQuestion);
+    hasUnsavedChanges.value = true;
+    ElMessage.success("题目已添加");
+
+    manualDrawerVisible.value = false;
+    resetManualForm();
+  } catch (error) {
+    console.error("手动录入失败:", error);
+    ElMessage.error("题目添加失败，请重试");
+  } finally {
+    manualSubmitting.value = false;
+  }
+};
+
+// 取消手动录入
+const handleManualCancel = () => {
+  manualDrawerVisible.value = false;
+  resetManualForm();
 };
 
 // ===== 题库选题（覆盖层方式，组件不销毁，状态不丢失） =====
@@ -277,24 +487,48 @@ const goToQuestionBank = (groupId) => {
 };
 
 // 题库选题确认回调
-const handleQuestionBankConfirm = () => {
+const handleQuestionBankConfirm = async () => {
   showQuestionBank.value = false;
   // 直接从共享状态读取结果
   const result = questionBankResult.value;
   if (!result) return;
   const { groupId, questions } = result;
   const group = questionList.value.find((g) => g.id === groupId);
-  if (group && questions && questions.length > 0) {
-    questions.forEach((q) => {
-      if (!group.questions.some((eq) => eq.id === q.id)) {
-        group.questions.push({
-          ...q,
-          id: q.id || Date.now() + Math.random(),
-          seq: nextQuestionSeq.value++,
-        });
-      }
-    });
-    ElMessage.success(`已添加 ${questions.length} 道题目`);
+  if (!group || !questions || questions.length === 0) return;
+
+  let addedCount = 0;
+  for (const q of questions) {
+    // 跳过已存在的题目
+    if (group.questions.some((eq) => eq.id === q.id)) continue;
+    try {
+      // 调用题目管理接口获取完整题目（含选项、答案、解析）
+      const res = await getQuestionCompleteById(q.id);
+      const full = res.data;
+      group.questions.push({
+        id: full.id,
+        content: full.content,
+        type: full.type,
+        options: full.options || [],
+        answer: full.answer || "",
+        analysis: full.analysis || "",
+        knowledgePoint: full.knowledgePoint || "",
+        difficulty: full.difficulty || "",
+      });
+      addedCount++;
+    } catch {
+      // 接口不可用时用基础数据兜底
+      group.questions.push({
+        ...q,
+        id: q.id || Date.now() + Math.random(),
+        options: q.options || [],
+        answer: q.answer || "",
+      });
+      addedCount++;
+    }
+  }
+  if (addedCount > 0) {
+    ElMessage.success(`已添加 ${addedCount} 道题目`);
+    hasUnsavedChanges.value = true;
   }
   questionBankResult.value = null;
   questionBankTarget.value = null;
@@ -328,6 +562,7 @@ const batchDelete = () => {
         (g) => g.questions.length > 0
       );
       checkedIds.value = new Set();
+      hasUnsavedChanges.value = true;
       ElMessage.success("删除成功");
     })
     .catch(() => {});
@@ -336,20 +571,44 @@ const batchDelete = () => {
 // ===== 完成 =====
 const handleComplete = async () => {
   try {
-    // 组装题目数据
+    // 组装题目数据（按 PaperQuestionDTO 格式：questionId, sortOrder, score）
+    // sortOrder 全局连续编号，不按分组重置
+    let globalSeq = 0;
     const questionsData = questionList.value.flatMap((group) =>
-      group.questions.map((q, idx) => ({
+      group.questions.map((q) => ({
         questionId: q.id,
-        questionType: group.type,
+        sortOrder: ++globalSeq,
         score: group.score,
-        sortOrder: idx + 1,
       }))
     );
-    await savePaperQuestions(route.params.id, { questions: questionsData });
+
+    if (route.params.id === "new") {
+      // 新增试卷：一次性提交试卷信息 + 题目
+      await addPaper({
+        name: paperData.value.name,
+        examTime: paperData.value.totalTime,
+        description: paperData.value.description,
+        totalScore: totalScore.value,
+        questions: questionsData,
+      });
+    } else {
+      // 编辑已有试卷：调用 updatePaper 提交完整数据
+      await updatePaper({
+        id: paperData.value.id,
+        name: paperData.value.name,
+        examTime: paperData.value.totalTime,
+        totalScore: totalScore.value,
+        description: paperData.value.description,
+        questions: questionsData,
+      });
+    }
+
+    hasUnsavedChanges.value = false;
     ElMessage.success("试卷保存成功");
   } catch (error) {
-    console.warn("保存接口不可用:", error.message);
-    ElMessage.info("已返回试卷管理页");
+    console.warn("保存失败:", error.message);
+    ElMessage.error(error.message || "保存失败，请重试");
+    return; // 失败时不跳转，留在当前页
   }
   router.push("/teacher/exampaper");
 };
@@ -373,6 +632,11 @@ const getTypeTagType = (type) => {
 // ===== 生命周期 =====
 onMounted(async () => {
   await fetchPaperData();
+  window.addEventListener("beforeunload", beforeUnloadHandler);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("beforeunload", beforeUnloadHandler);
 });
 </script>
 
@@ -392,22 +656,39 @@ onMounted(async () => {
       </el-button>
     </div>
 
-    <!-- 试卷信息展示 -->
+    <!-- 试卷信息展示（可编辑） -->
     <el-card class="info-card" shadow="hover" v-if="paperData">
       <div class="paper-info">
         <div class="info-item">
           <span class="info-label">试卷名称：</span>
-          <span class="info-value">{{ paperData.name }}</span>
+          <el-input
+            v-model="paperData.name"
+            placeholder="请输入试卷名称"
+            class="info-input"
+            @change="hasUnsavedChanges = true"
+          />
         </div>
         <div class="info-item">
           <span class="info-label">答题时间：</span>
-          <span class="info-value">{{ paperData.totalTime || 120 }} 分钟</span>
+          <el-input-number
+            v-model="paperData.totalTime"
+            :min="1"
+            :max="600"
+            :step="5"
+            controls-position="right"
+            class="info-input-number"
+            @change="hasUnsavedChanges = true"
+          />
+          <span class="info-unit">分钟</span>
         </div>
-        <div class="info-item">
+        <div class="info-item info-item-wide">
           <span class="info-label">试卷说明：</span>
-          <span class="info-value">{{
-            paperData.description || "暂无说明"
-          }}</span>
+          <el-input
+            v-model="paperData.description"
+            placeholder="请输入试卷说明"
+            class="info-input"
+            @change="hasUnsavedChanges = true"
+          />
         </div>
       </div>
     </el-card>
@@ -506,7 +787,7 @@ onMounted(async () => {
                 暂无题目，请通过"手动录入"或"题库选题"添加
               </div>
               <div
-                v-for="(q, idx) in group.questions"
+                v-for="q in group.questions"
                 :key="q.id"
                 class="question-item"
                 :class="{ 'is-checked': checkedIds.has(q.id) }"
@@ -518,7 +799,7 @@ onMounted(async () => {
                 />
                 <div class="question-main">
                   <div class="question-header">
-                    <span class="q-seq">{{ idx + 1 }}.</span>
+                    <span class="q-seq">{{ globalQuestionSeq[q.id] }}.</span>
                     <span class="q-content">{{ q.content }}</span>
                   </div>
                   <div
@@ -671,6 +952,199 @@ onMounted(async () => {
         @cancel="handleQuestionBankCancel"
       />
     </el-dialog>
+
+    <!-- 手动录入抽屉 -->
+    <el-drawer
+      v-model="manualDrawerVisible"
+      title="手动录入题目"
+      direction="rtl"
+      size="600px"
+      :close-on-click-modal="false"
+      @close="handleManualCancel"
+    >
+      <el-form
+        ref="manualFormRef"
+        :model="manualForm"
+        :rules="manualRules"
+        label-width="100px"
+        class="manual-form"
+      >
+        <!-- 题目内容 -->
+        <el-form-item label="题目内容" prop="content">
+          <el-input
+            v-model="manualForm.content"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入题目内容"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <!-- 题型（只读，跟随所在分组） -->
+        <el-form-item label="题型">
+          <el-tag :type="getTypeTagType(manualTargetGroup?.type)" size="default">
+            {{ typeMap[manualTargetGroup?.type] || "未知题型" }}
+          </el-tag>
+        </el-form-item>
+
+        <!-- 难度 -->
+        <el-form-item label="难度">
+          <el-select
+            v-model="manualForm.difficulty"
+            placeholder="请选择难度"
+            style="width: 100%"
+          >
+            <el-option label="简单" value="easy">
+              <el-tag type="success" effect="plain">简单</el-tag>
+            </el-option>
+            <el-option label="中等" value="medium">
+              <el-tag type="warning" effect="plain">中等</el-tag>
+            </el-option>
+            <el-option label="困难" value="hard">
+              <el-tag type="danger" effect="plain">困难</el-tag>
+            </el-option>
+          </el-select>
+        </el-form-item>
+
+        <!-- 知识点 -->
+        <el-form-item label="所属知识点">
+          <el-input
+            v-model="manualForm.knowledgePoint"
+            placeholder="请输入所属知识点"
+            clearable
+          />
+        </el-form-item>
+
+        <!-- 选项配置（单选、多选） -->
+        <template
+          v-if="manualTargetGroup?.type === 'single' || manualTargetGroup?.type === 'multiple'"
+        >
+          <el-form-item label="选项配置">
+            <div class="options-container">
+              <div
+                v-for="(option, index) in manualForm.options"
+                :key="index"
+                class="option-item"
+              >
+                <el-tag class="option-label">{{ option.label }}</el-tag>
+                <el-input
+                  v-model="option.content"
+                  placeholder="请输入选项内容"
+                  class="option-input"
+                />
+                <el-button
+                  type="danger"
+                  link
+                  :icon="Delete"
+                  @click="manualDeleteOption(index)"
+                  :disabled="manualForm.options.length <= 2"
+                />
+              </div>
+              <el-button
+                type="primary"
+                link
+                :icon="Plus"
+                @click="manualAddOption"
+                class="add-option-btn"
+              >
+                添加选项
+              </el-button>
+            </div>
+          </el-form-item>
+
+          <!-- 正确答案（单选） -->
+          <el-form-item
+            v-if="manualTargetGroup?.type === 'single'"
+            label="正确答案"
+            prop="answer"
+          >
+            <el-radio-group v-model="manualForm.answer">
+              <el-radio
+                v-for="option in manualForm.options"
+                :key="option.label"
+                :label="option.label"
+              >
+                {{ option.label }}
+              </el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <!-- 正确答案（多选） -->
+          <el-form-item
+            v-else-if="manualTargetGroup?.type === 'multiple'"
+            label="正确答案"
+            prop="answer"
+          >
+            <el-checkbox-group
+              :model-value="manualGetMultipleAnswerArray()"
+              @update:model-value="manualSetMultipleAnswer"
+            >
+              <el-checkbox
+                v-for="option in manualForm.options"
+                :key="option.label"
+                :label="option.label"
+              >
+                {{ option.label }}
+              </el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </template>
+
+        <!-- 正确答案（判断） -->
+        <el-form-item
+          v-else-if="manualTargetGroup?.type === 'judge'"
+          label="正确答案"
+          prop="answer"
+        >
+          <el-radio-group v-model="manualForm.answer">
+            <el-radio label="true">正确</el-radio>
+            <el-radio label="false">错误</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <!-- 参考答案（简答） -->
+        <el-form-item
+          v-else-if="manualTargetGroup?.type === 'essay'"
+          label="参考答案"
+          prop="answer"
+        >
+          <el-input
+            v-model="manualForm.answer"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入参考答案"
+            maxlength="1000"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <!-- 题目解析 -->
+        <el-form-item label="题目解析">
+          <el-input
+            v-model="manualForm.analysis"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入题目解析（选填）"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="drawer-footer">
+          <el-button @click="handleManualCancel">取消</el-button>
+          <el-button
+            type="primary"
+            @click="handleManualSubmit"
+            :loading="manualSubmitting"
+          >
+            添加
+          </el-button>
+        </div>
+      </template>
+    </el-drawer>
   </div>
 </template>
 
@@ -708,25 +1182,40 @@ onMounted(async () => {
 
 .paper-info {
   display: flex;
-  gap: 40px;
+  gap: 24px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .info-item {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.info-item-wide {
+  flex: 1 1 100%;
 }
 
 .info-label {
   color: #909399;
   font-size: 14px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.info-value {
-  color: #303133;
+.info-input {
+  width: 220px;
+}
+
+.info-input-number {
+  width: 140px;
+}
+
+.info-unit {
+  color: #606266;
   font-size: 14px;
-  font-weight: 500;
+  white-space: nowrap;
 }
 
 .main-content {
@@ -1051,6 +1540,50 @@ onMounted(async () => {
 
 :deep(.el-collapse) {
   border: 1px solid #ebeef5;
+}
+
+/* 手动录入抽屉 */
+.manual-form {
+  padding: 20px;
+}
+
+.options-container {
+  width: 100%;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.option-label {
+  min-width: 30px;
+  text-align: center;
+}
+
+.option-input {
+  flex: 1;
+}
+
+.add-option-btn {
+  margin-top: 10px;
+}
+
+.drawer-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-right: 20px;
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 500;
+}
+
+:deep(.el-textarea__inner) {
+  resize: vertical;
 }
 </style>
 

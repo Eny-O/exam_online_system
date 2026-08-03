@@ -47,11 +47,11 @@ watch(
     drawerVisible.value = val;
     if (val) {
       if (props.editData) {
-        // 编辑模式
+        // 编辑模式：后端返回 examTime，前端表单用 totalTime
         Object.assign(formData, {
           id: props.editData.id,
           name: props.editData.name,
-          totalTime: props.editData.totalTime || 120,
+          totalTime: props.editData.examTime || props.editData.totalTime || 120,
           description: props.editData.description || "",
         });
       } else {
@@ -91,16 +91,21 @@ const handleSubmit = async () => {
       drawerVisible.value = false;
       emit("success");
     } else {
-      // 新增：接口留空，直接携带表单数据跳转到组卷页面
+      // 新增：不调后端接口，携带表单数据跳转到组卷页面，由"完成"按钮统一提交
       drawerVisible.value = false;
       emit("success");
       router.push({
         path: "/teacher/paper-content/new",
-        query: submitData,
+        query: {
+          name: submitData.name,
+          examTime: submitData.totalTime,
+          description: submitData.description,
+        },
       });
     }
   } catch (error) {
     console.error("提交失败:", error);
+    ElMessage.error(error.message || "操作失败");
   } finally {
     submitting.value = false;
   }

@@ -3,7 +3,7 @@ import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Search, Refresh, Plus, Delete } from "@element-plus/icons-vue";
-import { getPaperPage, deletePapers } from "@/api/paperManager";
+import { getPaperPage, deletePapers, updatePaperStatus } from "@/api/paperManager";
 import PaperDrawer from "./components/PaperDrawer.vue";
 
 const router = useRouter();
@@ -35,6 +35,7 @@ const mockPapers = [
     id: 1,
     name: "Java基础期末考试",
     totalTime: 120,
+    totalScore: 100,
     description: "涵盖Java基础语法、面向对象、集合框架等核心知识点",
     creatorId: 1,
     creatorName: "张老师",
@@ -45,6 +46,7 @@ const mockPapers = [
     id: 2,
     name: "Spring Boot单元测试",
     totalTime: 90,
+    totalScore: 80,
     description: "测试Spring Boot自动配置、IOC、AOP等核心概念",
     creatorId: 2,
     creatorName: "李老师",
@@ -55,6 +57,7 @@ const mockPapers = [
     id: 3,
     name: "数据库原理期中考试",
     totalTime: 150,
+    totalScore: 120,
     description: "包含SQL语句、范式理论、事务与并发控制等内容",
     creatorId: 1,
     creatorName: "张老师",
@@ -65,6 +68,7 @@ const mockPapers = [
     id: 4,
     name: "前端Vue3综合测验",
     totalTime: 60,
+    totalScore: 50,
     description: "Vue3组合式API、响应式原理、路由与状态管理",
     creatorId: 2,
     creatorName: "李老师",
@@ -75,6 +79,7 @@ const mockPapers = [
     id: 5,
     name: "计算机网络期末考试",
     totalTime: 120,
+    totalScore: 100,
     description: "TCP/IP协议栈、HTTP/HTTPS、网络安全基础",
     creatorId: 1,
     creatorName: "张老师",
@@ -85,6 +90,7 @@ const mockPapers = [
     id: 6,
     name: "数据结构与算法测验",
     totalTime: 180,
+    totalScore: 150,
     description: "线性表、树、图、排序与查找算法综合分析",
     creatorId: 2,
     creatorName: "李老师",
@@ -95,6 +101,7 @@ const mockPapers = [
     id: 7,
     name: "操作系统模拟测试",
     totalTime: 120,
+    totalScore: 100,
     description: "进程管理、内存管理、文件系统与I/O管理",
     creatorId: 1,
     creatorName: "张老师",
@@ -105,6 +112,7 @@ const mockPapers = [
     id: 8,
     name: "软件工程综合考试",
     totalTime: 100,
+    totalScore: 80,
     description: "需求分析、系统设计、软件测试与项目管理",
     creatorId: 2,
     creatorName: "李老师",
@@ -207,6 +215,33 @@ const handleDelete = (row) => {
     });
 };
 
+// 更新试卷状态（启用/取消启用）
+const handleUpdateStatus = (row, newStatus) => {
+  const actionText = newStatus === 2 ? "启用" : "取消启用";
+  ElMessageBox.confirm(
+    `确定要${actionText}试卷"${row.name}"吗？`,
+    "提示",
+    {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "info",
+    }
+  )
+    .then(async () => {
+      try {
+        await updatePaperStatus(row.id, newStatus);
+        ElMessage.success(`${actionText}成功`);
+        fetchPaperList();
+      } catch (error) {
+        console.error("状态更新失败:", error);
+        ElMessage.error(`${actionText}失败，请重试`);
+      }
+    })
+    .catch(() => {
+      ElMessage.info("已取消操作");
+    });
+};
+
 // 批量删除
 const handleBatchDelete = () => {
   if (selectedRows.value.length === 0) {
@@ -223,15 +258,14 @@ const handleBatchDelete = () => {
     }
   )
     .then(async () => {
+      const ids = selectedRows.value.map((r) => r.id);
       try {
-        await deletePapers(selectedRows.value);
+        await deletePapers(ids);
         ElMessage.success("批量删除成功");
         selectedRows.value = [];
       } catch {
-        tableData.value = tableData.value.filter(
-          (p) => !selectedRows.value.includes(p.id)
-        );
-        pagination.total -= selectedRows.value.length;
+        tableData.value = tableData.value.filter((p) => !ids.includes(p.id));
+        pagination.total -= ids.length;
         selectedRows.value = [];
         ElMessage.success("批量删除成功");
       }
@@ -315,12 +349,21 @@ onMounted(() => {
         />
 
         <el-table-column
-          prop="totalTime"
+          prop="examTime"
           label="考试时间"
           width="120"
           align="center"
         >
-          <template #default="{ row }"> {{ row.totalTime }} 分钟 </template>
+          <template #default="{ row }"> {{ row.examTime }} 分钟 </template>
+        </el-table-column>
+
+        <el-table-column
+          prop="totalScore"
+          label="总分"
+          width="100"
+          align="center"
+        >
+          <template #default="{ row }"> {{ row.totalScore }} 分 </template>
         </el-table-column>
 
         <el-table-column
@@ -341,10 +384,40 @@ onMounted(() => {
 
         <el-table-column prop="updateTime" label="更新时间" width="180" />
 
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.status === 0" type="info" effect="plain">
+              草稿
+            </el-tag>
+            <el-tag v-else-if="row.status === 1" type="warning" effect="plain">
+              待启用
+            </el-tag>
+            <el-tag v-else-if="row.status === 2" type="success" effect="plain">
+              已启用
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">
               编辑
+            </el-button>
+            <el-button
+              v-if="row.status === 1"
+              type="success"
+              link
+              @click="handleUpdateStatus(row, 2)"
+            >
+              启用
+            </el-button>
+            <el-button
+              v-if="row.status === 2"
+              type="warning"
+              link
+              @click="handleUpdateStatus(row, 1)"
+            >
+              取消启用
             </el-button>
             <el-button type="danger" link @click="handleDelete(row)">
               删除
