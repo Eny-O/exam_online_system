@@ -5,16 +5,19 @@ import com.ai.exam_spring.common.constant.JwtConstant;
 import com.ai.exam_spring.common.constant.RedisConstant;
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_spring.domain.entity.User;
 import com.ai.exam_spring.domain.enums.UserStatusEnum;
 import com.ai.exam_spring.domain.vo.PermissionVO;
+import com.ai.exam_spring.domain.vo.UStudentVO;
+import com.ai.exam_spring.mapper.UserMapper;
 import com.ai.exam_spring.security.LoginUser;
-import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.domain.dto.UserLoginDTO;
 import com.ai.exam_spring.domain.vo.UserInfoVO;
 import com.ai.exam_spring.service.UserService;
 import com.ai.exam_spring.utils.JwtUtil;
 import com.ai.exam_spring.utils.RedisUtil;
 import com.ai.exam_spring.utils.SecurityUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,7 +26,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -31,6 +33,8 @@ import java.util.Objects;
 @Service
 @Slf4j
 public class UserServiceImpl implements UserService {
+    @Autowired
+    private UserMapper userMapper;
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -98,5 +102,22 @@ public class UserServiceImpl implements UserService {
         }).toList();
         userInfoVO.setPermissions(permissionVOList);
         return userInfoVO;
+    }
+
+    /**
+     * 获取班级成员
+     * @param classId 班级id
+     * @return 班级成员
+     */
+    @Override
+    public List<UStudentVO> getClassMember(Integer classId) {
+        if (classId == null) throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        List<User> users = userMapper.selectList(new LambdaQueryWrapper<User>().eq(User::getClassId, classId));
+        if (users == null || users.isEmpty()) return  null;
+        return users.stream().map(user -> {
+            UStudentVO uStudentVO = new UStudentVO();
+            BeanUtil.copyProperties(user, uStudentVO);
+            return uStudentVO;
+        }).toList();
     }
 }

@@ -22,7 +22,7 @@ import java.util.List;
  */
 public interface IPaperManagementService extends IService<Paper> {
 
-     PageResult<PaperVO> pagePaper(PaperQueryDTO paperQueryDTO);
+    PageResult<PaperVO> pagePaper(PaperQueryDTO paperQueryDTO);
 
     void addPaper(PaperContentDTO paperContentDTO);
 

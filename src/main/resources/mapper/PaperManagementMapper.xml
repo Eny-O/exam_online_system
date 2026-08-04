@@ -6,7 +6,6 @@
         SELECT
             p.id,
             p.name,
-            p.exam_time  AS examTime,
             p.total_score AS totalScore,
             p.description,
             s.real_name AS teacherName,

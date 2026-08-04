@@ -20,6 +20,15 @@ public class User {
     @Schema(description = "用户ID", example = "1")
     private Integer id;
 
+    @Schema(description = "学号", example = "1001")
+    public String studentNo;
+
+    @Schema(description = "工号", example = "1001")
+    public String staffNo;
+
+    @Schema(description = "用户类型：1-学生，2-教师，3-管理员", example = "1")
+    public Integer userType;
+
     @Schema(description = "用户名", example = "zhangsan")
     private String username;
 

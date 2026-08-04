@@ -1,11 +1,12 @@
 package com.ai.exam_spring.service;
 
-import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.domain.dto.UserLoginDTO;
 import com.ai.exam_spring.domain.vo.UserInfoVO;
+import com.ai.exam_spring.domain.vo.UStudentVO;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * 用户服务接口
@@ -26,4 +27,6 @@ public interface UserService {
      * 获取当前登录用户信息
      */
     UserInfoVO getInfo();
+
+    List<UStudentVO> getClassMember(Integer classId);
 }

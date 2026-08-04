@@ -23,7 +23,7 @@ public class GenerateEntity {
                         .entity("domain.entity")                     // 实体类包
                 )
                 .strategyConfig(builder -> builder
-                        .addInclude("paper")
+                        .addInclude("sys_class")
                         .entityBuilder()
                         .enableLombok()                   // 用 Lombok 简化 getter/setter
                         .enableTableFieldAnnotation()     // 加 @TableField 注解

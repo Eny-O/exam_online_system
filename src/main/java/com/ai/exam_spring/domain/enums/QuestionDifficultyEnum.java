@@ -1,5 +1,7 @@
 package com.ai.exam_spring.domain.enums;
 
+import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,14 +24,9 @@ public enum QuestionDifficultyEnum {
     @Schema(description = "困难")
     HARD("hard", "困难");
 
-    /**
-     * 对应数据库存储的值 (easy/medium/hard)
-     */
+    @JsonValue
+    @EnumValue
     private final String code;
-
-    /**
-     * 中文描述，用于前端展示或日志
-     */
     private final String description;
 
     /**

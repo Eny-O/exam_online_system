@@ -1,5 +1,7 @@
 package com.ai.exam_spring.domain.enums;
 
+import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -23,6 +25,8 @@ public enum QuestionTypeEnum {
     @Schema(description = "简答题")
     ESSAY("essay", "简答题");
 
+    @EnumValue
+    @JsonValue
     private final String code;
     private final String description;
 

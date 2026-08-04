@@ -2,6 +2,7 @@ package com.ai.exam_spring.controller.teacher;
 
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
+import com.ai.exam_spring.common.status.PaperStatus;
 import com.ai.exam_spring.domain.dto.PaperContentDTO;
 import com.ai.exam_spring.domain.dto.PaperQueryDTO;
 import com.ai.exam_spring.domain.dto.PaperStatusDTO;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -81,5 +83,12 @@ public class PaperManagementController {
         return ResponseResult.success();
     }
 
+    @Operation(summary = "获取所有试卷状态" ,description = "试卷状态:0为草稿,1为待启用,2为已启用")
+    @GetMapping("/getAllPaperStatus")
+    public ResponseResult<List<Integer>> getAllPaperStatus() {
+        log.info("获取所有试卷状态");
+        List<Integer> codes = Arrays.stream(PaperStatus.values()).map(PaperStatus::getCode).toList();
+        return ResponseResult.success(codes);
+    }
 
 }

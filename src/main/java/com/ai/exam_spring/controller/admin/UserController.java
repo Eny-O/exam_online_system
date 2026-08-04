@@ -3,6 +3,7 @@ package com.ai.exam_spring.controller.admin;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.domain.dto.UserLoginDTO;
 import com.ai.exam_spring.domain.vo.UserInfoVO;
+import com.ai.exam_spring.domain.vo.UStudentVO;
 import com.ai.exam_spring.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 
 @Tag(name = "用户接口")
 @RestController
@@ -42,4 +44,11 @@ public class UserController {
         return ResponseResult.success("登出成功");
     }
 
+    @Operation(summary = "根据班级id获取班级成员")
+    @GetMapping("/getClassMember")
+    public ResponseResult<List<UStudentVO>> getClassMember(Integer classId) {
+        log.info("根据班级id获取班级成员 {}", classId);
+        List<UStudentVO> students = userService.getClassMember(classId);
+        return ResponseResult.success(students);
+    }
 }
