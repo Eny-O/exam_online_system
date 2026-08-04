@@ -21,7 +21,7 @@ NEW_FILE_CODE
                 <el-divider direction="vertical" />
                 <span>班级：{{ studentInfo.className }}</span>
                 <el-divider direction="vertical" />
-                <span>考试时间：{{ studentInfo.examTime }}</span>
+                <span>考试时间：{{ studentInfo.startTime }}</span>
               </p>
             </div>
           </div>
@@ -235,7 +235,7 @@ const studentInfo = ref({
   name: "张三",
   studentNo: "2021001",
   className: "计算机2101班",
-  examTime: "2024-01-15 14:30",
+  startTime: "2024-01-15 14:30",
 });
 
 // 分数信息

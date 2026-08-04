@@ -111,7 +111,6 @@ const mockExams = [
     duration: 120,
     totalQuestions: 50,
     startTime: "2024-01-15 09:00",
-    endTime: "2024-01-15 11:00",
     status: "ongoing",
   },
   {
@@ -121,7 +120,6 @@ const mockExams = [
     duration: 90,
     totalQuestions: 80,
     startTime: "2024-01-16 14:00",
-    endTime: "2024-01-16 15:30",
     status: "upcoming",
   },
   {
@@ -131,7 +129,6 @@ const mockExams = [
     duration: 60,
     totalQuestions: 40,
     startTime: "2024-01-10 10:00",
-    endTime: "2024-01-10 11:00",
     status: "completed",
     score: 85,
   },
@@ -142,7 +139,6 @@ const mockExams = [
     duration: 150,
     totalQuestions: 60,
     startTime: "2024-01-20 08:00",
-    endTime: "2024-01-20 10:30",
     status: "upcoming",
   },
   {
@@ -152,7 +148,6 @@ const mockExams = [
     duration: 120,
     totalQuestions: 45,
     startTime: "2024-01-08 09:00",
-    endTime: "2024-01-08 11:00",
     status: "completed",
     score: 92,
   },

@@ -56,13 +56,11 @@
             </el-select>
           </el-form-item>
 
-          <el-form-item label="考试时间" prop="examTimeRange">
+          <el-form-item label="开始时间" prop="startTime">
             <el-date-picker
-              v-model="formData.examTimeRange"
-              type="datetimerange"
-              range-separator="至"
-              start-placeholder="开始时间"
-              end-placeholder="结束时间"
+              v-model="formData.startTime"
+              type="datetime"
+              placeholder="请选择开始时间"
               format="YYYY-MM-DD HH:mm"
               value-format="YYYY-MM-DD HH:mm"
               style="width: 100%"
@@ -364,7 +362,7 @@ const formData = reactive({
   examName: "",
   paperId: null,
   classIds: [],
-  examTimeRange: [],
+  startTime: "",
   duration: 120,
   strategyType: "manual", // manual 或 random
   randomRules: [],
@@ -399,12 +397,11 @@ const formRules = {
       type: "array",
     },
   ],
-  examTimeRange: [
+  startTime: [
     {
       required: true,
-      message: "请选择考试时间范围",
+      message: "请选择开始时间",
       trigger: "change",
-      type: "array",
     },
   ],
   duration: [
@@ -563,12 +560,8 @@ const fillFormData = (data) => {
   formData.duration = data.duration || 120;
   formData.strategyType = data.strategyType || "manual";
 
-  // 处理考试时间范围
-  if (data.startTime && data.endTime) {
-    formData.examTimeRange = [data.startTime, data.endTime];
-  } else {
-    formData.examTimeRange = [];
-  }
+  // 处理开始时间
+  formData.startTime = data.startTime || "";
 
   // 处理组卷策略数据
   if (data.strategyType === "manual") {
@@ -586,18 +579,6 @@ const submit = async () => {
   try {
     // 验证基本信息
     await formRef.value.validate();
-
-    // 验证考试时间范围
-    if (formData.examTimeRange && formData.examTimeRange.length === 2) {
-      const [startTime, endTime] = formData.examTimeRange;
-      const start = new Date(startTime);
-      const end = new Date(endTime);
-      if (end <= start) {
-        ElMessage.error("结束时间必须大于开始时间");
-        activeTab.value = "basic";
-        return;
-      }
-    }
 
     // 验证组卷策略
     if (formData.strategyType === "manual") {
@@ -630,8 +611,6 @@ const submit = async () => {
     // 构建提交数据
     const submitData = {
       ...formData,
-      startTime: formData.examTimeRange?.[0] || "",
-      endTime: formData.examTimeRange?.[1] || "",
       manualQuestions:
         formData.strategyType === "manual" ? manualQuestions.value : [],
       randomRules:

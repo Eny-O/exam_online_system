@@ -34,7 +34,6 @@ const mockPapers = [
   {
     id: 1,
     name: "Java基础期末考试",
-    totalTime: 120,
     totalScore: 100,
     description: "涵盖Java基础语法、面向对象、集合框架等核心知识点",
     creatorId: 1,
@@ -45,7 +44,6 @@ const mockPapers = [
   {
     id: 2,
     name: "Spring Boot单元测试",
-    totalTime: 90,
     totalScore: 80,
     description: "测试Spring Boot自动配置、IOC、AOP等核心概念",
     creatorId: 2,
@@ -56,7 +54,6 @@ const mockPapers = [
   {
     id: 3,
     name: "数据库原理期中考试",
-    totalTime: 150,
     totalScore: 120,
     description: "包含SQL语句、范式理论、事务与并发控制等内容",
     creatorId: 1,
@@ -67,7 +64,6 @@ const mockPapers = [
   {
     id: 4,
     name: "前端Vue3综合测验",
-    totalTime: 60,
     totalScore: 50,
     description: "Vue3组合式API、响应式原理、路由与状态管理",
     creatorId: 2,
@@ -78,7 +74,6 @@ const mockPapers = [
   {
     id: 5,
     name: "计算机网络期末考试",
-    totalTime: 120,
     totalScore: 100,
     description: "TCP/IP协议栈、HTTP/HTTPS、网络安全基础",
     creatorId: 1,
@@ -89,7 +84,6 @@ const mockPapers = [
   {
     id: 6,
     name: "数据结构与算法测验",
-    totalTime: 180,
     totalScore: 150,
     description: "线性表、树、图、排序与查找算法综合分析",
     creatorId: 2,
@@ -100,7 +94,6 @@ const mockPapers = [
   {
     id: 7,
     name: "操作系统模拟测试",
-    totalTime: 120,
     totalScore: 100,
     description: "进程管理、内存管理、文件系统与I/O管理",
     creatorId: 1,
@@ -111,7 +104,6 @@ const mockPapers = [
   {
     id: 8,
     name: "软件工程综合考试",
-    totalTime: 100,
     totalScore: 80,
     description: "需求分析、系统设计、软件测试与项目管理",
     creatorId: 2,
@@ -347,15 +339,6 @@ onMounted(() => {
           min-width="200"
           show-overflow-tooltip
         />
-
-        <el-table-column
-          prop="examTime"
-          label="考试时间"
-          width="120"
-          align="center"
-        >
-          <template #default="{ row }"> {{ row.examTime }} 分钟 </template>
-        </el-table-column>
 
         <el-table-column
           prop="totalScore"

@@ -27,7 +27,6 @@ const submitting = ref(false);
 const formData = reactive({
   id: null,
   name: "",
-  totalTime: 120,
   description: "",
 });
 
@@ -37,7 +36,6 @@ const rules = {
     { required: true, message: "请输入试卷名称", trigger: "blur" },
     { min: 2, max: 50, message: "长度在 2 到 50 个字符", trigger: "blur" },
   ],
-  totalTime: [{ required: true, message: "请输入考试时间", trigger: "blur" }],
 };
 
 // 监听抽屉显示状态
@@ -47,11 +45,10 @@ watch(
     drawerVisible.value = val;
     if (val) {
       if (props.editData) {
-        // 编辑模式：后端返回 examTime，前端表单用 totalTime
+        // 编辑模式
         Object.assign(formData, {
           id: props.editData.id,
           name: props.editData.name,
-          totalTime: props.editData.examTime || props.editData.totalTime || 120,
           description: props.editData.description || "",
         });
       } else {
@@ -80,7 +77,6 @@ const handleSubmit = async () => {
 
     const submitData = {
       name: formData.name,
-      totalTime: formData.totalTime,
       description: formData.description,
     };
 
@@ -98,7 +94,6 @@ const handleSubmit = async () => {
         path: "/teacher/paper-content/new",
         query: {
           name: submitData.name,
-          examTime: submitData.totalTime,
           description: submitData.description,
         },
       });
@@ -123,7 +118,6 @@ const resetForm = () => {
   }
   formData.id = null;
   formData.name = "";
-  formData.totalTime = 120;
   formData.description = "";
 };
 </script>
@@ -153,20 +147,6 @@ const resetForm = () => {
             show-word-limit
             clearable
           />
-        </el-form-item>
-
-        <!-- 考试时间 -->
-        <el-form-item label="考试时间" prop="totalTime">
-          <el-input-number
-            v-model="formData.totalTime"
-            :min="10"
-            :max="600"
-            :step="5"
-            placeholder="请输入考试时间"
-            controls-position="right"
-            style="width: 200px"
-          />
-          <span class="unit-text">分钟</span>
         </el-form-item>
 
         <!-- 描述 -->

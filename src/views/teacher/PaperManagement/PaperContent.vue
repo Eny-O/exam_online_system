@@ -120,7 +120,6 @@ const fetchPaperData = async () => {
       paperData.value = {
         id: null,
         name: route.query.name || "",
-        totalTime: Number(route.query.examTime) || 120,
         description: route.query.description || "",
       };
       return;
@@ -132,7 +131,6 @@ const fetchPaperData = async () => {
     paperData.value = {
       id: raw.id,
       name: raw.name,
-      totalTime: raw.examTime || 120,
       description: raw.description || "",
     };
 
@@ -175,7 +173,6 @@ const fetchPaperData = async () => {
     paperData.value = {
       id: route.params.id,
       name: "Java基础期末考试",
-      totalTime: 120,
       description: "涵盖Java基础语法、面向对象、集合框架等核心知识点",
     };
   } finally {
@@ -586,7 +583,6 @@ const handleComplete = async () => {
       // 新增试卷：一次性提交试卷信息 + 题目
       await addPaper({
         name: paperData.value.name,
-        examTime: paperData.value.totalTime,
         description: paperData.value.description,
         totalScore: totalScore.value,
         questions: questionsData,
@@ -596,7 +592,6 @@ const handleComplete = async () => {
       await updatePaper({
         id: paperData.value.id,
         name: paperData.value.name,
-        examTime: paperData.value.totalTime,
         totalScore: totalScore.value,
         description: paperData.value.description,
         questions: questionsData,
@@ -667,19 +662,6 @@ onBeforeUnmount(() => {
             class="info-input"
             @change="hasUnsavedChanges = true"
           />
-        </div>
-        <div class="info-item">
-          <span class="info-label">答题时间：</span>
-          <el-input-number
-            v-model="paperData.totalTime"
-            :min="1"
-            :max="600"
-            :step="5"
-            controls-position="right"
-            class="info-input-number"
-            @change="hasUnsavedChanges = true"
-          />
-          <span class="info-unit">分钟</span>
         </div>
         <div class="info-item info-item-wide">
           <span class="info-label">试卷说明：</span>

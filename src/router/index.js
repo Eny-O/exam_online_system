@@ -68,6 +68,12 @@ const asyncStandaloneRoutes = [
       import("@/views/teacher/PaperManagement/PaperContent.vue"),
     meta: { requiresAuth: true },
   },
+  {
+    path: "/teacher/addExam",
+    name: "AddExam",
+    component: () => import("@/views/teacher/ExamTask/AddExam.vue"),
+    meta: { requiresAuth: true },
+  },
 ];
 
 // ========== 创建路由实例 ==========
