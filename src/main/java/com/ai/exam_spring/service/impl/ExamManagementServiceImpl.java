@@ -4,22 +4,25 @@ import cn.hutool.core.bean.BeanUtil;
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
 import com.ai.exam_spring.common.result.PageResult;
-import com.ai.exam_spring.domain.dto.ExamDetailDTO;
-import com.ai.exam_spring.domain.dto.ExamQueryDTO;
-import com.ai.exam_spring.domain.entity.Exam;
-import com.ai.exam_spring.domain.vo.ExamVO;
+import com.ai.exam_spring.common.status.PaperStatus;
+import com.ai.exam_spring.pojo.dto.ExamDetailDTO;
+import com.ai.exam_spring.pojo.dto.ExamQueryDTO;
+import com.ai.exam_spring.pojo.entity.Exam;
+import com.ai.exam_spring.pojo.vo.ExamVO;
 import com.ai.exam_spring.mapper.ExamManagementMapper;
+import com.ai.exam_spring.pojo.vo.PaperContentVO;
 import com.ai.exam_spring.service.ExamClassService;
 import com.ai.exam_spring.service.ExamManagementService;
+import com.ai.exam_spring.service.IPaperManagementService;
 import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 
 @Service
@@ -31,6 +34,14 @@ public class ExamManagementServiceImpl implements ExamManagementService {
     @Autowired
     private ExamClassService examClassService;
 
+    @Autowired
+    private IPaperManagementService paperManagementService;
+
+    /**
+     * 分页查询考试
+     * @param examQueryDTO
+     * @return
+     */
     @Override
     public PageResult<ExamVO> pageExam(ExamQueryDTO examQueryDTO) {
         String currentUserId = SecurityUtil.getCurrentUserId();
@@ -51,13 +62,19 @@ public class ExamManagementServiceImpl implements ExamManagementService {
      * @param examDetailDTO
      * @return
      */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public Integer addExam(ExamDetailDTO examDetailDTO) {
         if (examDetailDTO == null) throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        PaperStatus paperStatus = paperManagementService.getPaperStatusById(examDetailDTO.getPaperId());
+        if (paperStatus != PaperStatus.ALREADY_ENABLE) {
+            throw new BusinessException(ErrorCodeEnum.NOT_ADD_ENABLE_PAPER);
+        }
         Exam exam = new Exam();
         BeanUtil.copyProperties(examDetailDTO, exam);
         examManagementMapper.insert(exam);
         examClassService.add(exam.getId(),examDetailDTO.getClassIds());
         return exam.getId();
     }
+
 }

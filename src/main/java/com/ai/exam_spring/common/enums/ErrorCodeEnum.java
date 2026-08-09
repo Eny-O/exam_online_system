@@ -29,11 +29,19 @@ public enum ErrorCodeEnum {
     PARAM_ERROR("1008", "参数错误"),
 
     // 题目错误码
-    QUESTION_NOT_FOUND("2001", "题目不存在"),
+    QUESTION_NOT_EXIST("2001", "题目不存在"),
     QUESTION_REFERENCE_PAPER("2002", "题目关联了试卷"),
+    QUESTION_OPTIONS_NOT_EMPTY("2003", "题目选项不能为空"),
+    QUESTION_OPTIONS_EXCEED_SIX("2004", "题目选项超过6个"),
+    QUESTION_OPTION_LABEL_ERROR("2005", "题目选项标签错误"),
+    JUDGE_MUST_HAVE_TWO_OPTIONS("2006", "判断只能有两个选项"),
+    QUESTION_TYPE_ERROR("2007",  "题目类型错误"),
+    QUESTION_OPTIONS_LABEL_ERROR("2008", "无效的选项标签"),
+    QUESTION_OPTIONS_AT_LEAST_TWO("2009","题目选项至少两个"),
 
     // 考试错误码
     EXAM_NOT_FOUND("3001", "考试不存在"),
+    NOT_ADD_ENABLE_PAPER("3002","不能添加未启用的试卷"),
 
     // 文件与导入错误码
     FILE_FORMAT_ERROR("4001", "仅支持 .xlsx 格式文件"),
@@ -46,7 +54,12 @@ public enum ErrorCodeEnum {
     PAPER_NOT_EXIST("5002","试卷不存在"),
     PAPER_ALREADY_ENABLE_NOT_UPDATE("5003",  "试卷已启用不能更改"),
     PAPER_ALREADY_ENABLE_NOT_DELETE("5004", "试卷已启用不能删除"),
-    PAPER_STATUS_TRANSFER_NOT_ALLOWED("5005", "试卷状态转换不允许");
+    PAPER_STATUS_TRANSFER_NOT_ALLOWED("5005", "试卷状态转换不允许"),
+    PAPER_REFERENCE_ANY_EXAM("5006", "试卷已被考试引用"),
+    PAPER_STATUS_CHANGE_FAIL("5007","试卷状态改变失败"),
+
+    // 并发修改错误码
+    DATA_ALREADY_MODIFIED_PLEASE_FLUSH_AFTER_RETRY("6001", "数据已经被更改,请刷新后重试");
 
     private final String code;
     private final String message;

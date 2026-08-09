@@ -1,10 +1,7 @@
 package com.ai.exam_spring.service;
 
-import com.ai.exam_spring.domain.entity.SysClass;
-import com.ai.exam_spring.domain.entity.User;
+import com.ai.exam_spring.pojo.entity.SysClass;
 import com.baomidou.mybatisplus.extension.service.IService;
-
-import java.util.List;
 
 /**
  * <p>

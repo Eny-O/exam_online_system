@@ -1,9 +1,8 @@
 package com.ai.exam_spring.mapper;
 
-import com.ai.exam_spring.domain.entity.Paper;
-import com.ai.exam_spring.domain.vo.PaperVO;
+import com.ai.exam_spring.pojo.entity.Paper;
+import com.ai.exam_spring.pojo.vo.PaperVO;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;

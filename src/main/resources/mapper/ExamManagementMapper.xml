@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ai.exam_spring.mapper.ExamManagementMapper">
 
-    <select id="pageExam" resultType="com.ai.exam_spring.domain.vo.ExamVO">
+    <select id="pageExam" resultType="com.ai.exam_spring.pojo.vo.ExamVO">
         SELECT
         exam.id,
         exam_name,

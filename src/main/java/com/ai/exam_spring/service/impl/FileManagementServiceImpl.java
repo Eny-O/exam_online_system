@@ -2,9 +2,13 @@ package com.ai.exam_spring.service.impl;
 
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.domain.dto.QuestionCompleteDTO;
-import com.ai.exam_spring.domain.dto.QuestionOptionDTO;
-import com.ai.exam_spring.domain.vo.ImportResultVO;
+import com.ai.exam_spring.common.result.BatchInsertResult;
+import com.ai.exam_spring.pojo.dto.QuestionAddDTO;
+import com.ai.exam_spring.pojo.dto.QuestionOptionAddDTO;
+import com.ai.exam_spring.pojo.dto.QuestionUpdateDTO;
+import com.ai.exam_spring.pojo.dto.QuestionOptionUpdateDTO;
+import com.ai.exam_spring.pojo.enums.OptionLabelEnum;
+import com.ai.exam_spring.pojo.vo.ImportResultVO;
 import com.ai.exam_spring.service.FileManagementService;
 import com.ai.exam_spring.service.QuestionManagementService;
 import com.ai.exam_spring.utils.ExcelUtil;
@@ -36,8 +40,8 @@ public class FileManagementServiceImpl implements FileManagementService {
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public ImportResultVO uploadFile(MultipartFile file) {
-        if (file.isEmpty()) throw new BusinessException(ErrorCodeEnum.FILE_EMPTY);
+    public BatchInsertResult uploadFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) throw new BusinessException(ErrorCodeEnum.FILE_EMPTY);
         String filename = file.getOriginalFilename();
         if (filename == null || !filename.endsWith(".xlsx"))
             throw new BusinessException(ErrorCodeEnum.FILE_FORMAT_ERROR);
@@ -48,11 +52,11 @@ public class FileManagementServiceImpl implements FileManagementService {
             int lastRowNum = sheet.getLastRowNum();
             // 获取第二行,第一行为表头
             int firstRowNum = sheet.getFirstRowNum() + 1;
-            List<QuestionCompleteDTO> questionCompleteDTOS = new ArrayList<>();
+            List<QuestionAddDTO> questionAddDTOS = new ArrayList<>();
             for (int i = firstRowNum; i <= lastRowNum; i++) {
                 XSSFRow row = sheet.getRow(i);
                 if (row == null) continue;
-                QuestionCompleteDTO questionCompleteDTO = new QuestionCompleteDTO();
+                QuestionAddDTO questionAddDTO = new QuestionAddDTO();
                 String content = getCellStringValue(row.getCell(0));
                 String type = getCellStringValue(row.getCell(1));
                 String difficulty = getCellStringValue(row.getCell(2));
@@ -65,35 +69,29 @@ public class FileManagementServiceImpl implements FileManagementService {
                 if (difficulty == null || difficulty.trim().isEmpty()) {
                     throw new BusinessException(ErrorCodeEnum.FILE_CONTENT_REQUIRED_FIELD_EMPTY, "第" + (i + 1) + "行难度不能为空");
                 }
-                questionCompleteDTO.setContent(content);
-                questionCompleteDTO.setType(type);
-                questionCompleteDTO.setDifficulty(difficulty);
-                questionCompleteDTO.setKnowledgePoint(getCellStringValue(row.getCell(3)));
-                questionCompleteDTO.setAnswer(getCellStringValue(row.getCell(4)));
-                questionCompleteDTO.setAnalysis(getCellStringValue(row.getCell(5)));
+                questionAddDTO.setContent(content);
+                questionAddDTO.setType(type);
+                questionAddDTO.setDifficulty(difficulty);
+                questionAddDTO.setKnowledgePoint(getCellStringValue(row.getCell(3)));
+                questionAddDTO.setAnswer(getCellStringValue(row.getCell(4)));
+                questionAddDTO.setAnalysis(getCellStringValue(row.getCell(5)));
 
-                List<QuestionOptionDTO> options = new ArrayList<>();
-                String[] labels = {"A", "B", "C", "D"};
-                for (int j = 0; j < 4; j++) {
+                List<QuestionOptionAddDTO> options = new ArrayList<>();
+                String[] labels = {"A", "B", "C", "D","E","F"};
+                for (int j = 0; j < 6; j++) {
                     String optionContent = getCellStringValue(row.getCell(6 + j));
                     if (optionContent != null && !optionContent.trim().isEmpty()) {
-                        QuestionOptionDTO option = new QuestionOptionDTO();
-                        option.setLabel(labels[j]);
+                        QuestionOptionAddDTO option = new QuestionOptionAddDTO();
+                        option.setLabel(OptionLabelEnum.valueOf(labels[j]));
                         option.setContent(optionContent);
                         options.add(option);
                     }
                 }
-                questionCompleteDTO.setOptions(options);
-                questionCompleteDTOS.add(questionCompleteDTO);
+                questionAddDTO.setOptions(options);
+                questionAddDTOS.add(questionAddDTO);
             }
-            for (QuestionCompleteDTO questionCompleteDTO : questionCompleteDTOS) {
-                System.out.println(questionCompleteDTO.toString());
-                //questionManagerService.addQuestionComplete(questionCompleteDTO);
-            }
-            ImportResultVO importResultVO = new ImportResultVO();
-            importResultVO.setSuccessCount(questionCompleteDTOS.size());
-            importResultVO.setFailCount(0);
-            return importResultVO;
+            log.info("文件导入中");
+            return questionManagementService.addQuestionComplete(questionAddDTOS);
         } catch (IOException e) {
             log.error("文件解析失败", e);
             throw new BusinessException(ErrorCodeEnum.FILE_PARSE_ERROR);

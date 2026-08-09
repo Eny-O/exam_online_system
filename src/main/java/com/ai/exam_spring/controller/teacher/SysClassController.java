@@ -3,9 +3,8 @@ package com.ai.exam_spring.controller.teacher;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.ai.exam_spring.common.result.ResponseResult;
-import com.ai.exam_spring.domain.entity.SysClass;
-import com.ai.exam_spring.domain.entity.User;
-import com.ai.exam_spring.domain.vo.SysClassVO;
+import com.ai.exam_spring.pojo.entity.SysClass;
+import com.ai.exam_spring.pojo.vo.SysClassVO;
 import com.ai.exam_spring.service.ISysClassService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

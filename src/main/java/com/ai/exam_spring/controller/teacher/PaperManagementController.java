@@ -3,11 +3,11 @@ package com.ai.exam_spring.controller.teacher;
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.common.status.PaperStatus;
-import com.ai.exam_spring.domain.dto.PaperContentDTO;
-import com.ai.exam_spring.domain.dto.PaperQueryDTO;
-import com.ai.exam_spring.domain.dto.PaperStatusDTO;
-import com.ai.exam_spring.domain.vo.PaperContentVO;
-import com.ai.exam_spring.domain.vo.PaperVO;
+import com.ai.exam_spring.pojo.dto.PaperUpdateDTO;
+import com.ai.exam_spring.pojo.dto.PaperQueryDTO;
+import com.ai.exam_spring.pojo.dto.PaperStatusUpdateDTO;
+import com.ai.exam_spring.pojo.vo.PaperContentVO;
+import com.ai.exam_spring.pojo.vo.PaperVO;
 import com.ai.exam_spring.service.IPaperManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,17 +45,17 @@ public class PaperManagementController {
 
     @Operation(summary = "添加试卷")
     @PostMapping("/addPaper")
-    public ResponseResult<Void> addPaper(@RequestBody PaperContentDTO paperContentDTO) {
-        log.info("保存试卷: {}", paperContentDTO);
-        paperService.addPaper(paperContentDTO);
+    public ResponseResult<Void> addPaper(@RequestBody PaperUpdateDTO paperUpdateDTO) {
+        log.info("保存试卷: {}", paperUpdateDTO);
+        paperService.addPaper(paperUpdateDTO);
         return ResponseResult.success();
     }
 
     @Operation(summary = "更新试卷")
     @PutMapping("/updatePaper")
-    public ResponseResult<Void> updatePaper(@RequestBody PaperContentDTO paperContentDTO) {
-        log.info("更新试卷: {}", paperContentDTO);
-        paperService.addPaper(paperContentDTO);
+    public ResponseResult<Void> updatePaper(@RequestBody PaperUpdateDTO paperUpdateDTO) {
+        log.info("更新试卷: {}", paperUpdateDTO);
+        paperService.addPaper(paperUpdateDTO);
         return ResponseResult.success();
     }
 
@@ -77,17 +77,17 @@ public class PaperManagementController {
 
     @Operation(summary = "更新试卷状态")
     @PutMapping("/updatePaperStatus")
-    public ResponseResult<Void> updatePaperStatus(@RequestBody PaperStatusDTO paperStatusDTO) {
-        log.info("更新试卷状态: {}", paperStatusDTO);
-        paperService.updatePaperStatus(paperStatusDTO);
+    public ResponseResult<Void> updatePaperStatus(@RequestBody PaperStatusUpdateDTO paperStatusUpdateDTO) {
+        log.info("更新试卷状态: {}", paperStatusUpdateDTO);
+        paperService.updatePaperStatus(paperStatusUpdateDTO);
         return ResponseResult.success();
     }
 
     @Operation(summary = "获取所有试卷状态" ,description = "试卷状态:0为草稿,1为待启用,2为已启用")
     @GetMapping("/getAllPaperStatus")
-    public ResponseResult<List<Integer>> getAllPaperStatus() {
+    public ResponseResult<List<String>> getAllPaperStatus() {
         log.info("获取所有试卷状态");
-        List<Integer> codes = Arrays.stream(PaperStatus.values()).map(PaperStatus::getCode).toList();
+        List<String> codes = Arrays.stream(PaperStatus.values()).map(PaperStatus::getCode).toList();
         return ResponseResult.success(codes);
     }
 

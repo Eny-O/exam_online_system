@@ -84,4 +84,11 @@ public class ResponseResult<T> {
         return new ResponseResult<>(ErrorCodeEnum.OPERATION_FAILED.getCode(), ErrorCodeEnum.OPERATION_FAILED.getMessage());
     }
 
+    /**
+     * 失败响应（自定义返回对象）
+     */
+    public static <T> ResponseResult<T> error(T data) {
+        return new ResponseResult<>(ErrorCodeEnum.OPERATION_FAILED.getCode(),ErrorCodeEnum.OPERATION_FAILED.getMessage(), data);
+    }
+
 }

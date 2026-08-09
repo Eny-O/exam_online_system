@@ -9,16 +9,16 @@ import java.util.List;
 @Getter
 public enum PaperStatus {
 
-    DRAFT(0,"草稿"),
-    PENDING_ENABLE(1,"待启用"),
-    ALREADY_ENABLE(2,"已启用");
+    DRAFT("DRAFT","草稿"),
+    PENDING_ENABLE("PENDING_ENABLE","待启用"),
+    ALREADY_ENABLE("ALREADY_ENABLE","已启用");
 
     @EnumValue
     @JsonValue
-    private final Integer code;
+    private final String code;
     private final String message;
 
-    PaperStatus(Integer code, String message) {
+    PaperStatus(String code, String message) {
         this.code = code;
         this.message = message;
     }

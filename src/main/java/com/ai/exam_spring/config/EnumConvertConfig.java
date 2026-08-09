@@ -1,6 +1,6 @@
 package com.ai.exam_spring.config;
 
-import com.ai.exam_spring.domain.enums.ExamEnum;
+import com.ai.exam_spring.pojo.enums.ExamEnum;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.format.FormatterRegistry;

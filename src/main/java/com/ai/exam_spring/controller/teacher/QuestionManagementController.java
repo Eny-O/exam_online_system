@@ -1,11 +1,13 @@
 package com.ai.exam_spring.controller.teacher;
 
-import com.ai.exam_spring.domain.dto.QuestionCompleteDTO;
-import com.ai.exam_spring.domain.dto.QuestionQueryDTO;
+import com.ai.exam_spring.common.result.BatchInsertResult;
+import com.ai.exam_spring.pojo.dto.QuestionAddDTO;
+import com.ai.exam_spring.pojo.dto.QuestionUpdateDTO;
+import com.ai.exam_spring.pojo.dto.QuestionQueryDTO;
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
-import com.ai.exam_spring.domain.vo.QuestionCompleteVO;
-import com.ai.exam_spring.domain.vo.QuestionVO;
+import com.ai.exam_spring.pojo.vo.QuestionCompleteVO;
+import com.ai.exam_spring.pojo.vo.QuestionVO;
 import com.ai.exam_spring.service.QuestionManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,18 +35,22 @@ public class QuestionManagementController {
         return ResponseResult.success(pageResult);
     }
 
-    @Operation(summary = "添加题目", description = "添加完整题目")
+
+    @Operation(summary = "批量添加题目", description = "添加完整题目")
     @PostMapping("/addQuestionComplete")
-    public ResponseResult<Integer> addQuestionComplete(@Validated @RequestBody QuestionCompleteDTO questionCompleteDTO){
-        log.info("添加题目: {}", questionCompleteDTO);
-        Integer id = questionManagementService.addQuestionComplete(questionCompleteDTO);
-        return ResponseResult.success(id);
+    public ResponseResult<BatchInsertResult> addQuestionComplete(@Validated @RequestBody List<QuestionAddDTO> questionAddDTOS){
+        log.info("添加题目: {}", questionAddDTOS);
+        BatchInsertResult batchInsertResult = questionManagementService.addQuestionComplete(questionAddDTOS);
+        if (batchInsertResult.getSuccessCount() != batchInsertResult.getTotalCount()) {
+            return ResponseResult.error(batchInsertResult);
+        }
+        return ResponseResult.success(batchInsertResult);
     }
     @Operation(summary = "更新题目", description = "更新完整题目")
     @PutMapping("/updateQuestionComplete")
-    public ResponseResult<Void> updateQuestionComplete(@Validated @RequestBody QuestionCompleteDTO questionCompleteDTO){
-        log.info("更新题目: {}", questionCompleteDTO);
-        questionManagementService.addQuestionComplete(questionCompleteDTO);
+    public ResponseResult<Void> updateQuestionComplete(@Validated @RequestBody QuestionUpdateDTO questionUpdateDTO){
+        log.info("更新题目: {}", questionUpdateDTO);
+        questionManagementService.updateQuestionComplete(questionUpdateDTO);
         return ResponseResult.success();
     }
 

@@ -1,9 +1,9 @@
 package com.ai.exam_spring.controller.admin;
 
 import com.ai.exam_spring.common.result.ResponseResult;
-import com.ai.exam_spring.domain.dto.UserLoginDTO;
-import com.ai.exam_spring.domain.vo.UserInfoVO;
-import com.ai.exam_spring.domain.vo.UStudentVO;
+import com.ai.exam_spring.pojo.dto.UserLoginDTO;
+import com.ai.exam_spring.pojo.vo.UserInfoVO;
+import com.ai.exam_spring.pojo.vo.UStudentVO;
 import com.ai.exam_spring.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

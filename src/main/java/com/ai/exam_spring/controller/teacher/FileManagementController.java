@@ -1,7 +1,8 @@
 package com.ai.exam_spring.controller.teacher;
 
+import com.ai.exam_spring.common.result.BatchInsertResult;
 import com.ai.exam_spring.common.result.ResponseResult;
-import com.ai.exam_spring.domain.vo.ImportResultVO;
+import com.ai.exam_spring.pojo.vo.ImportResultVO;
 import com.ai.exam_spring.service.FileManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,9 +22,13 @@ public class FileManagementController {
 
     @Operation(summary = "上传文件")
     @PostMapping(value = "/upload")
-    public ResponseResult<ImportResultVO> upload(@RequestPart @RequestParam("file")MultipartFile file){
+    public ResponseResult<BatchInsertResult> upload(@RequestPart @RequestParam("file")MultipartFile file){
         log.info("上传文件");
-        return ResponseResult.success(fileManagementService.uploadFile(file));
+        BatchInsertResult batchInsertResult = fileManagementService.uploadFile(file);
+        if (batchInsertResult.getSuccessCount() == batchInsertResult.getTotalCount()) {
+            return ResponseResult.success(batchInsertResult);
+        }
+        return ResponseResult.error(batchInsertResult);
     }
 
 }

@@ -1,8 +1,8 @@
 package com.ai.exam_spring.mapper;
 
-import com.ai.exam_spring.domain.entity.Exam;
-import com.ai.exam_spring.domain.enums.ExamEnum;
-import com.ai.exam_spring.domain.vo.ExamVO;
+import com.ai.exam_spring.pojo.entity.Exam;
+import com.ai.exam_spring.pojo.enums.ExamEnum;
+import com.ai.exam_spring.pojo.vo.ExamVO;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

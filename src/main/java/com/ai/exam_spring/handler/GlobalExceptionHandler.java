@@ -1,10 +1,13 @@
 package com.ai.exam_spring.handler;
 
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
+import com.ai.exam_spring.common.exception.BatchValidationException;
 import com.ai.exam_spring.common.exception.BusinessException;
 import com.ai.exam_spring.common.result.ResponseResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.validation.BindException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -26,7 +29,6 @@ public class GlobalExceptionHandler {
         return ResponseResult.error(e.getErrorCode(),e.getMessage());
     }
 
-
     /**
      * 非法访问异常处理
      */
@@ -44,6 +46,34 @@ public class GlobalExceptionHandler {
         log.warn("认证失败: {}", e.getMessage());
         return ResponseResult.error(ErrorCodeEnum.UNAUTHORIZED);
     }
+
+    /**
+     * 处理 JSR-303 参数校验异常 (@RequestBody 触发)
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseResult<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+        // 获取校验失败的字段和错误信息
+        String message = e.getBindingResult().getFieldError() != null
+                ? e.getBindingResult().getFieldError().getDefaultMessage()
+                : "参数校验失败";
+
+        log.warn("参数校验失败: {}", message);
+        return ResponseResult.error(message);
+    }
+
+    /**
+     * 处理 JSR-303 参数校验异常 (@RequestParam / @PathVariable 触发)
+     */
+    @ExceptionHandler(BindException.class)
+    public ResponseResult<?> handleBindException(BindException e) {
+        String message = e.getBindingResult().getFieldError() != null
+                ? e.getBindingResult().getFieldError().getDefaultMessage()
+                : "参数绑定失败";
+
+        log.warn("参数绑定失败: {}", message);
+        return ResponseResult.error( message);
+    }
+
 
     /**
      * 未捕获的服务器异常兜底处理

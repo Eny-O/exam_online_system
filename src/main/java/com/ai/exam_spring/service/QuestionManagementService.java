@@ -1,10 +1,12 @@
 package com.ai.exam_spring.service;
 
-import com.ai.exam_spring.domain.dto.QuestionCompleteDTO;
-import com.ai.exam_spring.domain.dto.QuestionQueryDTO;
+import com.ai.exam_spring.common.result.BatchInsertResult;
+import com.ai.exam_spring.pojo.dto.QuestionAddDTO;
+import com.ai.exam_spring.pojo.dto.QuestionUpdateDTO;
+import com.ai.exam_spring.pojo.dto.QuestionQueryDTO;
 import com.ai.exam_spring.common.result.PageResult;
-import com.ai.exam_spring.domain.vo.QuestionCompleteVO;
-import com.ai.exam_spring.domain.vo.QuestionVO;
+import com.ai.exam_spring.pojo.vo.QuestionCompleteVO;
+import com.ai.exam_spring.pojo.vo.QuestionVO;
 
 import java.util.List;
 
@@ -18,9 +20,9 @@ public interface QuestionManagementService {
     PageResult<QuestionVO> conditionPageQuery(QuestionQueryDTO queryDTO);
 
     /**
-     * 添加完整题目
+     * 批量添加完整题目
      */
-    Integer addQuestionComplete(QuestionCompleteDTO questionCompleteDTO);
+    BatchInsertResult addQuestionComplete(List<QuestionAddDTO> questionAddDTOS);
 
     /**
      * 根据题目ID查询完整题目
@@ -36,4 +38,6 @@ public interface QuestionManagementService {
      * 批量查询完整题目
      */
     List<QuestionCompleteVO> getQuestionCompleteByIds(List<Integer> ids);
+
+    void updateQuestionComplete(QuestionUpdateDTO questionUpdateDTO);
 }

@@ -2,10 +2,10 @@ package com.ai.exam_spring.controller.teacher;
 
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
-import com.ai.exam_spring.domain.dto.ExamDetailDTO;
-import com.ai.exam_spring.domain.dto.ExamQueryDTO;
-import com.ai.exam_spring.domain.enums.ExamEnum;
-import com.ai.exam_spring.domain.vo.ExamVO;
+import com.ai.exam_spring.pojo.dto.ExamDetailDTO;
+import com.ai.exam_spring.pojo.dto.ExamQueryDTO;
+import com.ai.exam_spring.pojo.enums.ExamEnum;
+import com.ai.exam_spring.pojo.vo.ExamVO;
 import com.ai.exam_spring.service.ExamManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,10 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.List;
-
-import static java.util.Arrays.stream;
 
 @Tag(name = "考试管理接口")
 @RestController
