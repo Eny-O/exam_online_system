@@ -162,10 +162,17 @@ const handleSubmit = async () => {
       knowledgePoint: formData.knowledgePoint,
       answer: formData.answer,
       analysis: formData.analysis,
-      options: formData.options.map((opt) => ({
-        label: opt.label,
-        content: opt.content,
-      })),
+      options: formData.options.map((opt) => {
+        const option = {
+          label: opt.label,
+          content: opt.content,
+        };
+        // 编辑模式下保留选项 id，供后端更新使用
+        if (opt.id !== undefined && opt.id !== null) {
+          option.id = opt.id;
+        }
+        return option;
+      }),
     };
 
     // 编辑时带上 id
@@ -174,10 +181,12 @@ const handleSubmit = async () => {
     }
 
     if (formData.id) {
+      // 更新接口接收单个对象
       await updateQuestionComplete(submitData);
       ElMessage.success("修改成功");
     } else {
-      await addQuestionComplete(submitData);
+      // 批量新增接口接收数组
+      await addQuestionComplete([submitData]);
       ElMessage.success("新增成功");
     }
 

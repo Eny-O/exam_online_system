@@ -11,6 +11,7 @@ const router = useRouter();
 // 搜索表单
 const searchForm = reactive({
   name: "",
+  paperStatus: "",
 });
 
 // 分页
@@ -121,6 +122,7 @@ const fetchPaperList = async () => {
       pageNum: pagination.currentPage,
       pageSize: pagination.pageSize,
       name: searchForm.name,
+      paperStatus: searchForm.paperStatus || undefined,
     });
     tableData.value = res.data.records;
     pagination.total = res.data.total;
@@ -148,6 +150,7 @@ const handleSearch = () => {
 // 重置
 const handleReset = () => {
   searchForm.name = "";
+  searchForm.paperStatus = "";
   pagination.currentPage = 1;
   fetchPaperList();
 };
@@ -369,13 +372,13 @@ onMounted(() => {
 
         <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.status === 0" type="info" effect="plain">
+            <el-tag v-if="row.status === 'DRAFT'" type="info" effect="plain">
               草稿
             </el-tag>
-            <el-tag v-else-if="row.status === 1" type="warning" effect="plain">
+            <el-tag v-else-if="row.status === 'PENDING_ENABLE'" type="warning" effect="plain">
               待启用
             </el-tag>
-            <el-tag v-else-if="row.status === 2" type="success" effect="plain">
+            <el-tag v-else-if="row.status === 'ALREADY_ENABLE'" type="success" effect="plain">
               已启用
             </el-tag>
           </template>
@@ -387,18 +390,18 @@ onMounted(() => {
               编辑
             </el-button>
             <el-button
-              v-if="row.status === 1"
+              v-if="row.status === 'PENDING_ENABLE'"
               type="success"
               link
-              @click="handleUpdateStatus(row, 2)"
+              @click="handleUpdateStatus(row, 'ALREADY_ENABLE')"
             >
               启用
             </el-button>
             <el-button
-              v-if="row.status === 2"
+              v-if="row.status === 'ALREADY_ENABLE'"
               type="warning"
               link
-              @click="handleUpdateStatus(row, 1)"
+              @click="handleUpdateStatus(row, 'PENDING_ENABLE')"
             >
               取消启用
             </el-button>

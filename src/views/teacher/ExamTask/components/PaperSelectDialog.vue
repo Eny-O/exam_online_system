@@ -154,6 +154,7 @@ const fetchPaperList = async () => {
       pageNum: pagination.currentPage,
       pageSize: pagination.pageSize,
       name: searchName.value,
+      paperStatus: "ALREADY_ENABLE", // 只查询已启用的试卷
     });
     tableData.value = res.data.records;
     pagination.total = res.data.total;
