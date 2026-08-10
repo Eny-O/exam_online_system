@@ -24,3 +24,15 @@ export function getClassList() {
 export function getAllExamStatus() {
   return request.get("/exam-task-management/getAllExamStatus");
 }
+
+// 更改考试状态
+export function updateExamStatus(id, status) {
+  return request.put("/exam-task-management/updateExamStatus", null, {
+    params: { id, status },
+  });
+}
+
+// 学生考试分页查询
+export function getStuExamPage(params) {
+  return request.get("/stu/exam/page", { params });
+}

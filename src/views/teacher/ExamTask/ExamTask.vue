@@ -92,44 +92,103 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="操作" width="260" align="center" fixed="right">
+      <el-table-column label="操作" width="320" align="center" fixed="right">
         <template #default="{ row }">
-          <el-button
-            v-if="row.status === 0"
-            link
-            type="primary"
-            size="small"
-            @click="handleEdit(row)"
-          >
-            编辑
-          </el-button>
-          <el-button
-            v-if="getRealStatus(row) === 4"
-            link
-            type="warning"
-            size="small"
-            @click="handleReview(row)"
-          >
-            批阅
-          </el-button>
-          <el-button
-            v-if="getRealStatus(row) >= 4"
-            link
-            type="success"
-            size="small"
-            @click="handleViewScore(row)"
-          >
-            查看成绩
-          </el-button>
-          <el-button
-            v-if="row.status === 0"
-            link
-            type="danger"
-            size="small"
-            @click="handleDelete(row)"
-          >
-            删除
-          </el-button>
+          <!-- 未发布(0)：发布 / 编辑 / 删除 -->
+          <template v-if="row.status === 0">
+            <el-button
+              link
+              type="success"
+              size="smal l"
+              @click="handlePublish(row)"
+            >
+              发布
+            </el-button>
+            <el-button
+              link
+              type="primary"
+              size="small"
+              @click="handleEdit(row)"
+            >
+              编辑
+            </el-button>
+            <el-button
+              link
+              type="danger"
+              size="small"
+              @click="handleDelete(row)"
+            >
+              删除
+            </el-button>
+          </template>
+
+          <!-- 未开始(2)：取消发布 -->
+          <template v-else-if="getRealStatus(row) === 2">
+            <el-button
+              link
+              type="info"
+              size="small"
+              @click="handleCancelPublish(row)"
+            >
+              取消发布
+            </el-button>
+          </template>
+
+          <!-- 进行中(3)：结束考试 -->
+          <template v-else-if="getRealStatus(row) === 3">
+            <el-button
+              link
+              type="danger"
+              size="small"
+              @click="handleEndExam(row)"
+            >
+              结束考试
+            </el-button>
+          </template>
+
+          <!-- 已结束(4)：批阅（点击后状态→待批阅） -->
+          <template v-else-if="getRealStatus(row) === 4">
+            <el-button
+              link
+              type="warning"
+              size="small"
+              @click="handleReview(row)"
+            >
+              批阅
+            </el-button>
+          </template>
+
+          <!-- 待批阅(5)：继续批阅 -->
+          <template v-else-if="getRealStatus(row) === 5">
+            <el-button
+              link
+              type="warning"
+              size="small"
+              @click="handleReview(row)"
+            >
+              继续批阅
+            </el-button>
+          </template>
+
+          <!-- 批阅完成(6)：查看成绩 / 公布成绩 -->
+          <template v-else-if="getRealStatus(row) === 6">
+            <el-button
+              link
+              type="success"
+              size="small"
+              @click="handleViewScore(row)"
+            >
+              查看成绩
+            </el-button>
+            <el-button
+              link
+              type="primary"
+              size="small"
+              @click="handlePublishScore(row)"
+            >
+              公布成绩
+            </el-button>
+          </template>
         </template>
       </el-table-column>
     </el-table>
@@ -181,7 +240,11 @@ import { Search, Plus } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import NewExamDrawer from "./NewExamDrawer.vue";
 import { useRouter } from "vue-router";
-import { getExamPage, getAllExamStatus } from "@/api/examTask";
+import {
+  getExamPage,
+  getAllExamStatus,
+  updateExamStatus,
+} from "@/api/examTask";
 
 const router = useRouter();
 
@@ -220,7 +283,9 @@ const getEndTime = (row) => {
   const start = new Date(row.startTime);
   const end = new Date(start.getTime() + row.duration * 60 * 1000);
   const pad = (n) => String(n).padStart(2, "0");
-  return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())} ${pad(end.getHours())}:${pad(end.getMinutes())}:${pad(end.getSeconds())}`;
+  return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(
+    end.getDate()
+  )} ${pad(end.getHours())}:${pad(end.getMinutes())}:${pad(end.getSeconds())}`;
 };
 
 // 计算真实状态：已发布(1)根据时间计算为 未开始(2)/进行中(3)/已结束(4)
@@ -361,12 +426,21 @@ const handleCreateSuccess = () => {
   fetchExamList();
 };
 
-// 批阅
-const handleReview = (row) => {
-  router.push({
-    path: "/teacher/onlineGrade",
-    query: { examId: row.id },
-  });
+// 批阅 / 继续批阅
+const handleReview = async (row) => {
+  try {
+    // 已结束(4) → 待批阅(5)，需要调用后端更新状态
+    if (getRealStatus(row) === 4) {
+      await updateExamStatus(row.id, 5);
+    }
+    router.push({
+      path: "/teacher/onlineGrade",
+      query: { examId: row.id },
+    });
+  } catch (error) {
+    console.error("状态更新失败:", error);
+    ElMessage.error("操作失败，请重试");
+  }
 };
 
 // 编辑
@@ -377,6 +451,80 @@ const handleEdit = (row) => {
 
 // 查看成绩
 const handleViewScore = (row) => {
+  router.push(`/teacher/classExamScore/${row.id}`);
+};
+
+// 发布考试
+const handlePublish = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要发布考试"${row.examName}"吗？发布后学生将可以查看考试信息。`,
+      "提示",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      }
+    );
+    await updateExamStatus(row.id, 1);
+    ElMessage.success("发布成功");
+    fetchExamList();
+  } catch (error) {
+    if (error !== "cancel") {
+      console.error("发布失败:", error);
+      ElMessage.error("发布失败");
+    }
+  }
+};
+
+// 结束考试
+const handleEndExam = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      "您确定要结束考试吗？结束考试后，不能重新启用了",
+      "提示",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      }
+    );
+    await updateExamStatus(row.id, 4);
+    ElMessage.success("考试已结束");
+    fetchExamList();
+  } catch (error) {
+    if (error !== "cancel") {
+      console.error("结束考试失败:", error);
+      ElMessage.error("操作失败");
+    }
+  }
+};
+
+// 取消发布
+const handleCancelPublish = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要取消发布考试"${row.examName}"吗？取消后学生将无法查看该考试。`,
+      "提示",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      }
+    );
+    await updateExamStatus(row.id, 0);
+    ElMessage.success("已取消发布");
+    fetchExamList();
+  } catch (error) {
+    if (error !== "cancel") {
+      console.error("取消发布失败:", error);
+      ElMessage.error("操作失败");
+    }
+  }
+};
+
+// 公布成绩
+const handlePublishScore = (row) => {
   router.push(`/teacher/classExamScore/${row.id}`);
 };
 

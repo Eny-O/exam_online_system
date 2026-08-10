@@ -99,7 +99,11 @@
             <el-form-item label="关联试卷" :required="true">
               <div class="paper-select-area">
                 <template v-if="!selectedPaper">
-                  <el-button type="primary" plain @click="paperDialogVisible = true">
+                  <el-button
+                    type="primary"
+                    plain
+                    @click="paperDialogVisible = true"
+                  >
                     <el-icon><Plus /></el-icon>
                     选择试卷
                   </el-button>
@@ -113,18 +117,30 @@
                         <div class="paper-name">{{ selectedPaper.name }}</div>
                         <div class="paper-meta">
                           <span class="meta-item">
-                            总分：<strong>{{ selectedPaper.totalScore }}分</strong>
+                            总分：<strong
+                              >{{ selectedPaper.totalScore }}分</strong
+                            >
                           </span>
-                          <span v-if="selectedPaper.creatorName" class="meta-item">
+                          <span
+                            v-if="selectedPaper.creatorName"
+                            class="meta-item"
+                          >
                             创建人：{{ selectedPaper.creatorName }}
                           </span>
                         </div>
-                        <div v-if="selectedPaper.description" class="paper-desc">
+                        <div
+                          v-if="selectedPaper.description"
+                          class="paper-desc"
+                        >
                           {{ selectedPaper.description }}
                         </div>
                       </div>
                     </div>
-                    <el-button type="primary" link @click="paperDialogVisible = true">
+                    <el-button
+                      type="primary"
+                      link
+                      @click="paperDialogVisible = true"
+                    >
                       重新选择
                     </el-button>
                   </div>
@@ -137,11 +153,7 @@
     </el-card>
 
     <!-- 考生列表（选择班级后显示） -->
-    <el-card
-      v-if="selectedClassId"
-      class="section-card"
-      shadow="hover"
-    >
+    <el-card v-if="selectedClassId" class="section-card" shadow="hover">
       <template #header>
         <div class="card-header">
           <span class="card-title">考生列表</span>
@@ -223,9 +235,7 @@ const formRules = {
     { required: true, message: "请输入考试名称", trigger: "blur" },
     { min: 2, max: 100, message: "长度在 2 到 100 个字符", trigger: "blur" },
   ],
-  startTime: [
-    { required: true, message: "请选择开始时间", trigger: "change" },
-  ],
+  startTime: [{ required: true, message: "请选择开始时间", trigger: "change" }],
   duration: [
     { required: true, message: "请输入考试时长", trigger: "blur" },
     {
@@ -319,11 +329,14 @@ const fetchStudents = async (classId) => {
   try {
     const res = await getStudentsByClassId(classId);
     const className = getClassNameById(classId);
-    studentList.value = (res.data || []).map(s => ({ ...s, className }));
+    studentList.value = (res.data || []).map((s) => ({ ...s, className }));
   } catch (error) {
     console.warn("获取学生列表失败，使用模拟数据:", error.message);
     const className = getClassNameById(classId);
-    studentList.value = (mockStudents[classId] || []).map(s => ({ ...s, className }));
+    studentList.value = (mockStudents[classId] || []).map((s) => ({
+      ...s,
+      className,
+    }));
   } finally {
     studentLoading.value = false;
   }
@@ -359,22 +372,21 @@ const handleSubmit = async () => {
     examName: formData.examName,
     startTime: formData.startTime,
     duration: formData.duration,
-    classId: selectedClassId.value,
+    classIds: [selectedClassId.value],
     paperId: selectedPaper.value.id,
-    paperName: selectedPaper.value.name,
   };
 
   submitting.value = true;
   try {
     await addExam(submitData);
     ElMessage.success("考试创建成功");
-    router.push("/teacher/examTask");
+    router.push("/teacher/examTask/myexam");
   } catch (error) {
     console.error("创建考试失败:", error);
     // 后端不可用时，模拟成功
     setTimeout(() => {
       ElMessage.success("考试创建成功（模拟）");
-      router.push("/teacher/examTask");
+      router.push("/teacher/examTask/myexam");
     }, 500);
   } finally {
     submitting.value = false;

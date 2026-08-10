@@ -85,6 +85,20 @@ const router = createRouter({
 // ========== 标记：是否已添加动态路由 ==========
 let hasRoutes = false;
 
+// ========== 辅助：从菜单树中获取第一个叶子菜单的完整路径 ==========
+function getFirstLeafPath(menuList) {
+  if (!menuList || menuList.length === 0) return null;
+  for (const menu of menuList) {
+    if (menu.children && menu.children.length > 0) {
+      const childPath = getFirstLeafPath(menu.children);
+      if (childPath) return childPath;
+    } else if (menu.path) {
+      return menu.path;
+    }
+  }
+  return null;
+}
+
 // ========== 路由守卫 ==========
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
@@ -122,10 +136,10 @@ router.beforeEach(async (to, from, next) => {
 
         hasRoutes = true;
 
-        // 访问根路径时，跳转到第一个权限页
+        // 访问根路径时，跳转到第一个叶子菜单的完整路径
         if (to.path === "/") {
-          const firstPerm = userStore.permissions.find((p) => p.path);
-          next(firstPerm ? firstPerm.path : "/");
+          const firstLeafPath = getFirstLeafPath(userStore.menuList);
+          next(firstLeafPath || "/");
         } else {
           next({ ...to, replace: true });
         }
