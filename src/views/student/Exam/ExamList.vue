@@ -1,457 +1,354 @@
 <template>
   <div class="exam-list-container">
-    <div class="content-wrapper">
-      <!-- 标题部分 -->
-      <div class="header-section fade-in">
-        <h1 class="title">考试中心</h1>
-        <p class="subtitle">查看和管理您的所有考试</p>
-      </div>
-
-      <!-- 搜索和过滤栏 -->
-      <el-card class="filter-card fade-in-delay" shadow="hover">
-        <div class="filter-row">
-          <el-input
-            v-model="searchQuery"
-            placeholder="搜索考试名称或科目..."
-            prefix-icon="Search"
-            class="search-input"
-            clearable
-          />
-          <div class="filter-buttons">
-            <el-button
-              v-for="status in statusOptions"
-              :key="status.value"
-              :type="filterStatus === status.value ? 'primary' : 'default'"
-              @click="filterStatus = status.value"
-              class="filter-btn"
-            >
-              {{ status.label }}
-            </el-button>
-          </div>
-        </div>
-      </el-card>
-
-      <!-- 考试列表 -->
-      <div class="exam-grid">
-        <el-card
-          v-for="(exam, index) in filteredExams"
-          :key="exam.id"
-          class="exam-card fade-in-up"
-          :style="{ animationDelay: `${index * 0.05}s` }"
-          shadow="hover"
-          @click="handleExamAction(exam)"
+    <!-- 顶部筛选区 -->
+    <div class="filter-section">
+      <div class="filter-left">
+        <el-input
+          v-model="searchForm.examName"
+          placeholder="请输入考试名称"
+          clearable
+          style="width: 200px; margin-right: 15px"
+          @keyup.enter="handleSearch"
         >
-          <div class="exam-content">
-            <div class="exam-info">
-              <div class="title-row">
-                <h3 class="exam-title">{{ exam.title }}</h3>
-                <el-tag
-                  :type="getStatusTagType(exam.status)"
-                  effect="light"
-                  class="status-tag"
-                >
-                  {{ getStatusLabel(exam.status) }}
-                </el-tag>
-              </div>
-              <div class="meta-row">
-                <span class="meta-item">
-                  <el-icon><Filter /></el-icon>
-                  {{ exam.subject }}
-                </span>
-                <span class="meta-item">
-                  <el-icon><Clock /></el-icon>
-                  {{ exam.duration }}分钟
-                </span>
-                <span class="meta-item">
-                  <el-icon><Calendar /></el-icon>
-                  {{ exam.startTime }}
-                </span>
-                <span class="meta-item"> {{ exam.totalQuestions }}道题 </span>
-              </div>
-            </div>
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
 
-            <div class="action-area">
-              <div v-if="exam.score !== undefined" class="score-display">
-                <div class="score-value">{{ exam.score }}</div>
-                <div class="score-label">分</div>
-              </div>
-              <el-button
-                :type="getButtonStatusType(exam.status)"
-                @click.stop="handleExamAction(exam)"
-              >
-                {{ getButtonLabel(exam.status) }}
-              </el-button>
-            </div>
-          </div>
-        </el-card>
-      </div>
+        <el-select
+          v-model="searchForm.status"
+          placeholder="考试状态"
+          clearable
+          style="width: 150px"
+        >
+          <el-option
+            v-for="item in statusOptions"
+            :key="item.code"
+            :label="item.label"
+            :value="item.code"
+          />
+        </el-select>
 
-      <!-- 空状态 -->
-      <div v-if="filteredExams.length === 0" class="empty-state fade-in">
-        <div class="empty-icon-wrapper">
-          <el-icon :size="32"><Search /></el-icon>
-        </div>
-        <p>没有找到匹配的考试</p>
+        <el-button type="primary" @click="handleSearch" style="margin-left: 15px">
+          <el-icon><Search /></el-icon>
+          搜索
+        </el-button>
+
+        <el-button @click="handleReset">重置</el-button>
       </div>
+    </div>
+
+    <!-- 数据表格区 -->
+    <el-table
+      :data="tableData"
+      v-loading="loading"
+      border
+      stripe
+      style="width: 100%; margin-top: 20px"
+    >
+      <el-table-column
+        prop="examName"
+        label="考试名称"
+        min-width="180"
+        show-overflow-tooltip
+      />
+
+      <el-table-column label="考试时间段" min-width="200">
+        <template #default="{ row }">
+          <div>{{ row.startTime }} ~ {{ getEndTime(row) }}</div>
+        </template>
+      </el-table-column>
+
+      <el-table-column
+        prop="duration"
+        label="时长（分钟）"
+        width="120"
+        align="center"
+      />
+
+      <el-table-column label="状态" width="100" align="center">
+        <template #default="{ row }">
+          <el-tag :type="getStatusType(getRealStatus(row))">
+            {{ getStatusText(getRealStatus(row)) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="操作" width="150" align="center" fixed="right">
+        <template #default="{ row }">
+          <!-- 进行中(3)：进入考试 -->
+          <el-button
+            v-if="getRealStatus(row) === 3"
+            link
+            type="success"
+            size="small"
+            @click="handleEnterExam(row)"
+          >
+            进入考试
+          </el-button>
+          <!-- 未开始(2)：查看详情 -->
+          <el-button
+            v-if="getRealStatus(row) === 2"
+            link
+            type="primary"
+            size="small"
+            @click="handleExamDetail(row)"
+          >
+            查看详情
+          </el-button>
+          <!-- 已结束(4) / 待批阅(5) / 批阅完成(6)：查看成绩 -->
+          <el-button
+            v-if="getRealStatus(row) >= 4"
+            link
+            type="warning"
+            size="small"
+            @click="handleViewResult(row)"
+          >
+            查看成绩
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- 底部分页区 -->
+    <div class="pagination-section">
+      <el-pagination
+        v-model:current-page="pagination.currentPage"
+        v-model:page-size="pagination.pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="pagination.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, reactive, onMounted } from "vue";
+import { Search } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
-import { Search, Filter, Clock, Calendar } from "@element-plus/icons-vue";
-
-// 模拟数据
-const mockExams = [
-  {
-    id: "1",
-    title: "高等数学期中考试",
-    subject: "数学",
-    duration: 120,
-    totalQuestions: 50,
-    startTime: "2024-01-15 09:00",
-    status: "ongoing",
-  },
-  {
-    id: "2",
-    title: "大学英语四级模拟",
-    subject: "英语",
-    duration: 90,
-    totalQuestions: 80,
-    startTime: "2024-01-16 14:00",
-    status: "upcoming",
-  },
-  {
-    id: "3",
-    title: "计算机基础测试",
-    subject: "计算机",
-    duration: 60,
-    totalQuestions: 40,
-    startTime: "2024-01-10 10:00",
-    status: "completed",
-    score: 85,
-  },
-  {
-    id: "4",
-    title: "线性代数期末考试",
-    subject: "数学",
-    duration: 150,
-    totalQuestions: 60,
-    startTime: "2024-01-20 08:00",
-    status: "upcoming",
-  },
-  {
-    id: "5",
-    title: "数据结构期中考试",
-    subject: "计算机",
-    duration: 120,
-    totalQuestions: 45,
-    startTime: "2024-01-08 09:00",
-    status: "completed",
-    score: 92,
-  },
-];
+import { getStuExamPage } from "@/api/examTask";
 
 const router = useRouter();
-const searchQuery = ref("");
-const filterStatus = ref("all");
 
-const statusOptions = [
-  { value: "all", label: "全部" },
-  { value: "ongoing", label: "进行中" },
-  { value: "upcoming", label: "即将开始" },
-  { value: "completed", label: "已完成" },
-];
-
-// 计算属性：过滤考试列表
-const filteredExams = computed(() => {
-  return mockExams.filter((exam) => {
-    const matchesSearch =
-      exam.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      exam.subject.toLowerCase().includes(searchQuery.value.toLowerCase());
-    const matchesFilter =
-      filterStatus.value === "all" || exam.status === filterStatus.value;
-    return matchesSearch && matchesFilter;
-  });
+// 搜索表单
+const searchForm = reactive({
+  examName: "",
+  status: undefined,
 });
 
-// 辅助函数：获取状态标签类型
-const getStatusTagType = (status) => {
-  switch (status) {
-    case "ongoing":
-      return "success"; // 绿色
-    case "upcoming":
-      return "primary"; // 蓝色
-    case "completed":
-      return "info"; // 灰色
-    default:
-      return "info";
+// 加载状态
+const loading = ref(false);
+
+// 表格数据
+const tableData = ref([]);
+
+// 分页信息
+const pagination = reactive({
+  currentPage: 1,
+  pageSize: 10,
+  total: 0,
+});
+
+// ========== 状态相关 ==========
+
+// 学生可见的状态选项（排除 0-未发布、1-已发布）
+const statusOptions = [
+  { code: 2, label: "未开始" },
+  { code: 3, label: "进行中" },
+  { code: 4, label: "已结束" },
+  { code: 5, label: "待批阅" },
+  { code: 6, label: "批阅完成" },
+];
+
+// 当 status === 1（已发布）时，根据当前时间计算真实状态
+const getRealStatus = (row) => {
+  if (row.status !== 1) return row.status;
+  const now = new Date();
+  const start = new Date(row.startTime);
+  const end = new Date(start.getTime() + row.duration * 60 * 1000);
+  if (now < start) return 2; // 未开始
+  if (now < end) return 3;   // 进行中
+  return 4;                   // 已结束
+};
+
+// 计算结束时间
+const getEndTime = (row) => {
+  const start = new Date(row.startTime);
+  const end = new Date(start.getTime() + row.duration * 60 * 1000);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())} ${pad(end.getHours())}:${pad(end.getMinutes())}:${pad(end.getSeconds())}`;
+};
+
+// 状态 → el-tag type
+const getStatusType = (status) => {
+  const map = {
+    2: "",
+    3: "success",
+    4: "info",
+    5: "warning",
+    6: "success",
+  };
+  return map[status] ?? "info";
+};
+
+// 状态 → 文本
+const getStatusText = (status) => {
+  const map = {
+    2: "未开始",
+    3: "进行中",
+    4: "已结束",
+    5: "待批阅",
+    6: "批阅完成",
+  };
+  return map[status] ?? "未知";
+};
+
+// ========== 数据加载 ==========
+
+const fetchExamList = async () => {
+  loading.value = true;
+  try {
+    const params = {
+      pageNum: pagination.currentPage,
+      pageSize: pagination.pageSize,
+    };
+    if (searchForm.examName) params.examName = searchForm.examName;
+    if (
+      searchForm.status !== undefined &&
+      searchForm.status !== null &&
+      searchForm.status !== ""
+    ) {
+      params.status = searchForm.status;
+    }
+    const res = await getStuExamPage(params);
+    pagination.total = res.data.total;
+    tableData.value = res.data.records;
+  } catch (error) {
+    console.error("获取考试列表失败:", error);
+    ElMessage.error("获取考试列表失败");
+  } finally {
+    loading.value = false;
   }
 };
 
-// 辅助函数：获取状态标签文本
-const getStatusLabel = (status) => {
-  switch (status) {
-    case "ongoing":
-      return "进行中";
-    case "upcoming":
-      return "即将开始";
-    case "completed":
-      return "已完成";
-    default:
-      return "未知";
-  }
+// 搜索
+const handleSearch = () => {
+  pagination.currentPage = 1;
+  fetchExamList();
 };
 
-// 辅助函数：获取按钮类型
-const getButtonStatusType = (status) => {
-  switch (status) {
-    case "ongoing":
-      return "success";
-    case "upcoming":
-      return "primary";
-    case "completed":
-      return "default";
-    default:
-      return "default";
-  }
+// 重置
+const handleReset = () => {
+  searchForm.examName = "";
+  searchForm.status = undefined;
+  pagination.currentPage = 1;
+  fetchExamList();
 };
 
-// 辅助函数：获取按钮文本
-const getButtonLabel = (status) => {
-  switch (status) {
-    case "ongoing":
-      return "进入考试";
-    case "upcoming":
-      return "查看详情";
-    case "completed":
-      return "查看成绩";
-    default:
-      return "查看";
-  }
+// ========== 操作 ==========
+
+// 进入考试（进行中）
+const handleEnterExam = (row) => {
+  router.push(`/exam/${row.id}/take`);
 };
 
-// 处理点击事件
-const handleExamAction = (exam) => {
-  if (exam.status === "ongoing") {
-    router.push(`/exam/${exam.id}/take`);
-  } else if (exam.status === "upcoming") {
-    router.push(`/exam/detail/${exam.id}`);
-  } else {
-    router.push(`/exam/${exam.id}/result`);
-  }
+// 查看详情（未开始）
+const handleExamDetail = (row) => {
+  router.push(`/exam/detail/${row.id}`);
 };
+
+// 查看成绩（已结束/待批阅/批阅完成）
+const handleViewResult = (row) => {
+  router.push(`/exam/${row.id}/result`);
+};
+
+// 分页大小改变
+const handleSizeChange = (val) => {
+  pagination.pageSize = val;
+  pagination.currentPage = 1;
+  fetchExamList();
+};
+
+// 当前页改变
+const handleCurrentChange = (val) => {
+  pagination.currentPage = val;
+  fetchExamList();
+};
+
+// 初始化
+onMounted(() => {
+  fetchExamList();
+});
 </script>
 
 <style scoped>
-/* 容器样式 */
 .exam-list-container {
-  min-height: 100vh;
-  background-color: #f9fafb; /* bg-gray-50 */
-  padding: 24px; /* p-6 */
+  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: calc(100vh - 60px);
 }
 
-.content-wrapper {
-  max-width: 1200px; /* max-w-6xl */
-  margin: 0 auto;
-}
-
-/* 头部样式 */
-.header-section {
-  margin-bottom: 32px; /* mb-8 */
-}
-
-.title {
-  font-size: 30px; /* text-3xl */
-  font-weight: bold;
-  color: #111827; /* text-gray-900 */
-  margin-bottom: 8px;
-  margin-top: 0;
-}
-
-.subtitle {
-  color: #4b5563; /* text-gray-600 */
-  margin: 0;
-}
-
-/* 过滤卡片样式 */
-.filter-card {
-  margin-bottom: 24px; /* mb-6 */
-  border-radius: 12px; /* rounded-xl */
-}
-
-.filter-row {
+/* 顶部筛选区 */
+.filter-section {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-@media (min-width: 768px) {
-  .filter-row {
-    flex-direction: row;
-  }
-}
-
-.search-input {
-  flex: 1;
-}
-
-.filter-buttons {
-  display: flex;
-  gap: 8px; /* gap-2 */
-  flex-wrap: wrap;
-}
-
-.filter-btn {
-  /* 自定义按钮样式以匹配原设计 */
-  border-radius: 8px; /* rounded-lg */
-  padding: 12px 16px; /* py-3 px-4 */
-  font-weight: 500;
-}
-
-/* 考试列表网格 */
-.exam-grid {
-  display: grid;
-  gap: 16px; /* gap-4 */
-}
-
-.exam-card {
-  border-radius: 12px; /* rounded-xl */
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.exam-card:hover {
-  transform: scale(1.01); /* whileHover scale */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06); /* hover:shadow-md */
-}
-
-.exam-content {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
+  align-items: center;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.exam-info {
-  flex: 1;
-  min-width: 200px;
-}
-
-.title-row {
+.filter-left {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
 }
 
-.exam-title {
-  font-size: 18px; /* text-lg */
-  font-weight: 600; /* font-semibold */
-  color: #111827; /* text-gray-900 */
-  margin: 0;
+/* 表格区域 */
+:deep(.el-table) {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.status-tag {
-  border-radius: 9999px; /* rounded-full */
-  font-size: 14px; /* text-sm */
-  font-weight: 500; /* font-medium */
+:deep(.el-table__header-wrapper th) {
+  background-color: #f5f7fa;
+  font-weight: 600;
+  color: #303133;
 }
 
-.meta-row {
+/* 分页区域 */
+.pagination-section {
   display: flex;
-  align-items: center;
-  gap: 24px; /* gap-6 */
-  color: #4b5563; /* text-gray-600 */
-  font-size: 14px; /* text-sm */
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  margin-top: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.action-area {
-  display: flex;
-  align-items: center;
-  gap: 16px; /* gap-4 */
-}
-
-.score-display {
-  text-align: right;
-}
-
-.score-value {
-  font-size: 24px; /* text-2xl */
-  font-weight: bold;
-  color: #2563eb; /* text-blue-600 */
-  line-height: 1;
-}
-
-.score-label {
-  font-size: 12px; /* text-xs */
-  color: #6b7280; /* text-gray-500 */
-}
-
-/* 空状态 */
-.empty-state {
-  text-align: center;
-  padding: 48px 0; /* py-12 */
-}
-
-.empty-icon-wrapper {
-  width: 64px; /* w-16 */
-  height: 64px; /* h-16 */
-  background-color: #f3f4f6; /* bg-gray-100 */
-  border-radius: 50%; /* rounded-full */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px; /* mx-auto mb-4 */
-  color: #9ca3af; /* text-gray-400 */
-}
-
-.empty-state p {
-  color: #6b7280; /* text-gray-500 */
-}
-
-/* 简单动画模拟 */
-.fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
-}
-
-.fade-in-delay {
-  animation: fadeIn 0.5s ease-out 0.1s forwards;
-  opacity: 0;
-}
-
-.fade-in-up {
-  animation: fadeInUp 0.5s ease-out forwards;
-  opacity: 0;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .filter-section {
+    flex-direction: column;
+    gap: 15px;
   }
-  to {
-    opacity: 1;
-  }
-}
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+  .filter-left {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 10px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .filter-left .el-input,
+  .filter-left .el-select {
+    flex: 1;
+    min-width: 150px;
   }
 }
 </style>

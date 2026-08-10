@@ -18,8 +18,10 @@
       <div class="exam-card">
         <!-- 头部渐变区域 -->
         <div class="card-header">
-          <h1 class="exam-title">{{ exam.title }}</h1>
-          <p class="exam-desc">{{ exam.description }}</p>
+          <h1 class="exam-title">{{ exam.examName }}</h1>
+          <p class="exam-desc">
+            {{ formatDateTime(exam.startTime) }} ~ {{ getEndTime(exam) }}
+          </p>
         </div>
 
         <div class="card-body">
@@ -28,50 +30,63 @@
             <div class="stat-item">
               <el-icon class="stat-icon blue"><Clock /></el-icon>
               <p class="stat-label">考试时长</p>
-              <p class="stat-value">{{ exam.duration }}分钟</p>
+              <p class="stat-value">{{ exam.duration }} 分钟</p>
             </div>
             <div class="stat-item">
-              <el-icon class="stat-icon green"><Document /></el-icon>
-              <p class="stat-label">题目数量</p>
-              <p class="stat-value">{{ exam.totalQuestions }}题</p>
+              <el-icon class="stat-icon green"><Calendar /></el-icon>
+              <p class="stat-label">开始时间</p>
+              <p class="stat-value">{{ formatDateTime(exam.startTime) }}</p>
             </div>
             <div class="stat-item">
               <el-icon class="stat-icon purple"><Check /></el-icon>
-              <p class="stat-label">总分</p>
-              <p class="stat-value">{{ exam.totalScore }}分</p>
-            </div>
-            <div class="stat-item">
-              <el-icon class="stat-icon orange"><Warning /></el-icon>
-              <p class="stat-label">及格线</p>
-              <p class="stat-value">{{ exam.passScore }}分</p>
+              <p class="stat-label">考试状态</p>
+              <el-tag :type="getStatusType(getRealStatus(exam))">
+                {{ getStatusText(getRealStatus(exam)) }}
+              </el-tag>
             </div>
           </div>
 
-          <!-- 考试规则 -->
+          <!-- 考试须知 -->
           <div class="rules-section">
-            <h3 class="section-title">考试规则</h3>
+            <h3 class="section-title">考试须知</h3>
             <ul class="rules-list">
-              <li
-                v-for="(rule, index) in exam.rules"
-                :key="index"
-                class="rule-item"
-              >
-                <span class="rule-number">{{ index + 1 }}</span>
-                <span class="rule-content">{{ rule }}</span>
+              <li class="rule-item">
+                <span class="rule-number">1</span>
+                <span class="rule-content"
+                  >考试时长为 {{ exam.duration }} 分钟，超时自动提交</span
+                >
+              </li>
+              <li class="rule-item">
+                <span class="rule-number">2</span>
+                <span class="rule-content"
+                  >请确保网络连接稳定，考试过程中请勿刷新页面</span
+                >
+              </li>
+              <li class="rule-item">
+                <span class="rule-number">3</span>
+                <span class="rule-content"
+                  >考试开始后可随时提交，提交后不可修改答案</span
+                >
+              </li>
+              <li class="rule-item">
+                <span class="rule-number">4</span>
+                <span class="rule-content"
+                  >如有疑问请联系任课教师</span
+                >
               </li>
             </ul>
           </div>
 
-          <!-- 开始按钮 -->
+          <!-- 返回按钮 -->
           <div class="action-area">
             <el-button
               type="primary"
               size="large"
-              class="start-btn"
-              @click="handleStartExam"
+              class="back-btn"
+              @click="router.back()"
             >
-              <el-icon><VideoPlay /></el-icon>
-              开始考试
+              <el-icon><ArrowLeft /></el-icon>
+              返回列表
             </el-button>
           </div>
         </div>
@@ -85,60 +100,86 @@ import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   Clock,
-  Document,
+  Calendar,
   Check,
-  Warning,
   Loading,
   CircleCloseFilled,
-  VideoPlay,
+  ArrowLeft,
 } from "@element-plus/icons-vue";
-// import { ElMessage } from "element-plus";
+import { ElMessage } from "element-plus";
+import { getExamInfo } from "@/api/examTask";
 
 const route = useRoute();
 const router = useRouter();
 
-// 状态定义
+// ========== 状态映射 ==========
+const STATUS_TEXT = {
+  0: "未发布",
+  1: "已发布",
+  2: "未开始",
+  3: "进行中",
+  4: "已结束",
+  5: "待批阅",
+  6: "批阅完成",
+};
+
+const STATUS_TYPE = {
+  0: "info",
+  1: "warning",
+  2: "",
+  3: "success",
+  4: "info",
+  5: "warning",
+  6: "success",
+};
+
+// 当 status === 1（已发布）时，根据时间计算真实状态
+const getRealStatus = (row) => {
+  if (row.status !== 1) return row.status;
+  const now = new Date();
+  const start = new Date(row.startTime);
+  const end = new Date(start.getTime() + row.duration * 60 * 1000);
+  if (now < start) return 2;
+  if (now < end) return 3;
+  return 4;
+};
+
+const getStatusText = (status) => STATUS_TEXT[status] ?? "未知";
+const getStatusType = (status) => STATUS_TYPE[status] ?? "info";
+
+// ========== 时间格式化 ==========
+const pad = (n) => String(n).padStart(2, "0");
+
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+};
+
+const getEndTime = (exam) => {
+  const start = new Date(exam.startTime);
+  const end = new Date(start.getTime() + exam.duration * 60 * 1000);
+  return formatDateTime(end.toISOString().slice(0, 19).replace("T", " "));
+};
+
+// ========== 数据获取 ==========
 const loading = ref(true);
 const exam = ref(null);
 
-// 模拟数据获取
 const fetchExamDetail = async () => {
-  const id = route.params.id;
-
-  // 模拟网络请求延迟
-  setTimeout(() => {
-    // 这里可以根据 id 筛选真实数据，暂时使用固定 mock
-    if (id) {
-      exam.value = {
-        id: id,
-        title: "JavaScript 基础测试",
-        description: "考察 JavaScript 基础语法、数据类型、函数等核心概念",
-        duration: 60,
-        totalQuestions: 20,
-        totalScore: 100,
-        passScore: 60,
-        rules: [
-          "考试时长为60分钟，超时自动提交",
-          "每题5分，共20题，满分100分",
-          "及格分数为60分",
-          "考试过程中请勿刷新页面",
-          "请确保网络连接稳定",
-        ],
-      };
-    } else {
-      exam.value = null;
-    }
+  loading.value = true;
+  try {
+    const res = await getExamInfo(route.params.id);
+    exam.value = res.data;
+  } catch (error) {
+    console.error("获取考试详情失败:", error);
+    ElMessage.error("获取考试详情失败");
+    exam.value = null;
+  } finally {
     loading.value = false;
-  }, 500);
+  }
 };
 
-// 方法
-const handleStartExam = () => {
-  // 跳转到考试页面
-  router.push(`/exam/${exam.value.id}/take`);
-};
-
-// 生命周期
 onMounted(() => {
   fetchExamDetail();
 });
@@ -227,21 +268,15 @@ onMounted(() => {
 /* 统计网格 */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px; /* gap-4 */
-  margin-bottom: 32px; /* mb-8 */
-}
-
-@media (min-width: 768px) {
-  .stats-grid {
-    grid-template-columns: repeat(4, 1fr); /* md:grid-cols-4 */
-  }
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
 .stat-item {
-  background-color: #f9fafb; /* bg-gray-50 */
-  border-radius: 8px; /* rounded-lg */
-  padding: 16px; /* p-4 */
+  background-color: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -249,8 +284,8 @@ onMounted(() => {
 }
 
 .stat-icon {
-  font-size: 24px; /* w-6 h-6 */
-  margin-bottom: 8px; /* mb-2 */
+  font-size: 24px;
+  margin-bottom: 8px;
 }
 
 .stat-icon.blue {
@@ -261,9 +296,6 @@ onMounted(() => {
 }
 .stat-icon.purple {
   color: #9333ea;
-}
-.stat-icon.orange {
-  color: #ea580c;
 }
 
 .stat-label {
@@ -332,7 +364,7 @@ onMounted(() => {
   justify-content: center;
 }
 
-.start-btn {
+.back-btn {
   padding-left: 32px;
   padding-right: 32px;
   height: 48px;
@@ -341,7 +373,7 @@ onMounted(() => {
   border-radius: 8px;
 }
 
-.start-btn :deep(.el-icon) {
+.back-btn :deep(.el-icon) {
   margin-right: 8px;
 }
 

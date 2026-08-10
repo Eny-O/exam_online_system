@@ -1,9 +1,23 @@
 <template>
   <div class="exam-taking-container">
     <!-- 顶部导航栏 -->
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-wrapper">
+      <el-icon class="is-loading loading-icon"><Loading /></el-icon>
+      <p>正在加载试卷...</p>
+    </div>
+
+    <!-- 主体内容 -->
+    <template v-else>
     <header class="exam-header">
       <div class="header-content">
-        <h1 class="exam-title">前端开发基础测试</h1>
+        <div class="header-left">
+          <el-button text @click="handleLeave">
+            <el-icon><ArrowLeft /></el-icon>
+          </el-button>
+          <h1 class="exam-title">{{ paper.name }}</h1>
+          <span class="total-score">总分：{{ paper.totalScore }}</span>
+        </div>
         <div class="timer-display">
           <el-icon class="timer-icon"><Clock /></el-icon>
           <span :class="{ 'time-warning': timeLeft < 300 }">{{
@@ -21,12 +35,10 @@
           <div :key="currentIndex" class="question-card">
             <div class="question-header">
               <span class="question-index">第 {{ currentIndex + 1 }} 题</span>
-              <el-tag
-                size="small"
-                :type="currentQuestion.type === 'single' ? '' : 'warning'"
-              >
-                {{ currentQuestion.type === "single" ? "单选" : "多选" }}
+              <el-tag size="small" :type="typeTagColor(currentQuestion.type)">
+                {{ typeLabel(currentQuestion.type) }}
               </el-tag>
+              <span class="question-score">{{ currentQuestion.score }} 分</span>
               <el-tag
                 v-if="isMarked(currentIndex)"
                 size="small"
@@ -39,25 +51,40 @@
 
             <p class="question-content">{{ currentQuestion.content }}</p>
 
-            <div class="options-list">
+            <!-- 客观题：单选 / 多选 / 判断 -->
+            <div
+              v-if="currentQuestion.type !== 'essay'"
+              class="options-list"
+            >
               <button
                 v-for="opt in currentQuestion.options"
-                :key="opt.id"
-                @click="handleSelect(opt.id)"
-                :class="['option-item', { selected: isSelected(opt.id) }]"
+                :key="opt.label"
+                @click="handleSelect(opt.label)"
+                :class="['option-item', { selected: isSelected(opt.label) }]"
               >
                 <div class="option-left">
                   <span
-                    :class="['option-circle', { selected: isSelected(opt.id) }]"
+                    :class="['option-circle', { selected: isSelected(opt.label) }]"
                   >
-                    {{ opt.id }}
+                    {{ opt.label }}
                   </span>
-                  <span class="option-text">{{ opt.text }}</span>
+                  <span class="option-text">{{ opt.content }}</span>
                 </div>
-                <el-icon v-if="isSelected(opt.id)" class="check-icon"
+                <el-icon v-if="isSelected(opt.label)" class="check-icon"
                   ><Check
                 /></el-icon>
               </button>
+            </div>
+
+            <!-- 主观题：简答 -->
+            <div v-else class="essay-area">
+              <el-input
+                v-model="essayAnswers[currentQuestion.id]"
+                type="textarea"
+                :rows="6"
+                placeholder="请在此输入答案"
+                @input="handleEssayInput"
+              />
             </div>
           </div>
         </transition>
@@ -133,98 +160,139 @@
         </div>
       </aside>
     </main>
+    </template>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {
   Clock,
   Flag,
   Check,
   ArrowLeft,
   ArrowRight,
+  Loading,
 } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { getExamInfo, getExamPaper } from "@/api/examTask";
 
-// 模拟数据
-const questions = [
-  {
-    id: 1,
-    type: "single",
-    content: "React 中 useState 的作用是什么？",
-    options: [
-      { id: "A", text: "用于管理组件状态" },
-      { id: "B", text: "用于处理副作用" },
-      { id: "C", text: "用于性能优化" },
-      { id: "D", text: "用于路由跳转" },
-    ],
-  },
-  {
-    id: 2,
-    type: "single",
-    content: "TypeScript 中 interface 和 type 的区别是什么？",
-    options: [
-      { id: "A", text: "没有区别，完全等价" },
-      { id: "B", text: "interface 可以合并，type 不行" },
-      { id: "C", text: "type 可以定义基本类型，interface 不行" },
-      { id: "D", text: "B 和 C 都正确" },
-    ],
-  },
-  {
-    id: 3,
-    type: "multiple",
-    content: "以下哪些是 React 的 Hook？",
-    options: [
-      { id: "A", text: "useState" },
-      { id: "B", text: "useEffect" },
-      { id: "C", text: "useRouter" },
-      { id: "D", text: "useContext" },
-    ],
-  },
-];
+const route = useRoute();
+const router = useRouter();
 
-// 状态定义
+// ========== 题型映射 ==========
+const TYPE_LABEL = {
+  single: "单选",
+  multiple: "多选",
+  judge: "判断",
+  essay: "简答",
+};
+
+const TYPE_TAG_COLOR = {
+  single: "",
+  multiple: "warning",
+  judge: "success",
+  essay: "danger",
+};
+
+const typeLabel = (type) => TYPE_LABEL[type] ?? "未知";
+const typeTagColor = (type) => TYPE_TAG_COLOR[type] ?? "info";
+
+// ========== 状态定义 ==========
+const loading = ref(true);
+const paper = ref({ name: "", totalScore: 0, stuPaperQuestionVOS: [] });
+const questions = ref([]); // 扁平化后的题目数组
 const currentIndex = ref(0);
-const answers = ref({}); // { questionId: ['A'] or ['A', 'B'] }
+const answers = ref({}); // { questionId: ['A'] or ['A','B'] }
+const essayAnswers = ref({}); // { questionId: '文本内容' }
 const markedIndices = ref(new Set());
-const timeLeft = ref(3600); // 60分钟
+const timeLeft = ref(0);
 let timer = null;
 
-// 计算属性
-const currentQuestion = computed(() => questions[currentIndex.value]);
+// ========== 数据获取 ==========
+const fetchData = async () => {
+  loading.value = true;
+  const examId = route.params.id;
+  try {
+    // 先获取考试信息，拿到 paperId
+    const infoRes = await getExamInfo(examId);
 
-// 方法
+    // 根据开始时间和时长动态计算剩余时间
+    const startTime = new Date(infoRes.data.startTime).getTime();
+    const durationSeconds = infoRes.data.duration * 60;
+    const endTime = startTime + durationSeconds * 1000;
+    const now = Date.now();
+    const remaining = Math.floor((endTime - now) / 1000);
+    // 未开始则显示完整时长，已过期则为0
+    timeLeft.value = remaining > durationSeconds ? durationSeconds : Math.max(remaining, 0);
+
+    // 用 paperId 获取试卷内容
+    const paperRes = await getExamPaper(infoRes.data.paperId);
+
+    // 保存试卷原始数据
+    paper.value = paperRes.data;
+
+    // 扁平化题目数据
+    questions.value = paperRes.data.stuPaperQuestionVOS.map((pq) => ({
+      sortOrder: pq.sortOrder,
+      score: pq.score,
+      id: pq.stuQuestionCompleteVO.id,
+      content: pq.stuQuestionCompleteVO.content,
+      type: pq.stuQuestionCompleteVO.type,
+      options: pq.stuQuestionCompleteVO.options || [],
+    }));
+  } catch (error) {
+    console.error("加载试卷失败:", error);
+    ElMessage.error("加载试卷失败");
+  } finally {
+    loading.value = false;
+  }
+};
+
+// ========== 计算属性 ==========
+const currentQuestion = computed(() => questions.value[currentIndex.value]);
+
+// ========== 方法 ==========
 const formatTime = (seconds) => {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
 
-const handleSelect = (optionId) => {
+const handleSelect = (optionLabel) => {
   const q = currentQuestion.value;
   const currentAns = answers.value[q.id] || [];
 
-  if (q.type === "single") {
-    // 单选：直接替换
-    answers.value[q.id] = [optionId];
+  if (q.type === "single" || q.type === "judge") {
+    // 单选/判断：直接替换
+    answers.value[q.id] = [optionLabel];
   } else {
     // 多选：切换状态
-    if (currentAns.includes(optionId)) {
-      answers.value[q.id] = currentAns.filter((id) => id !== optionId);
+    if (currentAns.includes(optionLabel)) {
+      answers.value[q.id] = currentAns.filter((l) => l !== optionLabel);
     } else {
-      answers.value[q.id] = [...currentAns, optionId];
+      answers.value[q.id] = [...currentAns, optionLabel];
     }
   }
 };
 
-const isSelected = (optionId) => {
-  const currentAns = answers.value[currentQuestion.value.id] || [];
-  return currentAns.includes(optionId);
+const isSelected = (optionLabel) => {
+  const q = currentQuestion.value;
+  const currentAns = answers.value[q.id] || [];
+  return currentAns.includes(optionLabel);
+};
+
+const handleEssayInput = () => {
+  // essayAnswers 通过 v-model 自动更新，此处可用于触发额外逻辑
 };
 
 const hasAnswer = (questionId) => {
-  return answers.value[questionId] && answers.value[questionId].length > 0;
+  // 客观题检查 answers，主观题检查 essayAnswers
+  const optAns = answers.value[questionId];
+  if (optAns && optAns.length > 0) return true;
+  const essayAns = essayAnswers.value[questionId];
+  return essayAns !== undefined && essayAns !== null && essayAns.trim() !== "";
 };
 
 const isMarked = (index) => {
@@ -237,9 +305,6 @@ const toggleMark = () => {
   } else {
     markedIndices.value.add(currentIndex.value);
   }
-  // 触发响应式更新（Set本身不是响应式的，需要重新赋值或使用其他方法，这里简单起见强制刷新视图或通过其他方式触发）
-  // 在Vue3中，如果ref指向一个对象/Set，修改内部属性不会触发视图更新，除非重新赋值ref.value
-  // 更好的做法是使用 reactive Set 或者仅仅依赖 markedIndices.value = new Set(markedIndices.value)
   markedIndices.value = new Set(markedIndices.value);
 };
 
@@ -250,8 +315,25 @@ const prevQuestion = () => {
 };
 
 const nextQuestion = () => {
-  if (currentIndex.value < questions.length - 1) {
+  if (currentIndex.value < questions.value.length - 1) {
     currentIndex.value++;
+  }
+};
+
+const handleLeave = async () => {
+  try {
+    await ElMessageBox.confirm(
+      "是否确定要离开考试？",
+      "离开确认",
+      {
+        confirmButtonText: "确定离开",
+        cancelButtonText: "继续考试",
+        type: "warning",
+      }
+    );
+    router.push("/exam/list");
+  } catch {
+    // 取消操作
   }
 };
 
@@ -266,23 +348,24 @@ const submitExam = async () => {
         type: "warning",
       }
     );
-    // 这里执行提交逻辑
+    // TODO: 调用后端提交接口
     ElMessage.success("试卷提交成功！");
-    // router.push('/result');
+    router.push("/exam/list");
   } catch {
     // 取消操作
   }
 };
 
-// 生命周期
+// ========== 生命周期 ==========
 onMounted(() => {
+  fetchData();
   timer = setInterval(() => {
     if (timeLeft.value > 0) {
       timeLeft.value--;
     } else {
       clearInterval(timer);
       ElMessage.warning("考试时间已到，自动提交试卷");
-      // submitExam();
+      submitExam();
     }
   }, 1000);
 });
@@ -298,6 +381,22 @@ onUnmounted(() => {
   background-color: #f9fafb;
   display: flex;
   flex-direction: column;
+}
+
+/* 加载状态 */
+.loading-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 0;
+  color: #6b7280;
+}
+
+.loading-icon {
+  font-size: 32px;
+  color: #2563eb;
+  margin-bottom: 16px;
 }
 
 /* 头部 */
@@ -317,6 +416,18 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.total-score {
+  font-size: 14px;
+  color: #6b7280;
+  white-space: nowrap;
 }
 
 .exam-title {
@@ -397,6 +508,11 @@ onUnmounted(() => {
   color: #6b7280;
 }
 
+.question-score {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
 .question-content {
   font-size: 18px;
   color: #1f2937;
@@ -469,6 +585,11 @@ onUnmounted(() => {
   color: #3b82f6;
   width: 20px;
   height: 20px;
+}
+
+/* 简答区域 */
+.essay-area {
+  margin-top: 8px;
 }
 
 /* 底部操作 */

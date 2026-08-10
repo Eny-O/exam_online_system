@@ -203,7 +203,7 @@ const customColors = [
 
 // 方法
 const handleBack = () => {
-  router.push("/exams");
+  router.back();
 };
 
 onMounted(() => {
