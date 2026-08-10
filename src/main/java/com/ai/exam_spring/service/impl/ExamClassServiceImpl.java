@@ -2,7 +2,7 @@ package com.ai.exam_spring.service.impl;
 
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.pojo.entity.ExamClass;
+import com.ai.exam_spring.pojo.entity.exam.ExamClass;
 import com.ai.exam_spring.mapper.ExamClassMapper;
 import com.ai.exam_spring.service.ExamClassService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -23,6 +23,8 @@ public class ExamClassServiceImpl extends ServiceImpl<ExamClassMapper, ExamClass
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void add(Integer examId, List<Integer> classIds) {
+        System.out.println(examId);
+        System.out.println(classIds);
         if (examId == null || classIds == null || classIds.isEmpty()) throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
         remove(new LambdaQueryWrapper<ExamClass>().eq(ExamClass::getExamId, examId));
         List<ExamClass> examClassList = classIds.stream()

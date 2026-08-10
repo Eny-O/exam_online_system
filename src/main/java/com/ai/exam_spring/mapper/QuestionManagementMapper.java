@@ -1,6 +1,6 @@
 package com.ai.exam_spring.mapper;
 
-import com.ai.exam_spring.pojo.entity.Question;
+import com.ai.exam_spring.pojo.entity.question.Question;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

@@ -2,12 +2,10 @@ package com.ai.exam_spring.service;
 
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.status.PaperStatus;
-import com.ai.exam_spring.pojo.dto.PaperUpdateDTO;
-import com.ai.exam_spring.pojo.dto.PaperQueryDTO;
-import com.ai.exam_spring.pojo.dto.PaperStatusUpdateDTO;
-import com.ai.exam_spring.pojo.entity.Paper;
-import com.ai.exam_spring.pojo.vo.PaperContentVO;
-import com.ai.exam_spring.pojo.vo.PaperVO;
+import com.ai.exam_spring.pojo.dto.paper.*;
+import com.ai.exam_spring.pojo.entity.paper.Paper;
+import com.ai.exam_spring.pojo.vo.paper.PaperContentVO;
+import com.ai.exam_spring.pojo.vo.paper.PaperVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
@@ -33,7 +31,7 @@ public interface IPaperManagementService extends IService<Paper> {
      * 添加试卷
      * @param paperUpdateDTO
      */
-    void addPaper(PaperUpdateDTO paperUpdateDTO);
+    void addPaper(BasePaperDTO paperUpdateDTO);
 
     /**
      * 根据id获取试卷

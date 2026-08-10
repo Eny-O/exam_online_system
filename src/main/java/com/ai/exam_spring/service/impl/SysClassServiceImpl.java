@@ -1,6 +1,6 @@
 package com.ai.exam_spring.service.impl;
 
-import com.ai.exam_spring.pojo.entity.SysClass;
+import com.ai.exam_spring.pojo.entity.user.SysClass;
 import com.ai.exam_spring.mapper.SysClassMapper;
 import com.ai.exam_spring.service.ISysClassService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;

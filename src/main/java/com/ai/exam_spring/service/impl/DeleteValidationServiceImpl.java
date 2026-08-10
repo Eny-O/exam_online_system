@@ -1,8 +1,8 @@
 package com.ai.exam_spring.service.impl;
 
 import com.ai.exam_spring.mapper.ExamManagementMapper;
-import com.ai.exam_spring.pojo.entity.Exam;
-import com.ai.exam_spring.pojo.entity.PaperQuestion;
+import com.ai.exam_spring.pojo.entity.exam.Exam;
+import com.ai.exam_spring.pojo.entity.paper.PaperQuestion;
 import com.ai.exam_spring.mapper.PaperQuestionMapper;
 import com.ai.exam_spring.service.DeleteValidationService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;

@@ -1,6 +1,6 @@
 package com.ai.exam_spring.service;
 
-import com.ai.exam_spring.pojo.entity.SysClass;
+import com.ai.exam_spring.pojo.entity.user.SysClass;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**

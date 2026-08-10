@@ -42,6 +42,7 @@ public enum ErrorCodeEnum {
     // 考试错误码
     EXAM_NOT_FOUND("3001", "考试不存在"),
     NOT_ADD_ENABLE_PAPER("3002","不能添加未启用的试卷"),
+    EXAM_STATUS_CHANGE_FAIL("3003","考试状态改变失败"),
 
     // 文件与导入错误码
     FILE_FORMAT_ERROR("4001", "仅支持 .xlsx 格式文件"),

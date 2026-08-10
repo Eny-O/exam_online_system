@@ -1,6 +1,6 @@
 package com.ai.exam_spring.mapper;
 
-import com.ai.exam_spring.pojo.entity.User;
+import com.ai.exam_spring.pojo.entity.user.User;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

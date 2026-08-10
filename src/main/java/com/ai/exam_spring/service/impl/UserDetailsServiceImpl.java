@@ -1,8 +1,8 @@
 package com.ai.exam_spring.service.impl;
 
 import com.ai.exam_spring.security.LoginUser;
-import com.ai.exam_spring.pojo.entity.Permission;
-import com.ai.exam_spring.pojo.entity.User;
+import com.ai.exam_spring.pojo.entity.user.Permission;
+import com.ai.exam_spring.pojo.entity.user.User;
 import com.ai.exam_spring.mapper.PermissionMapper;
 import com.ai.exam_spring.mapper.UserMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;

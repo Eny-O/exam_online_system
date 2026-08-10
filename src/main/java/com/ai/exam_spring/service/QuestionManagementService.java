@@ -1,12 +1,12 @@
 package com.ai.exam_spring.service;
 
 import com.ai.exam_spring.common.result.BatchInsertResult;
-import com.ai.exam_spring.pojo.dto.QuestionAddDTO;
-import com.ai.exam_spring.pojo.dto.QuestionUpdateDTO;
-import com.ai.exam_spring.pojo.dto.QuestionQueryDTO;
+import com.ai.exam_spring.pojo.dto.question.QuestionAddDTO;
+import com.ai.exam_spring.pojo.dto.question.QuestionUpdateDTO;
+import com.ai.exam_spring.pojo.dto.question.QuestionQueryDTO;
 import com.ai.exam_spring.common.result.PageResult;
-import com.ai.exam_spring.pojo.vo.QuestionCompleteVO;
-import com.ai.exam_spring.pojo.vo.QuestionVO;
+import com.ai.exam_spring.pojo.vo.question.QuestionCompleteVO;
+import com.ai.exam_spring.pojo.vo.question.QuestionVO;
 
 import java.util.List;
 

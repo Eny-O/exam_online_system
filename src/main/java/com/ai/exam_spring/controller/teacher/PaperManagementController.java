@@ -3,16 +3,18 @@ package com.ai.exam_spring.controller.teacher;
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.common.status.PaperStatus;
-import com.ai.exam_spring.pojo.dto.PaperUpdateDTO;
-import com.ai.exam_spring.pojo.dto.PaperQueryDTO;
-import com.ai.exam_spring.pojo.dto.PaperStatusUpdateDTO;
-import com.ai.exam_spring.pojo.vo.PaperContentVO;
-import com.ai.exam_spring.pojo.vo.PaperVO;
+import com.ai.exam_spring.pojo.dto.paper.PaperAddDTO;
+import com.ai.exam_spring.pojo.dto.paper.PaperUpdateDTO;
+import com.ai.exam_spring.pojo.dto.paper.PaperQueryDTO;
+import com.ai.exam_spring.pojo.dto.paper.PaperStatusUpdateDTO;
+import com.ai.exam_spring.pojo.vo.paper.PaperContentVO;
+import com.ai.exam_spring.pojo.vo.paper.PaperVO;
 import com.ai.exam_spring.service.IPaperManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -45,15 +47,15 @@ public class PaperManagementController {
 
     @Operation(summary = "添加试卷")
     @PostMapping("/addPaper")
-    public ResponseResult<Void> addPaper(@RequestBody PaperUpdateDTO paperUpdateDTO) {
-        log.info("保存试卷: {}", paperUpdateDTO);
-        paperService.addPaper(paperUpdateDTO);
+    public ResponseResult<Void> addPaper(@Validated @RequestBody PaperAddDTO paperAddDTO) {
+        log.info("保存试卷: {}", paperAddDTO);
+        paperService.addPaper(paperAddDTO);
         return ResponseResult.success();
     }
 
     @Operation(summary = "更新试卷")
     @PutMapping("/updatePaper")
-    public ResponseResult<Void> updatePaper(@RequestBody PaperUpdateDTO paperUpdateDTO) {
+    public ResponseResult<Void> updatePaper(@Validated @RequestBody PaperUpdateDTO paperUpdateDTO) {
         log.info("更新试卷: {}", paperUpdateDTO);
         paperService.addPaper(paperUpdateDTO);
         return ResponseResult.success();
@@ -77,7 +79,7 @@ public class PaperManagementController {
 
     @Operation(summary = "更新试卷状态")
     @PutMapping("/updatePaperStatus")
-    public ResponseResult<Void> updatePaperStatus(@RequestBody PaperStatusUpdateDTO paperStatusUpdateDTO) {
+    public ResponseResult<Void> updatePaperStatus(@Validated @RequestBody PaperStatusUpdateDTO paperStatusUpdateDTO) {
         log.info("更新试卷状态: {}", paperStatusUpdateDTO);
         paperService.updatePaperStatus(paperStatusUpdateDTO);
         return ResponseResult.success();

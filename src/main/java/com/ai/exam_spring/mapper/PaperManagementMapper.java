@@ -1,7 +1,7 @@
 package com.ai.exam_spring.mapper;
 
-import com.ai.exam_spring.pojo.entity.Paper;
-import com.ai.exam_spring.pojo.vo.PaperVO;
+import com.ai.exam_spring.pojo.entity.paper.Paper;
+import com.ai.exam_spring.pojo.vo.paper.PaperVO;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

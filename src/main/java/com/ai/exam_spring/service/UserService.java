@@ -1,8 +1,8 @@
 package com.ai.exam_spring.service;
 
-import com.ai.exam_spring.pojo.dto.UserLoginDTO;
-import com.ai.exam_spring.pojo.vo.UserInfoVO;
-import com.ai.exam_spring.pojo.vo.UStudentVO;
+import com.ai.exam_spring.pojo.dto.user.UserLoginDTO;
+import com.ai.exam_spring.pojo.vo.user.UserInfoVO;
+import com.ai.exam_spring.pojo.vo.user.UStudentVO;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;

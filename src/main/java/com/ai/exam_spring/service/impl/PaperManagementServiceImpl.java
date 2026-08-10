@@ -5,16 +5,13 @@ import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.status.PaperStatus;
-import com.ai.exam_spring.pojo.dto.PaperUpdateDTO;
-import com.ai.exam_spring.pojo.dto.PaperQueryDTO;
-import com.ai.exam_spring.pojo.dto.PaperQuestionDTO;
-import com.ai.exam_spring.pojo.dto.PaperStatusUpdateDTO;
-import com.ai.exam_spring.pojo.entity.Paper;
-import com.ai.exam_spring.pojo.entity.PaperQuestion;
-import com.ai.exam_spring.pojo.vo.PaperContentVO;
-import com.ai.exam_spring.pojo.vo.PaperQuestionVO;
-import com.ai.exam_spring.pojo.vo.PaperVO;
-import com.ai.exam_spring.pojo.vo.QuestionCompleteVO;
+import com.ai.exam_spring.pojo.dto.paper.*;
+import com.ai.exam_spring.pojo.entity.paper.Paper;
+import com.ai.exam_spring.pojo.entity.paper.PaperQuestion;
+import com.ai.exam_spring.pojo.vo.paper.PaperContentVO;
+import com.ai.exam_spring.pojo.vo.paper.PaperQuestionVO;
+import com.ai.exam_spring.pojo.vo.paper.PaperVO;
+import com.ai.exam_spring.pojo.vo.question.QuestionCompleteVO;
 import com.ai.exam_spring.mapper.PaperManagementMapper;
 import com.ai.exam_spring.mapper.PaperQuestionMapper;
 import com.ai.exam_spring.service.IPaperManagementService;
@@ -27,7 +24,6 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -79,7 +75,7 @@ public class PaperManagementServiceImpl extends ServiceImpl<PaperManagementMappe
      */
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public void addPaper(PaperUpdateDTO paperUpdateDTO) {
+    public void addPaper(BasePaperDTO paperUpdateDTO) {
         // 安全校验并获取当前用户的 id
         String currentUserId = SecurityUtil.getCurrentUserId();
         if (currentUserId == null) throw new BusinessException(ErrorCodeEnum.USER_NOT_LOGIN);

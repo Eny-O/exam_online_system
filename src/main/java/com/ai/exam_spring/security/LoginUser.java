@@ -1,7 +1,7 @@
 package com.ai.exam_spring.security;
 
-import com.ai.exam_spring.pojo.entity.Permission;
-import com.ai.exam_spring.pojo.entity.User;
+import com.ai.exam_spring.pojo.entity.user.Permission;
+import com.ai.exam_spring.pojo.entity.user.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
