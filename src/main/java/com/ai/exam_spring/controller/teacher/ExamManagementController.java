@@ -2,12 +2,11 @@ package com.ai.exam_spring.controller.teacher;
 
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
-import com.ai.exam_spring.pojo.dto.exam.ExamDetailDTO;
-import com.ai.exam_spring.pojo.dto.exam.ExamQueryDTO;
-import com.ai.exam_spring.pojo.dto.exam.ExamStatusUpdateDTO;
+import com.ai.exam_spring.pojo.dto.exam.*;
 import com.ai.exam_spring.pojo.enums.exam.ExamEnum;
+import com.ai.exam_spring.pojo.vo.exam.ExamDetailVO;
 import com.ai.exam_spring.pojo.vo.exam.ExamVO;
-import com.ai.exam_spring.service.IExamManagementService;
+import com.ai.exam_spring.service.exam.IExamManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -33,12 +32,28 @@ public class ExamManagementController {
         return ResponseResult.success(pageResult);
     }
 
-    @Operation(summary = "增加试卷")
+    @Operation(summary = "增加考试")
     @PostMapping("/add")
-    public ResponseResult<Integer> add(@Validated @RequestBody ExamDetailDTO examDetailDTO) {
-        log.info("增加试卷 {}", examDetailDTO);
-        Integer id = examManagementService.addExam(examDetailDTO);
+    public ResponseResult<Integer> add(@Validated @RequestBody ExamDetailAddDTO examDetailAddDTO) {
+        log.info("增加试卷 {}", examDetailAddDTO);
+        Integer id = examManagementService.addExam(examDetailAddDTO);
         return ResponseResult.success(id);
+    }
+
+    @Operation(summary = "更新考试")
+    @PutMapping("/update")
+    public ResponseResult<Void> update(@Validated @RequestBody ExamDetailUpdateDTO examDetailUpdateDTO) {
+        log.info("更新试卷 {}", examDetailUpdateDTO);
+        examManagementService.updateExam(examDetailUpdateDTO);
+        return ResponseResult.success();
+    }
+
+    @Operation(summary = "根据id获取考试详情")
+    @GetMapping("/getExamDetailById")
+    public ResponseResult<ExamDetailVO> getExamDetailById(@Validated @RequestParam Integer id) {
+        log.info("根据id获取考试详情 {}", id);
+        ExamDetailVO examDetailVO = examManagementService.getExamDetailById(id);
+        return ResponseResult.success(examDetailVO);
     }
 
 

@@ -1,10 +1,12 @@
 package com.ai.exam_spring.controller.admin;
 
+import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
+import com.ai.exam_spring.pojo.dto.user.StudentQueryDTO;
 import com.ai.exam_spring.pojo.dto.user.UserLoginDTO;
 import com.ai.exam_spring.pojo.vo.user.UserInfoVO;
 import com.ai.exam_spring.pojo.vo.user.UStudentVO;
-import com.ai.exam_spring.service.UserService;
+import com.ai.exam_spring.service.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,7 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
     @Operation(summary = "获取用户信息")
     @GetMapping("/getInfo")
     public ResponseResult<UserInfoVO> getInfo() {
@@ -51,4 +54,13 @@ public class UserController {
         List<UStudentVO> students = userService.getClassMember(classId);
         return ResponseResult.success(students);
     }
+
+    @Operation(summary = "分页条件查询学生")
+    @GetMapping("/pageStudent")
+    public ResponseResult<PageResult<UStudentVO>> pageStudent(StudentQueryDTO studentQueryDTO) {
+        log.info("分页条件查询学生: {}", studentQueryDTO);
+        PageResult<UStudentVO> pageResult = userService.pageStudent(studentQueryDTO);
+        return ResponseResult.success(pageResult);
+    }
+
 }

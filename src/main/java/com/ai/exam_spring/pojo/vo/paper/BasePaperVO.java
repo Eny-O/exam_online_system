@@ -8,7 +8,7 @@ import lombok.Data;
 public class BasePaperVO {
 
     @Schema(description = "主键id")
-    private Long id;
+    private Integer id;
 
     @Schema(description = "试卷名称")
     private String name;

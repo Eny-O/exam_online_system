@@ -1,5 +1,6 @@
 package com.ai.exam_spring.service;
 
+import com.ai.exam_spring.service.common.DeleteValidationService;
 import com.ai.exam_spring.service.impl.DeleteValidationServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -59,8 +59,11 @@ public enum ErrorCodeEnum {
     PAPER_REFERENCE_ANY_EXAM("5006", "试卷已被考试引用"),
     PAPER_STATUS_CHANGE_FAIL("5007","试卷状态改变失败"),
 
+    // 班级错误码
+    CLASS_NOT_FOUND("6001", "班级不存在"),
+
     // 并发修改错误码
-    DATA_ALREADY_MODIFIED_PLEASE_FLUSH_AFTER_RETRY("6001", "数据已经被更改,请刷新后重试");
+    DATA_ALREADY_MODIFIED_PLEASE_FLUSH_AFTER_RETRY("7001", "数据已经被更改,请刷新后重试");
 
     private final String code;
     private final String message;

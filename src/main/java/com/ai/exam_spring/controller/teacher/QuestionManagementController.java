@@ -8,7 +8,7 @@ import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.pojo.vo.question.QuestionCompleteVO;
 import com.ai.exam_spring.pojo.vo.question.QuestionVO;
-import com.ai.exam_spring.service.QuestionManagementService;
+import com.ai.exam_spring.service.question.QuestionManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;

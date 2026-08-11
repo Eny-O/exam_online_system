@@ -2,7 +2,7 @@ package com.ai.exam_spring.controller.teacher;
 
 import com.ai.exam_spring.common.result.BatchInsertResult;
 import com.ai.exam_spring.common.result.ResponseResult;
-import com.ai.exam_spring.service.FileManagementService;
+import com.ai.exam_spring.service.common.FileManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;

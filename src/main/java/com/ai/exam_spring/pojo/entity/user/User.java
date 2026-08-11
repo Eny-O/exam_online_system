@@ -42,6 +42,9 @@ public class User {
     @Schema(description = "班级ID（管理员为null）", example = "10")
     private Integer classId;
 
+    @Schema(description = "专业", example = "软件工程")
+    private String major;
+
     @Schema(description = "用户状态：1-启用，2-禁用", example = "1")
     private Integer status;
 

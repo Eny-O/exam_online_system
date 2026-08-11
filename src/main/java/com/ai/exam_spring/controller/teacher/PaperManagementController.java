@@ -9,7 +9,7 @@ import com.ai.exam_spring.pojo.dto.paper.PaperQueryDTO;
 import com.ai.exam_spring.pojo.dto.paper.PaperStatusUpdateDTO;
 import com.ai.exam_spring.pojo.vo.paper.PaperContentVO;
 import com.ai.exam_spring.pojo.vo.paper.PaperVO;
-import com.ai.exam_spring.service.IPaperManagementService;
+import com.ai.exam_spring.service.paper.IPaperManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;

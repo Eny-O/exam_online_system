@@ -5,7 +5,9 @@ import cn.hutool.core.bean.BeanUtil;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.pojo.entity.user.SysClass;
 import com.ai.exam_spring.pojo.vo.user.SysClassVO;
-import com.ai.exam_spring.service.ISysClassService;
+import com.ai.exam_spring.pojo.vo.user.UStudentVO;
+import com.ai.exam_spring.service.user.ISysClassService;
+import com.ai.exam_spring.service.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -43,5 +45,6 @@ public class SysClassController {
         }).toList();
         return ResponseResult.success(sysClassVOList);
     }
+
 
 }

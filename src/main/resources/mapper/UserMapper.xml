@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ai.exam_spring.mapper.UserMapper">
+    <select id="pageStudent" resultType="com.ai.exam_spring.pojo.vo.user.UStudentVO">
+        select
+            u.id,
+            student_no,
+            real_name,
+            class_name,
+            major,
+            grade
+        from sys_user u left join sys_class c on u.class_id = c.id
+        WHERE u.user_type = 1 AND u.status = 1
+        <if test="ew.sqlSegment != null and ew.sqlSegment != ''">
+            AND ${ew.sqlSegment}
+        </if>
+    </select>
+</mapper>
