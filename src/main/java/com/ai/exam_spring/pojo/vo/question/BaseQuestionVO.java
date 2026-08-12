@@ -1,5 +1,6 @@
 package com.ai.exam_spring.pojo.vo.question;
 
+import com.ai.exam_spring.pojo.enums.question.QuestionTypeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -17,7 +18,7 @@ public class BaseQuestionVO {
             description = "题目类型: single-单选 multiple-多选 judge-判断 essay-简答",
             allowableValues = {"single", "multiple", "judge", "essay"}
     )
-    private String type;
+    private QuestionTypeEnum type;
 
     @Schema(description = "所属知识点")
     private String knowledgePoint;

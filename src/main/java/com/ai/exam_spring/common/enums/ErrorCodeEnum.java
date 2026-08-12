@@ -26,7 +26,7 @@ public enum ErrorCodeEnum {
     PERMISSION_DENIED("1005", "无权限"),
     ACCOUNT_DISABLED("1006", "账号已被禁用"),
     PLEASE_FLUSH_AFTER_RETRY("1007", "请刷新页面后重试"),
-    PARAM_ERROR("1008", "参数错误"),
+    PARAM_ERROR("1008", "传入参数错误"),
 
     // 题目错误码
     QUESTION_NOT_EXIST("2001", "题目不存在"),
@@ -62,8 +62,11 @@ public enum ErrorCodeEnum {
     // 班级错误码
     CLASS_NOT_FOUND("6001", "班级不存在"),
 
+    // 阅卷错误码
+    PAPER_CONTENT_EMPTY_NOT_GRADE("7001", "试卷内容为空，不能阅卷"),
+
     // 并发修改错误码
-    DATA_ALREADY_MODIFIED_PLEASE_FLUSH_AFTER_RETRY("7001", "数据已经被更改,请刷新后重试");
+    DATA_ALREADY_MODIFIED_PLEASE_FLUSH_AFTER_RETRY("8001", "数据已经被更改,请刷新后重试");
 
     private final String code;
     private final String message;

@@ -57,7 +57,7 @@
         INNER JOIN sys_user u ON u.class_id = ec.class_id
         WHERE ec.exam_id = e.id AND u.id = #{stuId}
         )
-        )
+        ) AND e.status != 0
         ${ew.customSqlSegment}
         <choose>
             <when test="viewStatus != null and viewStatus.code == 2">

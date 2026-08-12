@@ -1,6 +1,7 @@
 package com.ai.exam_spring.pojo.vo.exam;
 
 import com.ai.exam_spring.pojo.enums.exam.ExamEnum;
+import com.ai.exam_spring.pojo.vo.paper.BasePaperVO;
 import com.ai.exam_spring.pojo.vo.user.UStudentVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -31,4 +32,7 @@ public class ExamDetailVO {
 
     @Schema(description = "关联学生信息集合")
     private List<UStudentVO> studentVOS;
+
+    @Schema(description = "试卷基本信息")
+    private BasePaperVO basePaperVO;
 }

@@ -3,6 +3,7 @@ package com.ai.exam_spring.service.exam.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerDTO;
 import com.ai.exam_spring.pojo.entity.exam.Exam;
 import com.ai.exam_spring.pojo.vo.exam.StuExamVO;
 import com.ai.exam_spring.pojo.vo.paper.PaperContentVO;
@@ -11,6 +12,7 @@ import com.ai.exam_spring.pojo.vo.paper.StuPaperVO;
 import com.ai.exam_spring.pojo.vo.question.StuQuestionCompleteVO;
 import com.ai.exam_spring.service.exam.IExamManagementService;
 import com.ai.exam_spring.service.exam.StuExamService;
+import com.ai.exam_spring.service.grading.IStudentAnswerService;
 import com.ai.exam_spring.service.paper.IPaperManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,9 @@ public class StuExamServiceImpl implements StuExamService {
 
     @Autowired
     private IPaperManagementService paperManagementService;
+
+    @Autowired
+    private IStudentAnswerService studentAnswerService;
 
     @Override
     public StuExamVO examInfoById(Integer id) {
@@ -60,5 +65,17 @@ public class StuExamServiceImpl implements StuExamService {
         }).toList();
         stuPaperVO.setStuPaperQuestionVOS(stuPaperQuestionVOS);
         return stuPaperVO;
+    }
+
+    /**
+     * 提交试卷
+     * @param studentAnswerDTO
+     */
+    @Override
+    public void submitPaper(StudentAnswerDTO studentAnswerDTO) {
+        if (studentAnswerDTO == null) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        }
+        studentAnswerService.batchSaveStudentAnswers(studentAnswerDTO);
     }
 }

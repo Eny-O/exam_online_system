@@ -1,23 +1,18 @@
 package com.ai.exam_spring.controller.student;
 
-import cn.hutool.core.bean.BeanUtil;
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.pojo.dto.exam.StuExamQueryDTO;
-import com.ai.exam_spring.pojo.entity.exam.Exam;
+import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerDTO;
 import com.ai.exam_spring.pojo.vo.exam.StuExamVO;
 import com.ai.exam_spring.pojo.vo.paper.StuPaperVO;
 import com.ai.exam_spring.service.exam.IExamManagementService;
 import com.ai.exam_spring.service.exam.StuExamService;
-import com.ai.exam_spring.service.paper.IPaperManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "学生考试相关接口")
 @RestController
@@ -53,5 +48,13 @@ public class ExamController {
         log.info("学生获取试卷内容: {}", id);
         StuPaperVO stuPaperVO = stuExamService.getPaperById(id);
         return ResponseResult.success(stuPaperVO);
+    }
+
+    @Operation(summary = "学生提交试卷")
+    @PostMapping("/submitPaper")
+    public ResponseResult<Void> submitPaper(@RequestBody StudentAnswerDTO studentAnswerDTO) {
+        log.info("学生提交试卷: {}", studentAnswerDTO);
+        stuExamService.submitPaper(studentAnswerDTO);
+        return ResponseResult.success();
     }
 }

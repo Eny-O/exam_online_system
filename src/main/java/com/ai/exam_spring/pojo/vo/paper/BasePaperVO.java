@@ -3,6 +3,8 @@ package com.ai.exam_spring.pojo.vo.paper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Schema(description = "试卷VO的基类")
 public class BasePaperVO {
@@ -18,4 +20,7 @@ public class BasePaperVO {
 
     @Schema(description = "试卷描述")
     private String description;
+
+    @Schema(description = "试卷题目列表")
+    private List<PaperQuestionVO> paperQuestionVOS;
 }
