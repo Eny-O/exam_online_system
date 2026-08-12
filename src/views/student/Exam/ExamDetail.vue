@@ -70,9 +70,7 @@
               </li>
               <li class="rule-item">
                 <span class="rule-number">4</span>
-                <span class="rule-content"
-                  >如有疑问请联系任课教师</span
-                >
+                <span class="rule-content">如有疑问请联系任课教师</span>
               </li>
             </ul>
           </div>
@@ -153,7 +151,9 @@ const pad = (n) => String(n).padStart(2, "0");
 const formatDateTime = (dateStr) => {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
 const getEndTime = (exam) => {

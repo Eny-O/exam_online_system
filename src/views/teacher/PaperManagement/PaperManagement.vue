@@ -3,7 +3,11 @@ import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Search, Refresh, Plus, Delete } from "@element-plus/icons-vue";
-import { getPaperPage, deletePapers, updatePaperStatus } from "@/api/paperManager";
+import {
+  getPaperPage,
+  deletePapers,
+  updatePaperStatus,
+} from "@/api/paperManager";
 import PaperDrawer from "./components/PaperDrawer.vue";
 
 const router = useRouter();
@@ -213,15 +217,11 @@ const handleDelete = (row) => {
 // 更新试卷状态（启用/取消启用）
 const handleUpdateStatus = (row, newStatus) => {
   const actionText = newStatus === 2 ? "启用" : "取消启用";
-  ElMessageBox.confirm(
-    `确定要${actionText}试卷"${row.name}"吗？`,
-    "提示",
-    {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "info",
-    }
-  )
+  ElMessageBox.confirm(`确定要${actionText}试卷"${row.name}"吗？`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "info",
+  })
     .then(async () => {
       try {
         await updatePaperStatus(row.id, newStatus);
@@ -375,10 +375,18 @@ onMounted(() => {
             <el-tag v-if="row.status === 'DRAFT'" type="info" effect="plain">
               草稿
             </el-tag>
-            <el-tag v-else-if="row.status === 'PENDING_ENABLE'" type="warning" effect="plain">
+            <el-tag
+              v-else-if="row.status === 'PENDING_ENABLE'"
+              type="warning"
+              effect="plain"
+            >
               待启用
             </el-tag>
-            <el-tag v-else-if="row.status === 'ALREADY_ENABLE'" type="success" effect="plain">
+            <el-tag
+              v-else-if="row.status === 'ALREADY_ENABLE'"
+              type="success"
+              effect="plain"
+            >
               已启用
             </el-tag>
           </template>

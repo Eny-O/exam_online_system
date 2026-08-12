@@ -10,9 +10,16 @@ export function addExam(data) {
   return request.post("/exam-task-management/add", data);
 }
 
+// 更新考试
+export function updateExam(data) {
+  return request.put("/exam-task-management/update", data);
+}
+
 // 根据id获取考试详情
 export function getExamDetailById(id) {
-  return request.get("/exam-task-management/getExamDetailById", { params: { id } });
+  return request.get("/exam-task-management/getExamDetailById", {
+    params: { id },
+  });
 }
 
 // 根据班级ID获取学生列表
@@ -54,4 +61,26 @@ export function getExamInfo(id) {
 // 学生获取试卷内容
 export function getExamPaper(id) {
   return request.get("/stu/exam/getExamPaper", { params: { id } });
+}
+
+// 学生提交试卷
+export function submitPaper(data) {
+  return request.post("/stu/exam/submitPaper", data);
+}
+
+// 获取批阅试卷内容
+export function getGradePaper(examId) {
+  return request.get("/gradePaper/getGradePaper", { params: { examId } });
+}
+
+// 获取要批阅的学生列表
+export function getGradeStudentList(examId) {
+  return request.get("/gradePaper/getGradeStudentList", { params: { examId } });
+}
+
+// 获取学生答题情况
+export function getStudentAnswer(studentId, examId) {
+  return request.get("/gradePaper/getStudentAnswer", {
+    params: { studentId, examId },
+  });
 }

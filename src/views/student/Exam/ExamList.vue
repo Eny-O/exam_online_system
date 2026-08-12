@@ -29,7 +29,11 @@
           />
         </el-select>
 
-        <el-button type="primary" @click="handleSearch" style="margin-left: 15px">
+        <el-button
+          type="primary"
+          @click="handleSearch"
+          style="margin-left: 15px"
+        >
           <el-icon><Search /></el-icon>
           搜索
         </el-button>
@@ -171,8 +175,8 @@ const getRealStatus = (row) => {
   const start = new Date(row.startTime);
   const end = new Date(start.getTime() + row.duration * 60 * 1000);
   if (now < start) return 2; // 未开始
-  if (now < end) return 3;   // 进行中
-  return 4;                   // 已结束
+  if (now < end) return 3; // 进行中
+  return 4; // 已结束
 };
 
 // 计算结束时间
@@ -180,7 +184,9 @@ const getEndTime = (row) => {
   const start = new Date(row.startTime);
   const end = new Date(start.getTime() + row.duration * 60 * 1000);
   const pad = (n) => String(n).padStart(2, "0");
-  return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())} ${pad(end.getHours())}:${pad(end.getMinutes())}:${pad(end.getSeconds())}`;
+  return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(
+    end.getDate()
+  )} ${pad(end.getHours())}:${pad(end.getMinutes())}:${pad(end.getSeconds())}`;
 };
 
 // 状态 → el-tag type

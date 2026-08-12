@@ -3,41 +3,48 @@
     <!-- 左侧学生列表 -->
     <div class="left-panel">
       <div class="panel-header">
-        <div class="header-title">待批改人数</div>
+        <div class="header-title">待批阅</div>
         <div class="header-count">{{ pendingCount }}</div>
       </div>
 
-      <el-scrollbar class="student-list">
+      <el-scrollbar class="student-list" v-loading="loadingStudents">
         <div
           v-for="student in studentList"
-          :key="student.id"
+          :key="student.studentId"
           class="student-item"
-          :class="{ active: currentStudentId === student.id }"
+          :class="{ active: currentStudentId === student.studentId }"
           @click="handleSelectStudent(student)"
         >
           <div class="student-info">
-            <div class="student-name">{{ student.name }}</div>
-            <div class="student-id">{{ student.studentNo }}</div>
+            <div class="student-name">{{ student.studentName }}</div>
+            <div class="student-no">{{ student.studentNo }}</div>
           </div>
-          <div
-            class="status-dot"
-            :class="student.status === 'graded' ? 'graded' : 'ungraded'"
-          ></div>
+          <el-badge
+            v-if="isStudentGraded(student.studentId)"
+            value="已批"
+            type="success"
+          />
+        </div>
+        <div
+          v-if="!loadingStudents && studentList.length === 0"
+          class="empty-tip"
+        >
+          暂无待批阅学生
         </div>
       </el-scrollbar>
     </div>
 
     <!-- 右侧阅卷区域 -->
-    <div class="right-panel">
+    <div class="right-panel" v-loading="loadingAnswers">
       <!-- 题号导航 -->
-      <div class="question-nav">
+      <div class="question-nav" v-if="displayQuestions.length > 0">
         <div
-          v-for="(question, index) in questionList"
-          :key="question.id"
+          v-for="(q, index) in displayQuestions"
+          :key="q.questionId"
           class="question-number"
           :class="{
             active: currentQuestionIndex === index,
-            graded: isQuestionGraded(question.id),
+            graded: q.isGraded,
           }"
           @click="handleSelectQuestion(index)"
         >
@@ -45,349 +52,433 @@
         </div>
       </div>
 
-      <!-- 题目信息卡片 -->
-      <el-card class="question-card" shadow="hover">
-        <div class="question-header">
-          <h3 class="question-title">{{ currentQuestion.title }}</h3>
-          <div class="question-score">
-            满分：{{ currentQuestion.fullScore }}分
-          </div>
-        </div>
-      </el-card>
-
-      <!-- 学生作答区域 -->
-      <el-card class="answer-card" shadow="hover">
-        <div class="answer-header">
-          <span class="answer-label">学生作答：</span>
-          <span class="student-name-display">{{ currentStudent?.name }}</span>
-        </div>
-        <div class="answer-content">
-          {{ getStudentAnswer(currentQuestion.id) || "暂无作答内容" }}
-        </div>
-      </el-card>
-
-      <!-- 底部打分操作栏 -->
-      <div class="grading-bar">
-        <div class="grading-form">
-          <div class="form-item">
-            <label class="form-label">得分：</label>
-            <el-input-number
-              v-model="gradingForm.score"
-              :min="0"
-              :max="currentQuestion.fullScore"
-              :precision="1"
-              placeholder="请输入分数"
-              style="width: 120px"
-            />
-            <span class="score-unit">分</span>
-          </div>
-
-          <div class="form-item form-item-wide">
-            <label class="form-label">评语：</label>
-            <el-input
-              v-model="gradingForm.comment"
-              type="textarea"
-              :rows="2"
-              placeholder="请输入评语（可选）"
-              maxlength="200"
-              show-word-limit
-            />
-          </div>
-        </div>
-
-        <div class="action-buttons">
-          <el-button @click="handleSaveDraft">保存草稿</el-button>
-          <el-button type="primary" @click="handleSaveAndNext">
-            <el-icon><ArrowRight /></el-icon>
-            保存并下一位
-          </el-button>
-        </div>
+      <!-- 空状态 -->
+      <div
+        v-if="
+          !loadingAnswers && displayQuestions.length === 0 && !currentStudentId
+        "
+        class="empty-state"
+      >
+        <p>请从左侧选择一位学生开始批阅</p>
       </div>
+      <div
+        v-if="
+          !loadingAnswers && displayQuestions.length === 0 && currentStudentId
+        "
+        class="empty-state"
+      >
+        <p>暂无答题数据</p>
+      </div>
+
+      <!-- 题目内容区域 -->
+      <el-scrollbar
+        v-show="displayQuestions.length > 0"
+        class="question-scroll"
+      >
+        <div
+          v-for="(q, index) in displayQuestions"
+          :key="q.questionId"
+          :ref="
+            (el) => {
+              if (el) questionRefs[index] = el;
+            }
+          "
+          class="question-block"
+          :class="{ 'highlight-block': currentQuestionIndex === index }"
+        >
+          <el-card shadow="hover">
+            <!-- 题目标头 -->
+            <div class="question-block-header">
+              <div class="question-left">
+                <span class="q-index">第 {{ index + 1 }} 题</span>
+                <el-tag
+                  size="small"
+                  :type="getTypeTag(q.type)"
+                  class="type-tag"
+                >
+                  {{ getTypeLabel(q.type) }}
+                </el-tag>
+                <span class="q-score">满分 {{ q.fullScore }} 分</span>
+              </div>
+              <div class="question-right" v-if="isObjective(q.type)">
+                <span class="result-label">判定：</span>
+                <el-tag
+                  v-if="q.isCorrect === 1"
+                  type="success"
+                  effect="dark"
+                  class="result-tag"
+                >
+                  正确
+                </el-tag>
+                <el-tag
+                  v-else-if="q.isCorrect === 0"
+                  type="danger"
+                  effect="dark"
+                  class="result-tag"
+                >
+                  错误
+                </el-tag>
+                <el-tag v-else type="info" effect="dark" class="result-tag">
+                  未判定
+                </el-tag>
+                <el-button
+                  size="small"
+                  text
+                  type="primary"
+                  @click="toggleCorrect(index)"
+                >
+                  修改
+                </el-button>
+              </div>
+            </div>
+
+            <!-- 题干 -->
+            <div class="question-content">{{ q.content }}</div>
+
+            <!-- 选项（客观题） -->
+            <div v-if="q.options && q.options.length > 0" class="options-area">
+              <div
+                v-for="opt in q.options"
+                :key="opt.id"
+                class="option-item"
+                :class="{
+                  'correct-option': opt.label === q.correctAnswer,
+                }"
+              >
+                <span class="option-label">{{ opt.label }}.</span>
+                <span class="option-content">{{ opt.content }}</span>
+                <span
+                  v-if="opt.label === q.correctAnswer"
+                  class="answer-hint correct-hint"
+                >
+                  正确答案
+                </span>
+              </div>
+            </div>
+
+            <!-- 正确答案（判断题） -->
+            <div
+              v-if="isJudge(q.type) && q.correctAnswer"
+              class="correct-answer-row"
+            >
+              <span class="answer-label">正确答案：</span>
+              <el-tag type="success" size="small">
+                {{ q.correctAnswer === "A" ? "正确" : "错误" }}
+              </el-tag>
+            </div>
+
+            <!-- 学生作答 -->
+            <div class="student-answer-section">
+              <div class="answer-label-row">
+                <span class="answer-label">学生作答：</span>
+                <el-tag
+                  v-if="isEssay(q.type)"
+                  :type="q.isGraded ? 'success' : 'warning'"
+                  size="small"
+                >
+                  {{ q.isGraded ? "已批阅" : "待批阅" }}
+                </el-tag>
+              </div>
+              <div
+                class="answer-content"
+                :class="{ 'no-answer': !q.studentAnswer }"
+              >
+                {{ formatStudentAnswer(q) }}
+              </div>
+            </div>
+
+            <!-- 得分 -->
+            <div class="score-section">
+              <span class="score-label">得分：</span>
+              <el-input-number
+                v-model="q.score"
+                :min="0"
+                :max="q.fullScore"
+                :precision="0"
+                size="small"
+                style="width: 130px"
+                @change="onScoreChange(index)"
+              />
+              <span class="score-max">/ {{ q.fullScore }} 分</span>
+            </div>
+          </el-card>
+        </div>
+
+        <!-- 底部操作栏 -->
+        <div class="action-bar">
+          <div class="total-score-display">
+            总分：<strong>{{ totalScore }}</strong> / {{ paperTotalScore }}
+          </div>
+          <div class="action-buttons">
+            <el-button @click="handleSaveCurrent">保存当前学生</el-button>
+            <el-button type="primary" @click="handleSaveAndNext">
+              保存并下一位
+            </el-button>
+          </div>
+        </div>
+      </el-scrollbar>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
-import { ArrowRight } from "@element-plus/icons-vue";
+import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
+import {
+  getGradePaper,
+  getGradeStudentList,
+  getStudentAnswer,
+} from "@/api/examTask";
 
-// 待批改人数
-const pendingCount = ref(15);
+const route = useRoute();
+const examId = Number(route.query.examId);
 
-// 当前选中的学生ID
+// ========== 加载状态 ==========
+const loadingStudents = ref(false);
+const loadingAnswers = ref(false);
+
+// ========== 试卷数据（只加载一次） ==========
+const paperInfo = ref({});
+const questionList = ref([]);
+
+// ========== 学生列表 ==========
+const studentList = ref([]);
 const currentStudentId = ref(null);
 
-// 当前题目索引
+// ========== 学生答题数据（按学生动态加载） ==========
+const studentAnswers = ref([]);
 const currentQuestionIndex = ref(0);
+const questionRefs = reactive({});
 
-// 题目列表（4个题目样例）
-const questionList = ref([
-  {
-    id: 1,
-    title: "请简述Vue3中Composition API的优势",
-    fullScore: 20,
-  },
-  {
-    id: 2,
-    title: "解释JavaScript中的闭包概念，并举例说明其应用场景",
-    fullScore: 15,
-  },
-  {
-    id: 3,
-    title: "请描述HTTP协议中GET和POST请求的区别",
-    fullScore: 10,
-  },
-  {
-    id: 4,
-    title: "什么是响应式设计？请列举至少三种实现响应式布局的方法",
-    fullScore: 25,
-  },
-]);
+// ========== 已批改记录 { [studentId]: true } ==========
+const gradedStudents = reactive({});
 
-// 当前题目
-const currentQuestion = computed(() => {
-  return questionList.value[currentQuestionIndex.value];
+// ========== 合并展示数据：题目结构 + 学生作答 ==========
+const displayQuestions = computed(() => {
+  return questionList.value.map((q) => {
+    const answer = studentAnswers.value.find((a) => a.questionId === q.id);
+    return {
+      questionId: q.id,
+      content: q.content,
+      type: q.type,
+      fullScore: q.score,
+      correctAnswer: q.correctAnswer,
+      options: q.options || [],
+      studentAnswer: answer?.studentAnswer || "",
+      isCorrect: answer?.isCorrect ?? null,
+      score: answer?.score ?? null,
+      isGraded: answer?.isCorrect !== null && answer?.isCorrect !== undefined,
+    };
+  });
 });
 
-// 模拟学生列表数据（包含多题目的答案）
-const studentList = ref([
-  {
-    id: 1,
-    name: "张三",
-    studentNo: "2021001",
-    status: "ungraded",
-    answers: {
-      1: "Composition API可以更好地组织代码逻辑，将相关的功能放在一起，提高了代码的可读性和可维护性。同时它支持更好的TypeScript类型推导，使得开发体验更加友好。",
-      2: "闭包是指函数能够记住并访问它的词法作用域，即使这个函数在其词法作用域之外执行。例如：function outer() { let count = 0; return function inner() { count++; return count; }; }",
-      3: "GET请求参数在URL中可见，有长度限制，适合获取数据；POST请求参数在请求体中，无长度限制，适合提交数据。GET可以被缓存，POST不可以。",
-      4: "响应式设计是让网页能够适应不同屏幕尺寸的设计方法。实现方法包括：1.媒体查询(@media)；2.弹性布局(Flexbox)；3.网格布局(Grid)；4.相对单位(rem, vw, vh)。",
-    },
-    scores: {},
-    comments: {},
-  },
-  {
-    id: 2,
-    name: "李四",
-    studentNo: "2021002",
-    status: "graded",
-    answers: {
-      1: "Vue3的Composition API允许我们按照逻辑关注点来组织代码，而不是按照选项类型。这使得代码更加模块化，便于复用和测试。",
-      2: "闭包是内部函数引用外部函数变量的现象。应用：数据封装、防抖节流、模块模式等。",
-      3: "GET用于获取资源，POST用于创建资源。GET幂等，POST不幂等。",
-      4: "使用Bootstrap框架、CSS Grid、Flexbox可以实现响应式布局。",
-    },
-    scores: { 1: 18, 2: 13, 3: 9, 4: 22 },
-    comments: { 1: "回答完整", 2: "举例不够详细", 3: "简洁明了", 4: "很好" },
-  },
-  {
-    id: 3,
-    name: "王五",
-    studentNo: "2021003",
-    status: "ungraded",
-    answers: {
-      1: "相比Options API，Composition API提供了更好的代码组织方式，特别是在大型项目中。它允许我们将相关逻辑提取到组合式函数中，实现真正的逻辑复用。",
-      2: "闭包就是函数可以访问外层函数的变量。比如setTimeout中使用外部变量。",
-      3: "主要区别在于数据传输方式和安全性。POST更安全因为参数不在URL中显示。",
-      4: "响应式设计需要用到媒体查询和百分比布局。",
-    },
-    scores: {},
-    comments: {},
-  },
-  {
-    id: 4,
-    name: "赵六",
-    studentNo: "2021004",
-    status: "ungraded",
-    answers: {
-      1: "Composition API的主要优势在于：1. 更好的代码组织；2. 更强的TypeScript支持；3. 更灵活的逻辑复用；4. 更小的打包体积。",
-      2: "闭包：函数和其周围状态的引用捆绑在一起。应用场景：计数器、私有变量、回调函数。",
-      3: "GET请求会被浏览器主动cache，而POST不会。GET请求只能进行url编码，而POST支持多种编码方式。",
-      4: "响应式设计方法：1. viewport设置；2. 流式布局；3. 媒体查询；4. 弹性图片。",
-    },
-    scores: {},
-    comments: {},
-  },
-  {
-    id: 5,
-    name: "孙七",
-    studentNo: "2021005",
-    status: "graded",
-    answers: {
-      1: "使用Composition API可以让组件逻辑更加清晰，避免了Options API中data、methods、computed等选项分散的问题。",
-      2: "闭包让函数可以访问外部作用域的变量。",
-      3: "GET和POST都是HTTP方法，用途不同。",
-      4: "用CSS框架可以快速实现响应式。",
-    },
-    scores: { 1: 16, 2: 10, 3: 7, 4: 18 },
-    comments: { 1: "基本正确", 2: "过于简单", 3: "需要补充", 4: "可以更详细" },
-  },
-]);
-
-// 当前选中的学生
-const currentStudent = computed(() => {
-  return studentList.value.find((s) => s.id === currentStudentId.value);
+// 待批阅人数
+const pendingCount = computed(() => {
+  return studentList.value.filter((s) => !gradedStudents[s.studentId]).length;
 });
 
-// 打分表单
-const gradingForm = reactive({
-  score: null,
-  comment: "",
+// 试卷总分
+const paperTotalScore = computed(() => {
+  return questionList.value.reduce((sum, q) => sum + (q.score || 0), 0);
 });
 
-// 获取学生在当前题目的答案
-const getStudentAnswer = (questionId) => {
-  if (!currentStudent.value) return "";
-  return currentStudent.value.answers?.[questionId] || "";
-};
-
-// 判断题目是否已批改
-const isQuestionGraded = (questionId) => {
-  if (!currentStudent.value) return false;
-  return currentStudent.value.scores?.[questionId] !== undefined;
-};
-
-// 选择题目
-const handleSelectQuestion = (index) => {
-  // 先保存当前题目的评分
-  saveCurrentGrade();
-
-  currentQuestionIndex.value = index;
-
-  // 加载新题目的评分
-  loadQuestionGrade();
-};
-
-// 选择学生
-const handleSelectStudent = (student) => {
-  // 先保存当前学生的评分
-  saveCurrentGrade();
-
-  currentStudentId.value = student.id;
-
-  // 重置题目索引到第一题
-  currentQuestionIndex.value = 0;
-
-  // 加载第一个题目的评分
-  loadQuestionGrade();
-};
-
-// 加载当前题目的评分
-const loadQuestionGrade = () => {
-  if (!currentStudent.value) return;
-
-  const questionId = currentQuestion.value.id;
-  gradingForm.score = currentStudent.value.scores?.[questionId] || null;
-  gradingForm.comment = currentStudent.value.comments?.[questionId] || "";
-};
-
-// 保存当前题目的评分
-const saveCurrentGrade = () => {
-  if (
-    !currentStudentId.value ||
-    gradingForm.score === null ||
-    gradingForm.score === ""
-  ) {
-    return;
-  }
-
-  const student = studentList.value.find(
-    (s) => s.id === currentStudentId.value
+// 当前学生已得总分
+const totalScore = computed(() => {
+  return displayQuestions.value.reduce(
+    (sum, q) => sum + (typeof q.score === "number" ? q.score : 0),
+    0
   );
-  if (student) {
-    const questionId = currentQuestion.value.id;
-    student.scores[questionId] = gradingForm.score;
-    student.comments[questionId] = gradingForm.comment;
+});
 
-    // 检查是否所有题目都已批改
-    const allQuestionsGraded = questionList.value.every(
-      (q) => student.scores[q.id] !== undefined
-    );
+// ========== 工具方法 ==========
+const isObjective = (type) => ["SINGLE", "MULTIPLE", "JUDGE"].includes(type);
+const isEssay = (type) => type === "ESSAY";
+const isJudge = (type) => type === "JUDGE";
 
-    if (allQuestionsGraded) {
-      student.status = "graded";
-      updatePendingCount();
-    }
+const getTypeLabel = (type) => {
+  const map = {
+    SINGLE: "单选题",
+    MULTIPLE: "多选题",
+    JUDGE: "判断题",
+    ESSAY: "简答题",
+  };
+  return map[type] || type;
+};
+
+const getTypeTag = (type) => {
+  const map = {
+    SINGLE: "primary",
+    MULTIPLE: "warning",
+    JUDGE: "info",
+    ESSAY: "danger",
+  };
+  return map[type] || "";
+};
+
+const formatStudentAnswer = (q) => {
+  if (!q.studentAnswer) return "暂无作答";
+  if (isEssay(q.type)) return q.studentAnswer;
+  if (isJudge(q.type)) {
+    return q.studentAnswer === "A" ? "正确" : "错误";
+  }
+  return q.studentAnswer;
+};
+
+const isStudentGraded = (studentId) => !!gradedStudents[studentId];
+
+// ========== 初始化加载 ==========
+onMounted(async () => {
+  if (!examId) {
+    ElMessage.error("缺少考试ID");
+    return;
+  }
+  await Promise.all([loadPaper(), loadStudentList()]);
+});
+
+const loadPaper = async () => {
+  loadingAnswers.value = true;
+  try {
+    const res = await getGradePaper(examId);
+    const data = res.data;
+    paperInfo.value = data;
+    questionList.value = (data.gradePaperQuestionVOS || []).map((q) => ({
+      id: q.id,
+      sortOrder: q.sortOrder,
+      score: q.score,
+      content: q.content,
+      type: q.type,
+      correctAnswer: q.correctAnswer,
+      options: q.options || [],
+    }));
+  } catch (e) {
+    console.error("加载批阅试卷失败:", e);
+    ElMessage.error("加载试卷内容失败");
+  } finally {
+    loadingAnswers.value = false;
   }
 };
 
-// 更新待批改人数
-const updatePendingCount = () => {
-  const ungradedCount = studentList.value.filter(
-    (s) => s.status === "ungraded"
-  ).length;
-  pendingCount.value = ungradedCount;
+const loadStudentList = async () => {
+  loadingStudents.value = true;
+  try {
+    const res = await getGradeStudentList(examId);
+    studentList.value = res.data || [];
+  } catch (e) {
+    console.error("加载学生列表失败:", e);
+    ElMessage.error("加载学生列表失败");
+  } finally {
+    loadingStudents.value = false;
+  }
 };
 
-// 保存草稿
-const handleSaveDraft = () => {
+const loadStudentAnswers = async (studentId) => {
+  loadingAnswers.value = true;
+  try {
+    const res = await getStudentAnswer(studentId, examId);
+    studentAnswers.value = res.data || [];
+  } catch (e) {
+    console.error("加载学生答题失败:", e);
+    ElMessage.error("加载学生答题情况失败");
+    studentAnswers.value = [];
+  } finally {
+    loadingAnswers.value = false;
+  }
+};
+
+// ========== 交互方法 ==========
+const handleSelectStudent = async (student) => {
+  if (currentStudentId.value === student.studentId) return;
+  currentStudentId.value = student.studentId;
+  currentQuestionIndex.value = 0;
+  await loadStudentAnswers(student.studentId);
+};
+
+const handleSelectQuestion = (index) => {
+  currentQuestionIndex.value = index;
+  const el = questionRefs[index];
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+};
+
+const toggleCorrect = (index) => {
+  const q = displayQuestions.value[index];
+  if (q.isCorrect === 1) {
+    q.isCorrect = 0;
+  } else if (q.isCorrect === 0) {
+    q.isCorrect = 1;
+  } else {
+    q.isCorrect = 1;
+  }
+  // 同步到 studentAnswers 以便后续保存
+  const answer = studentAnswers.value.find(
+    (a) => a.questionId === q.questionId
+  );
+  if (answer) {
+    answer.isCorrect = q.isCorrect;
+  }
+};
+
+const onScoreChange = (index) => {
+  const q = displayQuestions.value[index];
+  const answer = studentAnswers.value.find(
+    (a) => a.questionId === q.questionId
+  );
+  if (answer) {
+    answer.score = q.score;
+  }
+};
+
+const checkAllGraded = () => {
+  return displayQuestions.value.every(
+    (q) => q.isCorrect !== null && q.isCorrect !== undefined
+  );
+};
+
+const markCurrentStudentGraded = () => {
+  if (currentStudentId.value && checkAllGraded()) {
+    gradedStudents[currentStudentId.value] = true;
+  }
+};
+
+const handleSaveCurrent = () => {
   if (!currentStudentId.value) {
-    ElMessage.warning("请先选择一个学生");
+    ElMessage.warning("请先选择一位学生");
     return;
   }
-
-  if (gradingForm.score === null || gradingForm.score === "") {
-    ElMessage.warning("请输入分数");
-    return;
-  }
-
-  saveCurrentGrade();
-  ElMessage.success("草稿保存成功");
+  markCurrentStudentGraded();
+  ElMessage.success("保存成功");
 };
 
-// 保存并下一位
 const handleSaveAndNext = () => {
   if (!currentStudentId.value) {
-    ElMessage.warning("请先选择一个学生");
+    ElMessage.warning("请先选择一位学生");
     return;
   }
-
-  if (gradingForm.score === null || gradingForm.score === "") {
-    ElMessage.warning("请输入分数");
-    return;
-  }
-
-  if (gradingForm.score > currentQuestion.value.fullScore) {
-    ElMessage.error(`分数不能超过满分${currentQuestion.value.fullScore}分`);
-    return;
-  }
-
-  saveCurrentGrade();
+  markCurrentStudentGraded();
   ElMessage.success("保存成功");
 
-  // 尝试跳转到下一个未批改的题目或学生
-  const nextUngradedQuestion = questionList.value.findIndex(
-    (q, idx) => idx > currentQuestionIndex.value && !isQuestionGraded(q.id)
+  const currentIdx = studentList.value.findIndex(
+    (s) => s.studentId === currentStudentId.value
   );
-
-  if (nextUngradedQuestion !== -1) {
-    // 还有未批改的题目
-    setTimeout(() => {
-      handleSelectQuestion(nextUngradedQuestion);
-    }, 300);
-  } else {
-    // 当前学生所有题目已批改完，找下一个学生
-    const nextUngradedStudent = studentList.value.find(
-      (s) => s.id !== currentStudentId.value && s.status === "ungraded"
-    );
-
-    if (nextUngradedStudent) {
-      setTimeout(() => {
-        handleSelectStudent(nextUngradedStudent);
-      }, 300);
-    } else {
-      ElMessage.success("所有学生已批改完成！");
+  // 优先找下一个未批阅的学生
+  let nextStudent = null;
+  for (let i = 1; i < studentList.value.length; i++) {
+    const idx = (currentIdx + i) % studentList.value.length;
+    const s = studentList.value[idx];
+    if (!gradedStudents[s.studentId]) {
+      nextStudent = s;
+      break;
     }
   }
-};
 
-// 初始化时选中第一个未批改的学生
-onMounted(() => {
-  const firstUngraded = studentList.value.find((s) => s.status === "ungraded");
-  if (firstUngraded) {
-    handleSelectStudent(firstUngraded);
+  if (nextStudent) {
+    handleSelectStudent(nextStudent);
+  } else {
+    ElMessage.success("所有学生已批阅完成！");
   }
-});
+};
 </script>
 
 <style scoped>
@@ -398,10 +489,10 @@ onMounted(() => {
   background-color: #f5f7fa;
 }
 
-/* 左侧面板 */
+/* ===== 左侧面板 ===== */
 .left-panel {
-  width: 300px;
-  min-width: 300px;
+  width: 280px;
+  min-width: 280px;
   background-color: #ffffff;
   border-right: 1px solid #e4e7ed;
   display: flex;
@@ -437,9 +528,9 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
+  padding: 14px 20px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -460,30 +551,22 @@ onMounted(() => {
   font-size: 15px;
   font-weight: 500;
   color: #303133;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
-.student-id {
+.student-no {
   font-size: 13px;
   color: #909399;
 }
 
-.status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-left: 10px;
+.empty-tip {
+  text-align: center;
+  padding: 40px 20px;
+  color: #909399;
+  font-size: 14px;
 }
 
-.status-dot.ungraded {
-  background-color: #f56c6c;
-}
-
-.status-dot.graded {
-  background-color: #67c23a;
-}
-
-/* 右侧面板 */
+/* ===== 右侧面板 ===== */
 .right-panel {
   flex: 1;
   display: flex;
@@ -495,25 +578,26 @@ onMounted(() => {
 /* 题号导航 */
 .question-nav {
   display: flex;
-  gap: 10px;
-  padding: 15px 20px;
+  gap: 8px;
+  padding: 12px 20px;
   background-color: #ffffff;
   border-bottom: 1px solid #e4e7ed;
+  flex-wrap: wrap;
 }
 
 .question-number {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
   background-color: #f5f7fa;
   color: #606266;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   border: 2px solid transparent;
 }
 
@@ -529,7 +613,7 @@ onMounted(() => {
 }
 
 .question-number.graded {
-  background-color: #f0f9ff;
+  background-color: #f0f9eb;
   color: #67c23a;
   border-color: #67c23a;
 }
@@ -540,43 +624,148 @@ onMounted(() => {
   border-color: #67c23a;
 }
 
-.question-card {
-  margin: 20px 20px 0 20px;
-  border-radius: 8px;
+/* 空状态 */
+.empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  font-size: 16px;
 }
 
-.question-header {
+/* 题目内容滚动区 */
+.question-scroll {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 题目块 */
+.question-block {
+  padding: 16px 20px 0;
+}
+
+.question-block:last-child {
+  padding-bottom: 0;
+}
+
+.highlight-block :deep(.el-card) {
+  border-color: #409eff;
+}
+
+.question-block-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.question-title {
-  margin: 0;
-  font-size: 18px;
+.question-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.q-index {
+  font-size: 16px;
   font-weight: 600;
   color: #303133;
 }
 
-.question-score {
-  font-size: 16px;
-  font-weight: 600;
-  color: #409eff;
+.type-tag {
+  margin-left: 2px;
 }
 
-.answer-card {
-  margin: 20px;
-  border-radius: 8px;
-  flex: 1;
+.q-score {
+  font-size: 14px;
+  color: #909399;
+}
+
+.question-right {
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  align-items: center;
+  gap: 6px;
 }
 
-.answer-header {
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #e4e7ed;
+.result-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.result-tag {
+  cursor: default;
+}
+
+/* 题干 */
+.question-content {
+  font-size: 15px;
+  color: #303133;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background-color: #fafafa;
+  border-radius: 6px;
+}
+
+/* 选项 */
+.options-area {
+  margin-bottom: 12px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.option-item.correct-option {
+  background-color: #f0f9eb;
+}
+
+.option-label {
+  font-weight: 600;
+  color: #606266;
+  min-width: 20px;
+}
+
+.option-content {
+  color: #303133;
+}
+
+.answer-hint {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.correct-hint {
+  color: #67c23a;
+  font-weight: 500;
+}
+
+/* 判断题正确答案 */
+.correct-answer-row {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 学生作答 */
+.student-answer-section {
+  margin-bottom: 12px;
+}
+
+.answer-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .answer-label {
@@ -585,76 +774,71 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.student-name-display {
-  margin-left: 10px;
-  font-size: 14px;
-  color: #409eff;
-  font-weight: 500;
-}
-
 .answer-content {
-  flex: 1;
-  overflow-y: auto;
   font-size: 15px;
   line-height: 1.8;
   color: #303133;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 6px;
+  border-left: 3px solid #409eff;
   white-space: pre-wrap;
   word-break: break-word;
-  padding: 10px;
-  background-color: #fafafa;
-  border-radius: 4px;
 }
 
-/* 底部打分栏 */
-.grading-bar {
-  background-color: #ffffff;
-  border-top: 1px solid #e4e7ed;
-  padding: 20px;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+.answer-content.no-answer {
+  color: #c0c4cc;
+  font-style: italic;
+  border-left-color: #dcdfe6;
 }
 
-.grading-form {
+/* 得分 */
+.score-section {
   display: flex;
-  gap: 20px;
-  margin-bottom: 15px;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e4e7ed;
 }
 
-.form-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.form-item-wide {
-  flex: 1;
-}
-
-.form-label {
+.score-label {
   font-size: 14px;
   color: #606266;
   font-weight: 500;
-  padding-top: 8px;
-  white-space: nowrap;
 }
 
-.score-unit {
+.score-max {
   font-size: 14px;
   color: #909399;
-  padding-top: 8px;
+}
+
+/* 底部操作栏 */
+.action-bar {
+  padding: 16px 20px;
+  background-color: #ffffff;
+  border-top: 1px solid #e4e7ed;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-score-display {
+  font-size: 16px;
+  color: #303133;
+}
+
+.total-score-display strong {
+  color: #409eff;
+  font-size: 20px;
 }
 
 .action-buttons {
   display: flex;
-  justify-content: flex-end;
   gap: 10px;
 }
 
-/* 滚动条样式优化 */
+/* 滚动条 */
 :deep(.el-scrollbar__wrap) {
   overflow-x: hidden;
-}
-
-:deep(.el-textarea__inner) {
-  resize: none;
 }
 </style>

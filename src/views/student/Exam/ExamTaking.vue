@@ -9,157 +9,159 @@
 
     <!-- 主体内容 -->
     <template v-else>
-    <header class="exam-header">
-      <div class="header-content">
-        <div class="header-left">
-          <el-button text @click="handleLeave">
-            <el-icon><ArrowLeft /></el-icon>
-          </el-button>
-          <h1 class="exam-title">{{ paper.name }}</h1>
-          <span class="total-score">总分：{{ paper.totalScore }}</span>
+      <header class="exam-header">
+        <div class="header-content">
+          <div class="header-left">
+            <el-button text @click="handleLeave">
+              <el-icon><ArrowLeft /></el-icon>
+            </el-button>
+            <h1 class="exam-title">{{ paper.name }}</h1>
+            <span class="total-score">总分：{{ paper.totalScore }}</span>
+          </div>
+          <div class="timer-display">
+            <el-icon class="timer-icon"><Clock /></el-icon>
+            <span :class="{ 'time-warning': timeLeft < 300 }">{{
+              formatTime(timeLeft)
+            }}</span>
+          </div>
         </div>
-        <div class="timer-display">
-          <el-icon class="timer-icon"><Clock /></el-icon>
-          <span :class="{ 'time-warning': timeLeft < 300 }">{{
-            formatTime(timeLeft)
-          }}</span>
-        </div>
-      </div>
-    </header>
+      </header>
 
-    <!-- 主体内容 -->
-    <main class="exam-main">
-      <!-- 左侧题目区 -->
-      <div class="question-area">
-        <transition name="fade-slide" mode="out-in">
-          <div :key="currentIndex" class="question-card">
-            <div class="question-header">
-              <span class="question-index">第 {{ currentIndex + 1 }} 题</span>
-              <el-tag size="small" :type="typeTagColor(currentQuestion.type)">
-                {{ typeLabel(currentQuestion.type) }}
-              </el-tag>
-              <span class="question-score">{{ currentQuestion.score }} 分</span>
-              <el-tag
-                v-if="isMarked(currentIndex)"
-                size="small"
-                type="warning"
-                effect="plain"
-              >
-                已标记
-              </el-tag>
+      <!-- 主体内容 -->
+      <main class="exam-main">
+        <!-- 左侧题目区 -->
+        <div class="question-area">
+          <transition name="fade-slide" mode="out-in">
+            <div :key="currentIndex" class="question-card">
+              <div class="question-header">
+                <span class="question-index">第 {{ currentIndex + 1 }} 题</span>
+                <el-tag size="small" :type="typeTagColor(currentQuestion.type)">
+                  {{ typeLabel(currentQuestion.type) }}
+                </el-tag>
+                <span class="question-score"
+                  >{{ currentQuestion.score }} 分</span
+                >
+                <el-tag
+                  v-if="isMarked(currentIndex)"
+                  size="small"
+                  type="warning"
+                  effect="plain"
+                >
+                  已标记
+                </el-tag>
+              </div>
+
+              <p class="question-content">{{ currentQuestion.content }}</p>
+
+              <!-- 客观题：单选 / 多选 / 判断 -->
+              <div v-if="currentQuestion.type !== 'essay'" class="options-list">
+                <button
+                  v-for="opt in currentQuestion.options"
+                  :key="opt.label"
+                  @click="handleSelect(opt.label)"
+                  :class="['option-item', { selected: isSelected(opt.label) }]"
+                >
+                  <div class="option-left">
+                    <span
+                      :class="[
+                        'option-circle',
+                        { selected: isSelected(opt.label) },
+                      ]"
+                    >
+                      {{ opt.label }}
+                    </span>
+                    <span class="option-text">{{ opt.content }}</span>
+                  </div>
+                  <el-icon v-if="isSelected(opt.label)" class="check-icon"
+                    ><Check
+                  /></el-icon>
+                </button>
+              </div>
+
+              <!-- 主观题：简答 -->
+              <div v-else class="essay-area">
+                <el-input
+                  v-model="essayAnswers[currentQuestion.id]"
+                  type="textarea"
+                  :rows="6"
+                  placeholder="请在此输入答案"
+                  @input="handleEssayInput"
+                />
+              </div>
             </div>
+          </transition>
 
-            <p class="question-content">{{ currentQuestion.content }}</p>
-
-            <!-- 客观题：单选 / 多选 / 判断 -->
-            <div
-              v-if="currentQuestion.type !== 'essay'"
-              class="options-list"
+          <!-- 底部操作栏 -->
+          <div class="question-footer">
+            <el-button
+              :type="isMarked(currentIndex) ? 'warning' : 'default'"
+              plain
+              @click="toggleMark"
             >
-              <button
-                v-for="opt in currentQuestion.options"
-                :key="opt.label"
-                @click="handleSelect(opt.label)"
-                :class="['option-item', { selected: isSelected(opt.label) }]"
+              <el-icon><Flag /></el-icon>
+              {{ isMarked(currentIndex) ? "取消标记" : "标记题目" }}
+            </el-button>
+
+            <div class="nav-buttons">
+              <el-button @click="prevQuestion" :disabled="currentIndex === 0">
+                <el-icon><ArrowLeft /></el-icon>
+                上一题
+              </el-button>
+
+              <el-button
+                v-if="currentIndex < questions.length - 1"
+                type="primary"
+                @click="nextQuestion"
               >
-                <div class="option-left">
-                  <span
-                    :class="['option-circle', { selected: isSelected(opt.label) }]"
-                  >
-                    {{ opt.label }}
-                  </span>
-                  <span class="option-text">{{ opt.content }}</span>
-                </div>
-                <el-icon v-if="isSelected(opt.label)" class="check-icon"
-                  ><Check
-                /></el-icon>
+                下一题
+                <el-icon><ArrowRight /></el-icon>
+              </el-button>
+              <el-button v-else type="success" @click="submitExam">
+                提交试卷
+              </el-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧答题卡 -->
+        <aside class="answer-sheet">
+          <div class="sheet-card">
+            <h3 class="sheet-title">题目导航</h3>
+            <div class="sheet-grid">
+              <button
+                v-for="(q, index) in questions"
+                :key="q.id"
+                @click="currentIndex = index"
+                :class="[
+                  'sheet-item',
+                  {
+                    active: currentIndex === index,
+                    answered: hasAnswer(q.id),
+                    marked: isMarked(index),
+                  },
+                ]"
+              >
+                {{ index + 1 }}
               </button>
             </div>
 
-            <!-- 主观题：简答 -->
-            <div v-else class="essay-area">
-              <el-input
-                v-model="essayAnswers[currentQuestion.id]"
-                type="textarea"
-                :rows="6"
-                placeholder="请在此输入答案"
-                @input="handleEssayInput"
-              />
+            <div class="sheet-legend">
+              <div class="legend-item">
+                <span class="legend-dot answered"></span>
+                <span>已作答</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot marked"></span>
+                <span>已标记</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot"></span>
+                <span>未作答</span>
+              </div>
             </div>
           </div>
-        </transition>
-
-        <!-- 底部操作栏 -->
-        <div class="question-footer">
-          <el-button
-            :type="isMarked(currentIndex) ? 'warning' : 'default'"
-            plain
-            @click="toggleMark"
-          >
-            <el-icon><Flag /></el-icon>
-            {{ isMarked(currentIndex) ? "取消标记" : "标记题目" }}
-          </el-button>
-
-          <div class="nav-buttons">
-            <el-button @click="prevQuestion" :disabled="currentIndex === 0">
-              <el-icon><ArrowLeft /></el-icon>
-              上一题
-            </el-button>
-
-            <el-button
-              v-if="currentIndex < questions.length - 1"
-              type="primary"
-              @click="nextQuestion"
-            >
-              下一题
-              <el-icon><ArrowRight /></el-icon>
-            </el-button>
-            <el-button v-else type="success" @click="submitExam">
-              提交试卷
-            </el-button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 右侧答题卡 -->
-      <aside class="answer-sheet">
-        <div class="sheet-card">
-          <h3 class="sheet-title">题目导航</h3>
-          <div class="sheet-grid">
-            <button
-              v-for="(q, index) in questions"
-              :key="q.id"
-              @click="currentIndex = index"
-              :class="[
-                'sheet-item',
-                {
-                  active: currentIndex === index,
-                  answered: hasAnswer(q.id),
-                  marked: isMarked(index),
-                },
-              ]"
-            >
-              {{ index + 1 }}
-            </button>
-          </div>
-
-          <div class="sheet-legend">
-            <div class="legend-item">
-              <span class="legend-dot answered"></span>
-              <span>已作答</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot marked"></span>
-              <span>已标记</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot"></span>
-              <span>未作答</span>
-            </div>
-          </div>
-        </div>
-      </aside>
-    </main>
+        </aside>
+      </main>
     </template>
   </div>
 </template>
@@ -176,7 +178,7 @@ import {
   Loading,
 } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { getExamInfo, getExamPaper } from "@/api/examTask";
+import { getExamInfo, getExamPaper, submitPaper } from "@/api/examTask";
 
 const route = useRoute();
 const router = useRouter();
@@ -201,6 +203,8 @@ const typeTagColor = (type) => TYPE_TAG_COLOR[type] ?? "info";
 
 // ========== 状态定义 ==========
 const loading = ref(true);
+const examId = ref(null);
+const paperId = ref(null);
 const paper = ref({ name: "", totalScore: 0, stuPaperQuestionVOS: [] });
 const questions = ref([]); // 扁平化后的题目数组
 const currentIndex = ref(0);
@@ -213,10 +217,11 @@ let timer = null;
 // ========== 数据获取 ==========
 const fetchData = async () => {
   loading.value = true;
-  const examId = route.params.id;
+  examId.value = route.params.id;
   try {
     // 先获取考试信息，拿到 paperId
-    const infoRes = await getExamInfo(examId);
+    const infoRes = await getExamInfo(examId.value);
+    paperId.value = infoRes.data.paperId;
 
     // 根据开始时间和时长动态计算剩余时间
     const startTime = new Date(infoRes.data.startTime).getTime();
@@ -225,7 +230,8 @@ const fetchData = async () => {
     const now = Date.now();
     const remaining = Math.floor((endTime - now) / 1000);
     // 未开始则显示完整时长，已过期则为0
-    timeLeft.value = remaining > durationSeconds ? durationSeconds : Math.max(remaining, 0);
+    timeLeft.value =
+      remaining > durationSeconds ? durationSeconds : Math.max(remaining, 0);
 
     // 用 paperId 获取试卷内容
     const paperRes = await getExamPaper(infoRes.data.paperId);
@@ -233,15 +239,19 @@ const fetchData = async () => {
     // 保存试卷原始数据
     paper.value = paperRes.data;
 
-    // 扁平化题目数据
+    // 扁平化题目数据（后端返回type为大写，统一转小写匹配前端逻辑）
     questions.value = paperRes.data.stuPaperQuestionVOS.map((pq) => ({
       sortOrder: pq.sortOrder,
       score: pq.score,
       id: pq.stuQuestionCompleteVO.id,
       content: pq.stuQuestionCompleteVO.content,
-      type: pq.stuQuestionCompleteVO.type,
+      type: pq.stuQuestionCompleteVO.type?.toLowerCase(),
       options: pq.stuQuestionCompleteVO.options || [],
     }));
+    console.log(
+      "题目数据:",
+      questions.value.map((q) => ({ id: q.id, type: q.type }))
+    );
   } catch (error) {
     console.error("加载试卷失败:", error);
     ElMessage.error("加载试卷失败");
@@ -322,37 +332,64 @@ const nextQuestion = () => {
 
 const handleLeave = async () => {
   try {
-    await ElMessageBox.confirm(
-      "是否确定要离开考试？",
-      "离开确认",
-      {
-        confirmButtonText: "确定离开",
-        cancelButtonText: "继续考试",
-        type: "warning",
-      }
-    );
+    await ElMessageBox.confirm("是否确定要离开考试？", "离开确认", {
+      confirmButtonText: "确定离开",
+      cancelButtonText: "继续考试",
+      type: "warning",
+    });
     router.push("/exam/list");
   } catch {
     // 取消操作
   }
 };
 
-const submitExam = async () => {
+// 收集所有作答，构建提交数据
+const collectAnswers = () => {
+  return questions.value.map((q) => {
+    let studentAnswer = "";
+    if (q.type === "essay") {
+      studentAnswer = essayAnswers.value[q.id] || "";
+    } else {
+      const selected = answers.value[q.id] || [];
+      studentAnswer = selected.sort().join(",");
+    }
+    return {
+      sortOrder: q.sortOrder,
+      questionId: q.id,
+      studentAnswer,
+    };
+  });
+};
+
+const submitExam = async (autoSubmit = false) => {
+  if (!autoSubmit) {
+    try {
+      await ElMessageBox.confirm(
+        `确定要提交试卷吗？剩余时间: ${formatTime(timeLeft.value)}`,
+        "提交确认",
+        {
+          confirmButtonText: "确定提交",
+          cancelButtonText: "再检查一下",
+          type: "warning",
+        }
+      );
+    } catch {
+      return; // 取消操作
+    }
+  }
+
+  const payload = {
+    examId: examId.value,
+    paperId: paperId.value,
+    answers: collectAnswers(),
+  };
+
   try {
-    await ElMessageBox.confirm(
-      `确定要提交试卷吗？剩余时间: ${formatTime(timeLeft.value)}`,
-      "提交确认",
-      {
-        confirmButtonText: "确定提交",
-        cancelButtonText: "再检查一下",
-        type: "warning",
-      }
-    );
-    // TODO: 调用后端提交接口
+    await submitPaper(payload);
     ElMessage.success("试卷提交成功！");
     router.push("/exam/list");
-  } catch {
-    // 取消操作
+  } catch (error) {
+    console.error("提交试卷失败:", error);
   }
 };
 
@@ -365,7 +402,7 @@ onMounted(() => {
     } else {
       clearInterval(timer);
       ElMessage.warning("考试时间已到，自动提交试卷");
-      submitExam();
+      submitExam(true);
     }
   }, 1000);
 });

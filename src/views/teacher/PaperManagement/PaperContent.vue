@@ -965,7 +965,10 @@ onBeforeUnmount(() => {
 
         <!-- 题型（只读，跟随所在分组） -->
         <el-form-item label="题型">
-          <el-tag :type="getTypeTagType(manualTargetGroup?.type)" size="default">
+          <el-tag
+            :type="getTypeTagType(manualTargetGroup?.type)"
+            size="default"
+          >
             {{ typeMap[manualTargetGroup?.type] || "未知题型" }}
           </el-tag>
         </el-form-item>
@@ -1000,7 +1003,10 @@ onBeforeUnmount(() => {
 
         <!-- 选项配置（单选、多选） -->
         <template
-          v-if="manualTargetGroup?.type === 'single' || manualTargetGroup?.type === 'multiple'"
+          v-if="
+            manualTargetGroup?.type === 'single' ||
+            manualTargetGroup?.type === 'multiple'
+          "
         >
           <el-form-item label="选项配置">
             <div class="options-container">

@@ -4,7 +4,7 @@
     <div class="page-header">
       <div class="header-left">
         <el-button @click="handleBack" :icon="ArrowLeft" circle size="small" />
-        <h3 class="page-title">{{ isEdit ? '编辑考试' : '添加考试' }}</h3>
+        <h3 class="page-title">{{ isEdit ? "编辑考试" : "添加考试" }}</h3>
       </div>
     </div>
 
@@ -77,7 +77,7 @@
       <el-form label-width="100px" class="exam-form">
         <el-row :gutter="24">
           <el-col :span="8">
-            <el-form-item label="考试班级" :required="true">
+            <el-form-item label="考试班级">
               <el-select
                 v-model="selectedClassIds"
                 placeholder="请选择考试班级（可多选）"
@@ -156,13 +156,24 @@
           <el-col :span="12">
             <el-form-item label="添加学生">
               <div class="student-add-area">
-                <el-button type="primary" plain @click="studentDialogVisible = true">
+                <el-button
+                  type="primary"
+                  plain
+                  @click="studentDialogVisible = true"
+                >
                   <el-icon><User /></el-icon>
                   选择学生
                 </el-button>
                 <span v-if="manuallyAddedStudents.length" class="added-count">
-                  已添加 <strong>{{ manuallyAddedStudents.length }}</strong> 名学生
-                  <el-button type="primary" link size="small" @click="clearManualStudents">清空</el-button>
+                  已添加
+                  <strong>{{ manuallyAddedStudents.length }}</strong> 名学生
+                  <el-button
+                    type="primary"
+                    link
+                    size="small"
+                    @click="clearManualStudents"
+                    >清空</el-button
+                  >
                 </span>
                 <span v-else class="hint-text">点击按钮从学生列表中选择</span>
               </div>
@@ -181,7 +192,9 @@
       <template #header>
         <div class="card-header">
           <span class="card-title">考生列表</span>
-          <span class="student-count">共 {{ displayStudentList.length }} 名学生</span>
+          <span class="student-count"
+            >共 {{ displayStudentList.length }} 名学生</span
+          >
         </div>
       </template>
 
@@ -224,7 +237,9 @@
         />
         <el-table-column label="来源" width="100" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row._manual" type="success" size="small">手动添加</el-tag>
+            <el-tag v-if="row._manual" type="success" size="small"
+              >手动添加</el-tag
+            >
             <el-tag v-else type="info" size="small">班级</el-tag>
           </template>
         </el-table-column>
@@ -273,8 +288,13 @@ import { ArrowLeft, Plus, Document, User } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import PaperSelectDialog from "./components/PaperSelectDialog.vue";
 import StudentSelectDialog from "./components/StudentSelectDialog.vue";
-import { addExam, getExamDetailById, getStudentsByClassId, getClassList } from "@/api/examTask";
-import { getPaperById } from "@/api/paperManager";
+import {
+  addExam,
+  updateExam,
+  getExamDetailById,
+  getStudentsByClassId,
+  getClassList,
+} from "@/api/examTask";
 
 const router = useRouter();
 const route = useRoute();
@@ -413,10 +433,15 @@ const handleStudentConfirm = (students) => {
   ]);
   const newStudents = students.filter((s) => !existingIds.has(s.id));
   if (newStudents.length < students.length) {
-    ElMessage.warning(`${students.length - newStudents.length} 名学生已在列表中，已自动去重`);
+    ElMessage.warning(
+      `${students.length - newStudents.length} 名学生已在列表中，已自动去重`
+    );
   }
   if (newStudents.length) {
-    manuallyAddedStudents.value = [...manuallyAddedStudents.value, ...newStudents];
+    manuallyAddedStudents.value = [
+      ...manuallyAddedStudents.value,
+      ...newStudents,
+    ];
   }
 };
 
@@ -448,12 +473,6 @@ const handleSubmit = async () => {
     return;
   }
 
-  // 校验班级
-  if (!selectedClassIds.value.length) {
-    ElMessage.warning("请选择考试班级");
-    return;
-  }
-
   // 校验试卷
   if (!selectedPaper.value) {
     ElMessage.warning("请选择关联试卷");
@@ -461,9 +480,7 @@ const handleSubmit = async () => {
   }
 
   // 收集所有学生ID（班级学生 + 手动添加的学生，去重）
-  const allStudentIds = [
-    ...new Set(displayStudentList.value.map((s) => s.id)),
-  ];
+  const allStudentIds = [...new Set(displayStudentList.value.map((s) => s.id))];
 
   // 构建提交数据
   const submitData = {
@@ -475,24 +492,20 @@ const handleSubmit = async () => {
     studentIds: allStudentIds,
   };
 
-  // 编辑模式下带上考试ID
-  if (isEdit.value && examId.value) {
-    submitData.id = examId.value;
-  }
-
   const actionText = isEdit.value ? "更新" : "创建";
 
   submitting.value = true;
   try {
-    await addExam(submitData);
+    if (isEdit.value) {
+      submitData.id = examId.value;
+      await updateExam(submitData);
+    } else {
+      await addExam(submitData);
+    }
     ElMessage.success(`考试${actionText}成功`);
     router.push("/teacher/examTask/myexam");
   } catch (error) {
     console.error(`考试${actionText}失败:`, error);
-    setTimeout(() => {
-      ElMessage.success(`考试${actionText}成功（模拟）`);
-      router.push("/teacher/examTask/myexam");
-    }, 500);
   } finally {
     submitting.value = false;
   }
@@ -516,19 +529,17 @@ const loadExamData = async (id) => {
     formData.startTime = data.startTime;
     formData.duration = data.duration;
 
-    // 填充试卷（根据 paperId 查询试卷详情用于回显）
-    try {
-      const paperRes = await getPaperById(data.paperId);
-      selectedPaper.value = paperRes.data;
-    } catch {
-      selectedPaper.value = { id: data.paperId };
-    }
+    // 填充试卷（接口已直接返回试卷信息）
+    selectedPaper.value = data.basePaperVO || { id: data.paperId };
 
     // 填充班级（设值前 isLoadingData 已为 true，不会触发 handleClassChange 重新加载）
     selectedClassIds.value = data.classIds || [];
 
     // 填充学生列表
-    studentList.value = data.studentVOS || [];
+    const students = data.studentVOS || [];
+    studentList.value = students;
+    // 同步备份到手动添加列表，防止切换班级时丢失原始学生
+    manuallyAddedStudents.value = [...students];
   } catch (error) {
     console.error("获取考试详情失败:", error);
     ElMessage.error("获取考试详情失败");
