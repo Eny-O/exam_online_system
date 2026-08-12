@@ -46,7 +46,6 @@ export function updateExamStatus(id, status) {
 export function getStuExamPage(params) {
   return request.get("/stu/exam/page", { params });
 }
-
 // 学生查看考试详情
 export function getExamInfo(id) {
   return request.get("/stu/exam/getExamInfo", { params: { id } });
