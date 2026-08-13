@@ -146,7 +146,7 @@
             </el-button>
           </template>
 
-          <!-- 已结束(4)：批阅（点击后状态→待批阅） -->
+          <!-- 待批阅(4)：批阅（点击后状态→批阅完成(5)） -->
           <template v-else-if="getRealStatus(row) === 4">
             <el-button
               link
@@ -252,7 +252,7 @@ const getEndTime = (row) => {
   )} ${pad(end.getHours())}:${pad(end.getMinutes())}:${pad(end.getSeconds())}`;
 };
 
-// 计算真实状态：已发布(1)根据时间计算为 未开始(2)/进行中(3)/已结束(4)
+// 计算真实状态：已发布(1)根据时间计算为 未开始(2)/进行中(3)/待批阅(4)
 const getRealStatus = (row) => {
   if (row.status !== 1) return row.status;
   const now = new Date();
@@ -260,7 +260,7 @@ const getRealStatus = (row) => {
   const end = new Date(start.getTime() + row.duration * 60 * 1000);
   if (now < start) return 2; // 未开始
   if (now < end) return 3; // 进行中
-  return 4; // 已结束
+  return 4; // 待批阅
 };
 
 // 状态 → el-tag type
@@ -270,9 +270,8 @@ const getStatusType = (status) => {
     1: "warning", // 已发布
     2: "", // 未开始
     3: "success", // 进行中
-    4: "info", // 已结束
-    5: "warning", // 待批阅
-    6: "success", // 批阅完成
+    4: "warning", // 待批阅
+    5: "success", // 批阅完成
   };
   return map[status] ?? "info";
 };
@@ -284,9 +283,8 @@ const getStatusText = (status) => {
     1: "已发布",
     2: "未开始",
     3: "进行中",
-    4: "已结束",
-    5: "待批阅",
-    6: "批阅完成",
+    4: "待批阅",
+    5: "批阅完成",
   };
   return map[status] ?? "未知";
 };
@@ -311,9 +309,8 @@ const fetchStatusOptions = async () => {
       { code: 1, label: "已发布" },
       { code: 2, label: "未开始" },
       { code: 3, label: "进行中" },
-      { code: 4, label: "已结束" },
-      { code: 5, label: "待批阅" },
-      { code: 6, label: "批阅完成" },
+      { code: 4, label: "待批阅" },
+      { code: 5, label: "批阅完成" },
     ];
   }
 };
@@ -375,7 +372,7 @@ const handleEdit = (row) => {
 // 批阅 / 继续批阅
 const handleReview = async (row) => {
   try {
-    // 已结束(4) → 待批阅(5)，需要调用后端更新状态
+    // 待批阅(4) → 批阅完成(5)，需要调用后端更新状态
     if (getRealStatus(row) === 4) {
       await updateExamStatus(row.id, 5);
     }
@@ -430,7 +427,7 @@ const handleEndExam = async (row) => {
       }
     );
     await updateExamStatus(row.id, 4);
-    ElMessage.success("考试已结束");
+    ElMessage.success("考试已结束，进入待批阅");
     fetchExamList();
   } catch (error) {
     if (error !== "cancel") {

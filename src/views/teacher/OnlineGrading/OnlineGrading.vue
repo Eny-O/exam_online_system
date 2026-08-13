@@ -44,7 +44,10 @@
           class="question-number"
           :class="{
             active: currentQuestionIndex === index,
-            graded: q.isGraded,
+            'nav-full': q.score !== null && q.score === q.fullScore,
+            'nav-partial':
+              q.score !== null && q.score > 0 && q.score < q.fullScore,
+            'nav-zero': q.score !== null && q.score === 0,
           }"
           @click="handleSelectQuestion(index)"
         >
@@ -85,6 +88,7 @@
           "
           class="question-block"
           :class="{ 'highlight-block': currentQuestionIndex === index }"
+          @click="currentQuestionIndex = index"
         >
           <el-card shadow="hover">
             <!-- 题目标头 -->
@@ -203,35 +207,41 @@
             </div>
           </el-card>
         </div>
-
-        <!-- 底部操作栏 -->
-        <div class="action-bar">
-          <div class="total-score-display">
-            总分：<strong>{{ totalScore }}</strong> / {{ paperTotalScore }}
-          </div>
-          <div class="action-buttons">
-            <el-button @click="handleSaveCurrent">保存当前学生</el-button>
-            <el-button type="primary" @click="handleSaveAndNext">
-              保存并下一位
-            </el-button>
-          </div>
-        </div>
       </el-scrollbar>
+
+      <!-- 底部操作栏（固定） -->
+      <div class="action-bar">
+        <div class="total-score-display">
+          总分：<strong>{{ totalScore }}</strong> / {{ paperTotalScore }}
+        </div>
+        <div class="action-buttons">
+          <el-button @click="handleGoBack">返回</el-button>
+          <el-button @click="handleSaveCurrent">保存当前学生</el-button>
+          <el-button type="primary" @click="handleSaveAndNext">
+            保存并下一位
+          </el-button>
+          <el-button type="success" @click="handleGradingComplete">
+            批阅完成
+          </el-button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
-import { ElMessage } from "element-plus";
+import { useRoute, useRouter } from "vue-router";
+import { ElMessage, ElMessageBox } from "element-plus";
 import {
   getGradePaper,
   getGradeStudentList,
   getStudentAnswer,
+  updateGradeStudentScore,
 } from "@/api/examTask";
 
 const route = useRoute();
+const router = useRouter();
 const examId = Number(route.query.examId);
 
 // ========== 加载状态 ==========
@@ -259,6 +269,7 @@ const displayQuestions = computed(() => {
   return questionList.value.map((q) => {
     const answer = studentAnswers.value.find((a) => a.questionId === q.id);
     return {
+      answerId: answer?.id ?? null,
       questionId: q.id,
       content: q.content,
       type: q.type,
@@ -334,6 +345,10 @@ onMounted(async () => {
     return;
   }
   await Promise.all([loadPaper(), loadStudentList()]);
+  // 自动加载第一个学生的答题情况
+  if (studentList.value.length > 0) {
+    await handleSelectStudent(studentList.value[0]);
+  }
 });
 
 const loadPaper = async () => {
@@ -427,6 +442,18 @@ const onScoreChange = (index) => {
   );
   if (answer) {
     answer.score = q.score;
+    // 主观题根据分数更新 isCorrect
+    if (q.type === "ESSAY") {
+      if (q.score === null || q.score === undefined) {
+        answer.isCorrect = null;
+      } else if (q.score === q.fullScore) {
+        answer.isCorrect = 1;
+      } else if (q.score === 0) {
+        answer.isCorrect = 0;
+      } else {
+        answer.isCorrect = 2;
+      }
+    }
   }
 };
 
@@ -442,21 +469,75 @@ const markCurrentStudentGraded = () => {
   }
 };
 
-const handleSaveCurrent = () => {
-  if (!currentStudentId.value) {
-    ElMessage.warning("请先选择一位学生");
-    return;
+// 根据分数计算 isCorrect 状态
+const computeIsCorrect = (score, fullScore, type) => {
+  // 客观题保持手动设置的对错标记
+  if (["SINGLE", "MULTIPLE", "JUDGE"].includes(type)) {
+    return null; // 客观题使用 displayQuestions 中的 isCorrect
   }
-  markCurrentStudentGraded();
-  ElMessage.success("保存成功");
+  // 主观题根据分数判断
+  if (score === null || score === undefined) return null; // 未批阅
+  if (score === fullScore) return 1; // 满分
+  if (score === 0) return 0; // 零分
+  return 2; // 半对
 };
 
-const handleSaveAndNext = () => {
+// 构建保存请求的数据
+const buildSavePayload = () => {
+  return displayQuestions.value
+    .filter((q) => q.answerId !== null)
+    .map((q) => {
+      // 客观题使用手动标记的 isCorrect，主观题根据分数计算
+      let isCorrect;
+      if (["SINGLE", "MULTIPLE", "JUDGE"].includes(q.type)) {
+        isCorrect = q.isCorrect;
+      } else {
+        isCorrect = computeIsCorrect(q.score, q.fullScore, q.type);
+      }
+      return {
+        id: q.answerId,
+        examId: examId,
+        studentId: currentStudentId.value,
+        questionId: q.questionId,
+        type: q.type ? q.type.toLowerCase() : "",
+        isCorrect: isCorrect,
+        score: q.score,
+      };
+    });
+};
+
+// 保存批阅结果到后端
+const saveGrading = async () => {
   if (!currentStudentId.value) {
     ElMessage.warning("请先选择一位学生");
-    return;
+    return false;
   }
-  markCurrentStudentGraded();
+  const payload = buildSavePayload();
+  if (payload.length === 0) {
+    ElMessage.warning("没有可保存的批阅数据");
+    return false;
+  }
+  try {
+    await updateGradeStudentScore(payload);
+    markCurrentStudentGraded();
+    return true;
+  } catch (e) {
+    console.error("保存批阅失败:", e);
+    ElMessage.error("保存批阅失败，请重试");
+    return false;
+  }
+};
+
+const handleSaveCurrent = async () => {
+  const success = await saveGrading();
+  if (success) {
+    ElMessage.success("保存成功");
+  }
+};
+
+const handleSaveAndNext = async () => {
+  const success = await saveGrading();
+  if (!success) return;
   ElMessage.success("保存成功");
 
   const currentIdx = studentList.value.findIndex(
@@ -478,6 +559,26 @@ const handleSaveAndNext = () => {
   } else {
     ElMessage.success("所有学生已批阅完成！");
   }
+};
+
+const handleGoBack = () => {
+  router.push("/teacher/examTask/myexam");
+};
+
+const handleGradingComplete = () => {
+  ElMessageBox.confirm("确认所有学生的批阅都已完成并提交吗？", "批阅完成确认", {
+    confirmButtonText: "确认完成",
+    cancelButtonText: "继续批阅",
+    type: "warning",
+  })
+    .then(() => {
+      // TODO: 调用后端提交批阅结果的API
+      ElMessage.success("批阅完成，已提交所有成绩！");
+      router.push("/teacher/examTask/myexam");
+    })
+    .catch(() => {
+      // 用户取消，继续批阅
+    });
 };
 </script>
 
@@ -612,16 +713,43 @@ const handleSaveAndNext = () => {
   border-color: #409eff;
 }
 
-.question-number.graded {
+/* 满分 - 绿色 */
+.question-number.nav-full {
   background-color: #f0f9eb;
   color: #67c23a;
   border-color: #67c23a;
 }
 
-.question-number.active.graded {
+.question-number.active.nav-full {
   background-color: #67c23a;
   color: #ffffff;
   border-color: #67c23a;
+}
+
+/* 半对 - 橙色 */
+.question-number.nav-partial {
+  background-color: #fdf6ec;
+  color: #e6a23c;
+  border-color: #e6a23c;
+}
+
+.question-number.active.nav-partial {
+  background-color: #e6a23c;
+  color: #ffffff;
+  border-color: #e6a23c;
+}
+
+/* 零分 - 红色 */
+.question-number.nav-zero {
+  background-color: #fef0f0;
+  color: #f56c6c;
+  border-color: #f56c6c;
+}
+
+.question-number.active.nav-zero {
+  background-color: #f56c6c;
+  color: #ffffff;
+  border-color: #f56c6c;
 }
 
 /* 空状态 */
@@ -812,7 +940,7 @@ const handleSaveAndNext = () => {
   color: #909399;
 }
 
-/* 底部操作栏 */
+/* 底部操作栏（固定） */
 .action-bar {
   padding: 16px 20px;
   background-color: #ffffff;
@@ -820,6 +948,7 @@ const handleSaveAndNext = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .total-score-display {

@@ -116,9 +116,8 @@ const STATUS_TEXT = {
   1: "已发布",
   2: "未开始",
   3: "进行中",
-  4: "已结束",
-  5: "待批阅",
-  6: "批阅完成",
+  4: "待批阅",
+  5: "批阅完成",
 };
 
 const STATUS_TYPE = {
@@ -126,9 +125,8 @@ const STATUS_TYPE = {
   1: "warning",
   2: "",
   3: "success",
-  4: "info",
-  5: "warning",
-  6: "success",
+  4: "warning",
+  5: "success",
 };
 
 // 当 status === 1（已发布）时，根据时间计算真实状态

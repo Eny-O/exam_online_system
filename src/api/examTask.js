@@ -84,3 +84,8 @@ export function getStudentAnswer(studentId, examId) {
     params: { studentId, examId },
   });
 }
+
+// 更新批阅的学生得分
+export function updateGradeStudentScore(data) {
+  return request.put("/gradePaper/updateGradeStudentScore", data);
+}

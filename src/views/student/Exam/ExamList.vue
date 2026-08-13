@@ -100,7 +100,7 @@
           >
             查看详情
           </el-button>
-          <!-- 已结束(4) / 待批阅(5) / 批阅完成(6)：查看成绩 -->
+          <!-- 待批阅(4) / 批阅完成(5)：查看成绩 -->
           <el-button
             v-if="getRealStatus(row) >= 4"
             link
@@ -163,9 +163,8 @@ const pagination = reactive({
 const statusOptions = [
   { code: 2, label: "未开始" },
   { code: 3, label: "进行中" },
-  { code: 4, label: "已结束" },
-  { code: 5, label: "待批阅" },
-  { code: 6, label: "批阅完成" },
+  { code: 4, label: "待批阅" },
+  { code: 5, label: "批阅完成" },
 ];
 
 // 当 status === 1（已发布）时，根据当前时间计算真实状态
@@ -176,7 +175,7 @@ const getRealStatus = (row) => {
   const end = new Date(start.getTime() + row.duration * 60 * 1000);
   if (now < start) return 2; // 未开始
   if (now < end) return 3; // 进行中
-  return 4; // 已结束
+  return 4; // 待批阅
 };
 
 // 计算结束时间
@@ -194,9 +193,8 @@ const getStatusType = (status) => {
   const map = {
     2: "",
     3: "success",
-    4: "info",
-    5: "warning",
-    6: "success",
+    4: "warning",
+    5: "success",
   };
   return map[status] ?? "info";
 };
@@ -206,9 +204,8 @@ const getStatusText = (status) => {
   const map = {
     2: "未开始",
     3: "进行中",
-    4: "已结束",
-    5: "待批阅",
-    6: "批阅完成",
+    4: "待批阅",
+    5: "批阅完成",
   };
   return map[status] ?? "未知";
 };
@@ -267,7 +264,7 @@ const handleExamDetail = (row) => {
   router.push(`/exam/detail/${row.id}`);
 };
 
-// 查看成绩（已结束/待批阅/批阅完成）
+// 查看成绩（待批阅/批阅完成）
 const handleViewResult = (row) => {
   router.push(`/exam/${row.id}/result`);
 };
