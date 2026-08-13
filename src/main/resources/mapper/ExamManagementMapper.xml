@@ -16,19 +16,16 @@
         FROM exam left join paper on exam.paper_id = paper.id
         ${ew.customSqlSegment}
         <choose>
-            <!-- 如果前端查”未开始” -->
             <when test="viewStatus != null and viewStatus.code == 2">
                 AND exam.status = 1 AND #{now} &lt; exam.start_time
             </when>
-            <!-- 如果前端查”进行中” -->
             <when test="viewStatus != null and viewStatus.code == 3">
                 AND exam.status = 1 AND #{now} &gt;= exam.start_time AND #{now} &lt;= DATE_ADD(exam.start_time, INTERVAL exam.duration MINUTE)
             </when>
-            <!-- 如果前端查”已结束” -->
+            <!-- 新增：待批阅 = 已发布 + 时间已过 -->
             <when test="viewStatus != null and viewStatus.code == 4">
                 AND exam.status = 1 AND #{now} &gt; DATE_ADD(exam.start_time, INTERVAL exam.duration MINUTE)
             </when>
-            <!-- 接收后端控制的状态 -->
             <otherwise>
                 <if test="viewStatus != null" >
                     AND exam.status = #{viewStatus.code}
@@ -66,6 +63,7 @@
             <when test="viewStatus != null and viewStatus.code == 3">
                 AND e.status = 1 AND #{now} &gt;= e.start_time AND #{now} &lt;= DATE_ADD(e.start_time, INTERVAL e.duration MINUTE)
             </when>
+            <!-- 新增：待批阅 = 已发布 + 时间已过 -->
             <when test="viewStatus != null and viewStatus.code == 4">
                 AND e.status = 1 AND #{now} &gt; DATE_ADD(e.start_time, INTERVAL e.duration MINUTE)
             </when>

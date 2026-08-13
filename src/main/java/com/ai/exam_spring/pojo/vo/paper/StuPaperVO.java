@@ -16,7 +16,7 @@ public class StuPaperVO {
     private String name;
 
     @Schema(description = "总分")
-    private Integer totalScore;
+    private Double totalScore;
 
     @Schema(description = "试卷题目列表")
     private List<StuPaperQuestionVO> stuPaperQuestionVOS;

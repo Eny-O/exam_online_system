@@ -13,7 +13,7 @@ public class GradePaperQuestionVO {
     private Integer sortOrder;
 
     @Schema(description = "题目分数")
-    private Integer score;
+    private Double score;
 
     @Schema(description = "题目ID")
     private Integer id;
@@ -24,7 +24,12 @@ public class GradePaperQuestionVO {
     @Schema(description = "题干内容")
     private String content;
 
+    @Schema(description = "题目类型")
+    private String type;
+
     @Schema(description = "题目选项列表")
     private List<QuestionOptionVO> options;
+
+
 
 }

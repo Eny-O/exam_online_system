@@ -43,6 +43,8 @@ public enum ErrorCodeEnum {
     EXAM_NOT_FOUND("3001", "考试不存在"),
     NOT_ADD_ENABLE_PAPER("3002","不能添加未启用的试卷"),
     EXAM_STATUS_CHANGE_FAIL("3003","考试状态改变失败"),
+    EXAM_STATUS_NOT_PENDING_NOT_SUBMIT("3004", "考试状态不是待考试不能提交"),
+    EXAM_STUDENT_NOT_FOUND("3005", "考试学生关联数据不存在"),
 
     // 文件与导入错误码
     FILE_FORMAT_ERROR("4001", "仅支持 .xlsx 格式文件"),
@@ -58,12 +60,16 @@ public enum ErrorCodeEnum {
     PAPER_STATUS_TRANSFER_NOT_ALLOWED("5005", "试卷状态转换不允许"),
     PAPER_REFERENCE_ANY_EXAM("5006", "试卷已被考试引用"),
     PAPER_STATUS_CHANGE_FAIL("5007","试卷状态改变失败"),
+    STUDENT_SUBMIT_PAPER_FAILED("5008", "学生提交试卷失败"),
 
     // 班级错误码
     CLASS_NOT_FOUND("6001", "班级不存在"),
 
     // 阅卷错误码
     PAPER_CONTENT_EMPTY_NOT_GRADE("7001", "试卷内容为空，不能阅卷"),
+    PAPER_STATUS_ERROR_NOT_GRADE("7002", "试卷状态错误，不能阅卷"),
+
+
 
     // 并发修改错误码
     DATA_ALREADY_MODIFIED_PLEASE_FLUSH_AFTER_RETRY("8001", "数据已经被更改,请刷新后重试");

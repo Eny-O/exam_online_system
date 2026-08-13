@@ -36,6 +36,4 @@ public class ExamClass {
         this.classId = classId;
     }
 
-
-
 }

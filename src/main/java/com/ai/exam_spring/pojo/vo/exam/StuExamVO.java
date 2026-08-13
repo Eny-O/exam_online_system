@@ -21,7 +21,7 @@ public class StuExamVO {
     @Schema(description = "考试时长(分钟)")
     private Integer duration;
 
-    @Schema(description = "状态: 2-未开始,3-进行中,4-已结束,5-待批阅,6-批阅完成")
+    @Schema(description = "状态: 2-未开始,3-进行中,4-待批阅,5-批阅完成")
     private ExamEnum status;
 
     @Schema(description = "试卷id")

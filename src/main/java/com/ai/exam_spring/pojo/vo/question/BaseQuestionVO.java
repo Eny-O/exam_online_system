@@ -14,10 +14,7 @@ public class BaseQuestionVO {
     @Schema(description = "题干内容")
     private String content;
 
-    @Schema(
-            description = "题目类型: single-单选 multiple-多选 judge-判断 essay-简答",
-            allowableValues = {"single", "multiple", "judge", "essay"}
-    )
+    @Schema(description = "题目类型: single-单选 multiple-多选 judge-判断 essay-简答", example = "SINGLE")
     private QuestionTypeEnum type;
 
     @Schema(description = "所属知识点")

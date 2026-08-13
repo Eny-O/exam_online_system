@@ -3,6 +3,7 @@ package com.ai.exam_spring.service.grading.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerAddDTO;
 import com.ai.exam_spring.pojo.entity.exam.Exam;
 import com.ai.exam_spring.pojo.entity.stu_answer.StudentAnswer;
 import com.ai.exam_spring.pojo.entity.user.User;
@@ -11,7 +12,6 @@ import com.ai.exam_spring.pojo.vo.grade.GradePaperQuestionVO;
 import com.ai.exam_spring.pojo.vo.grade.GradeStudentVO;
 import com.ai.exam_spring.pojo.vo.paper.*;
 import com.ai.exam_spring.pojo.vo.question.QuestionCompleteVO;
-import com.ai.exam_spring.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.service.exam.IExamManagementService;
 import com.ai.exam_spring.service.grading.GradePaperService;
 import com.ai.exam_spring.service.grading.IStudentAnswerService;
@@ -72,34 +72,21 @@ public class GradePaperServiceImpl implements GradePaperService {
             gradePaperQuestionVO.setId(questionCompleteVO.getId());
             gradePaperQuestionVO.setCorrectAnswer(questionCompleteVO.getAnswer());
             gradePaperQuestionVO.setOptions(questionCompleteVO.getOptions());
+            gradePaperQuestionVO.setType(questionCompleteVO.getType().name());
             return gradePaperQuestionVO;
         }).toList();
         gradePaperContentVO.setGradePaperQuestionVOS(gradePaperQuestionVOS);
         return gradePaperContentVO;
     }
 
-    @Override
-    public List<StudentAnswerVO> getStudentAnswer(Integer studentId, Integer examId) {
-        if (studentId == null || examId == null) {
-            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
-        }
-        List<StudentAnswer> studentAnswers = studentAnswerService.list(
-                new LambdaQueryWrapper<StudentAnswer>()
-                        .eq(StudentAnswer::getStudentId, studentId)
-                        .eq(StudentAnswer::getExamId, examId));
-        if (studentAnswers == null || studentAnswers.isEmpty()) {
-            return null;
-        }
-        return studentAnswers.stream().map(studentAnswer -> {
-            StudentAnswerVO studentAnswerVO = new StudentAnswerVO();
-            studentAnswerVO.setStudentAnswer(studentAnswer.getStudentAnswer());
-            studentAnswerVO.setIsCorrect(studentAnswer.getIsCorrect());
-            studentAnswerVO.setQuestionId(studentAnswer.getQuestionId());
-            studentAnswerVO.setScore(studentAnswer.getScore());
-            return studentAnswerVO;
-        }).toList();
-    }
 
+
+    /**
+     * 根据考试id获取批阅试卷学生列表
+     *
+     * @param examId
+     * @return
+     */
     @Override
     public List<GradeStudentVO> getGradeStudentList(Integer examId) {
         if (examId == null) {
@@ -123,5 +110,15 @@ public class GradePaperServiceImpl implements GradePaperService {
             gradeStudentVO.setStudentNo(user.getStudentNo());
             return gradeStudentVO;
         }).toList();
+    }
+
+    /**
+     * 保存批阅学生答案
+     *
+     * @param studentAnswerAddDTO
+     */
+    @Override
+    public void saveGradeStudentAnswer(StudentAnswerAddDTO studentAnswerAddDTO) {
+
     }
 }

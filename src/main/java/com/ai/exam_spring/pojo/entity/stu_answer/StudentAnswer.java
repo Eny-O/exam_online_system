@@ -31,14 +31,14 @@ public class StudentAnswer {
     @Schema(description = "学生作答内容", example = "A")
     private String studentAnswer;
 
-    @Schema(description = "是否正确: 1-正确 0-错误 NULL-未评判(主观题)", example = "1")
+    @Schema(description = "是否正确: 1-正确 0-错误 NULL-未评判(主观题) 2-半对(主观题)", example = "1")
     private Integer isCorrect;
 
     @Schema(description = "得分", example = "9.5")
-    private Integer score;
+    private Double score;
 
     @Schema(description = "满分", example = "10.0")
-    private Integer fullScore;
+    private Double fullScore;
 
     @Schema(description = "教师批注(主观题)", example = "回答思路清晰，但缺少关键点。")
     private String teacherComment;

@@ -8,8 +8,8 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-@Schema(description = "学生作答请求对象")
-public class StudentAnswerDTO {
+@Schema(description = "学生作答添加请求对象")
+public class StudentAnswerAddDTO {
     @NotNull(message = "{validate.exam.id.notNull}")
     @Schema(description = "考试ID", example = "101")
     private Integer examId;

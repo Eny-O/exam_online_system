@@ -17,7 +17,7 @@ public class BasePaperDTO {
 
     @NotNull(message = "{validate.paper.totalScore.notNull}")
     @Schema(description = "总分")
-    private Integer totalScore;
+    private Double totalScore;
 
     @Schema(description = "试卷描述")
     private String description;

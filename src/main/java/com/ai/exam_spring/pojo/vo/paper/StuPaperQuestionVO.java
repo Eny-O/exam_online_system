@@ -11,7 +11,7 @@ public class StuPaperQuestionVO {
     private Integer sortOrder;
 
     @Schema(description = "题目分数")
-    private Integer score;
+    private Double score;
 
     @Schema(description = "完整题目")
     private StuQuestionCompleteVO stuQuestionCompleteVO;

@@ -57,7 +57,7 @@ public class ExamManagementController {
     }
 
 
-    @Operation(summary = "获取所有考试状态",description = "状态: 0-未发布,1-已发布,2-未开始,3-进行中,4-已结束,5-待批阅,6-批阅完成,其中2,3,4前端维护")
+    @Operation(summary = "获取所有考试状态",description = "状态: 0-未发布,1-已发布,2-未开始,3-进行中,4-待批阅,5-批阅完成,其中2,3,4前端维护")
     @GetMapping("/getAllExamStatus")
     public ResponseResult<ExamEnum[]> getAllExamStatus() {
         log.info("获取所有考试状态");

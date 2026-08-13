@@ -22,5 +22,5 @@ public class PaperQuestionDTO {
     @NotNull(message = "{validate.paper.question.score.notNull}")
     @Min(value = 1, message = "{validate.paper.question.score.min}")
     @Schema(description = "题目分数")
-    private Integer score;
+    private Double score;
 }

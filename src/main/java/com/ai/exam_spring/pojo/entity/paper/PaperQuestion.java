@@ -26,7 +26,7 @@ public class PaperQuestion {
     private Integer sortOrder;
 
     @Schema(description = "题目分数")
-    private Integer score;
+    private Double score;
 
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建时间")

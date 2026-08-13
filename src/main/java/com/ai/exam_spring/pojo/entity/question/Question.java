@@ -1,5 +1,6 @@
 package com.ai.exam_spring.pojo.entity.question;
 
+import com.ai.exam_spring.pojo.enums.question.QuestionTypeEnum;
 import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -27,8 +28,8 @@ public class Question {
     @Schema(description = "题目内容", example = "Java中哪个关键字用于实现接口？")
     private String content;
 
-    @Schema(description = "题目类型: single-单选 multiple-多选 judge-判断 essay-简答", example = "single")
-    private String type;
+    @Schema(description = "题目类型: single-单选 multiple-多选 judge-判断 essay-简答", example = "SINGLE")
+    private QuestionTypeEnum type;
 
     @Schema(description = "难度: easy-medium-hard", example = "medium")
     private String difficulty;

@@ -1,6 +1,6 @@
 package com.ai.exam_spring.service.exam;
 
-import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerDTO;
+import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerAddDTO;
 import com.ai.exam_spring.pojo.vo.exam.StuExamVO;
 import com.ai.exam_spring.pojo.vo.paper.StuPaperVO;
 
@@ -21,7 +21,7 @@ public interface StuExamService {
 
     /**
      * 提交试卷
-     * @param studentAnswerDTO
+     * @param studentAnswerAddDTO
      */
-    void submitPaper(StudentAnswerDTO studentAnswerDTO);
+    void submitPaper(StudentAnswerAddDTO studentAnswerAddDTO);
 }

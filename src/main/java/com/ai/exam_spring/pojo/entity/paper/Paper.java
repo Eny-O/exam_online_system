@@ -26,7 +26,7 @@ public class Paper {
     private String name;
 
     @Schema(description = "总分")
-    private Integer totalScore;
+    private Double totalScore;
 
     @Schema(description = "试卷描述")
     private String description;

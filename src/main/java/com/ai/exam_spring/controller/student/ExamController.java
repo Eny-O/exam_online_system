@@ -3,7 +3,7 @@ package com.ai.exam_spring.controller.student;
 import com.ai.exam_spring.common.result.PageResult;
 import com.ai.exam_spring.common.result.ResponseResult;
 import com.ai.exam_spring.pojo.dto.exam.StuExamQueryDTO;
-import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerDTO;
+import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerAddDTO;
 import com.ai.exam_spring.pojo.vo.exam.StuExamVO;
 import com.ai.exam_spring.pojo.vo.paper.StuPaperVO;
 import com.ai.exam_spring.service.exam.IExamManagementService;
@@ -52,9 +52,9 @@ public class ExamController {
 
     @Operation(summary = "学生提交试卷")
     @PostMapping("/submitPaper")
-    public ResponseResult<Void> submitPaper(@RequestBody StudentAnswerDTO studentAnswerDTO) {
-        log.info("学生提交试卷: {}", studentAnswerDTO);
-        stuExamService.submitPaper(studentAnswerDTO);
+    public ResponseResult<Void> submitPaper(@RequestBody StudentAnswerAddDTO studentAnswerAddDTO) {
+        log.info("学生提交试卷: {}", studentAnswerAddDTO);
+        stuExamService.submitPaper(studentAnswerAddDTO);
         return ResponseResult.success();
     }
 }

@@ -11,9 +11,8 @@ public enum ExamEnum {
     ALREADY_POST(1, "已发布"),
     NOT_START(2, "未开始"),
     ONGOING(3, "进行中"),
-    ALREADY_END(4, "已结束"),
-    PENDING_REVIEW(5, "待批阅"),
-    REVIEW_FINISHED(6, "批阅完成");
+    PENDING_REVIEW(4, "待批阅"),
+    REVIEW_FINISHED(5, "批阅完成");
 
     @EnumValue
     @JsonValue
