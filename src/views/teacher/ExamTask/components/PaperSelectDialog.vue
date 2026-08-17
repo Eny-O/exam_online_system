@@ -48,12 +48,7 @@
         show-overflow-tooltip
       />
 
-      <el-table-column
-        prop="totalScore"
-        label="总分"
-        width="90"
-        align="center"
-      >
+      <el-table-column prop="totalScore" label="总分" width="90" align="center">
         <template #default="{ row }">
           <span class="score-text">{{ row.totalScore }} 分</span>
         </template>
@@ -98,7 +93,11 @@
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedPaper" @click="handleConfirm">
+        <el-button
+          type="primary"
+          :disabled="!selectedPaper"
+          @click="handleConfirm"
+        >
           确认选择
         </el-button>
       </div>
@@ -136,14 +135,70 @@ const pagination = reactive({
 
 // 模拟试卷数据（后端不可用时降级）
 const mockPapers = [
-  { id: 1, name: "Java基础期末考试", totalScore: 100, description: "涵盖Java基础语法、面向对象、集合框架等核心知识点", creatorName: "张老师", createTime: "2025-06-01 09:00:00" },
-  { id: 2, name: "Spring Boot单元测试", totalScore: 80, description: "测试Spring Boot自动配置、IOC、AOP等核心概念", creatorName: "李老师", createTime: "2025-06-05 10:00:00" },
-  { id: 3, name: "数据库原理期中考试", totalScore: 120, description: "包含SQL语句、范式理论、事务与并发控制等内容", creatorName: "张老师", createTime: "2025-05-20 08:30:00" },
-  { id: 4, name: "前端Vue3综合测验", totalScore: 50, description: "Vue3组合式API、响应式原理、路由与状态管理", creatorName: "李老师", createTime: "2025-06-08 13:00:00" },
-  { id: 5, name: "计算机网络期末考试", totalScore: 100, description: "TCP/IP协议栈、HTTP/HTTPS、网络安全基础", creatorName: "张老师", createTime: "2025-06-10 14:00:00" },
-  { id: 6, name: "数据结构与算法测验", totalScore: 150, description: "线性表、树、图、排序与查找算法综合分析", creatorName: "李老师", createTime: "2025-05-25 09:30:00" },
-  { id: 7, name: "操作系统模拟测试", totalScore: 100, description: "进程管理、内存管理、文件系统与I/O管理", creatorName: "张老师", createTime: "2025-06-12 11:00:00" },
-  { id: 8, name: "软件工程综合考试", totalScore: 80, description: "需求分析、系统设计、软件测试与项目管理", creatorName: "李老师", createTime: "2025-06-15 16:00:00" },
+  {
+    id: 1,
+    name: "Java基础期末考试",
+    totalScore: 100,
+    description: "涵盖Java基础语法、面向对象、集合框架等核心知识点",
+    creatorName: "张老师",
+    createTime: "2025-06-01 09:00:00",
+  },
+  {
+    id: 2,
+    name: "Spring Boot单元测试",
+    totalScore: 80,
+    description: "测试Spring Boot自动配置、IOC、AOP等核心概念",
+    creatorName: "李老师",
+    createTime: "2025-06-05 10:00:00",
+  },
+  {
+    id: 3,
+    name: "数据库原理期中考试",
+    totalScore: 120,
+    description: "包含SQL语句、范式理论、事务与并发控制等内容",
+    creatorName: "张老师",
+    createTime: "2025-05-20 08:30:00",
+  },
+  {
+    id: 4,
+    name: "前端Vue3综合测验",
+    totalScore: 50,
+    description: "Vue3组合式API、响应式原理、路由与状态管理",
+    creatorName: "李老师",
+    createTime: "2025-06-08 13:00:00",
+  },
+  {
+    id: 5,
+    name: "计算机网络期末考试",
+    totalScore: 100,
+    description: "TCP/IP协议栈、HTTP/HTTPS、网络安全基础",
+    creatorName: "张老师",
+    createTime: "2025-06-10 14:00:00",
+  },
+  {
+    id: 6,
+    name: "数据结构与算法测验",
+    totalScore: 150,
+    description: "线性表、树、图、排序与查找算法综合分析",
+    creatorName: "李老师",
+    createTime: "2025-05-25 09:30:00",
+  },
+  {
+    id: 7,
+    name: "操作系统模拟测试",
+    totalScore: 100,
+    description: "进程管理、内存管理、文件系统与I/O管理",
+    creatorName: "张老师",
+    createTime: "2025-06-12 11:00:00",
+  },
+  {
+    id: 8,
+    name: "软件工程综合考试",
+    totalScore: 80,
+    description: "需求分析、系统设计、软件测试与项目管理",
+    creatorName: "李老师",
+    createTime: "2025-06-15 16:00:00",
+  },
 ];
 
 // 获取试卷列表

@@ -12,16 +12,18 @@
       <!-- 用户基本信息卡片 -->
       <el-card class="user-card" shadow="hover">
         <div class="user-info-flex">
-          <el-avatar :size="80" :src="mockUser.avatar" class="user-avatar" />
+          <el-avatar :size="80" :src="userAvatar" class="user-avatar" />
           <div class="user-details">
-            <h2 class="user-name">{{ mockUser.name }}</h2>
+            <h2 class="user-name">
+              {{ userInfo.realName || userInfo.username || "--" }}
+            </h2>
             <div class="detail-item">
-              <el-icon><Message /></el-icon>
-              <span>{{ mockUser.email }}</span>
+              <el-icon><User /></el-icon>
+              <span>{{ userInfo.username }}</span>
             </div>
             <div class="detail-item">
               <el-icon><Calendar /></el-icon>
-              <span>加入时间: {{ mockUser.joinDate }}</span>
+              <span>欢迎回来</span>
             </div>
           </div>
         </div>
@@ -33,7 +35,7 @@
           <div class="stat-content">
             <div class="stat-text">
               <p class="stat-label">总考试数</p>
-              <p class="stat-value text-primary">{{ mockUser.totalExams }}</p>
+              <p class="stat-value text-primary">{{ examList.length }}</p>
             </div>
             <div class="stat-icon-bg bg-blue">
               <el-icon><Trophy /></el-icon>
@@ -45,7 +47,7 @@
           <div class="stat-content">
             <div class="stat-text">
               <p class="stat-label">通过考试</p>
-              <p class="stat-value text-success">{{ mockUser.passedExams }}</p>
+              <p class="stat-value text-success">{{ passedCount }}</p>
             </div>
             <div class="stat-icon-bg bg-green">
               <el-icon><TrendCharts /></el-icon>
@@ -57,10 +59,10 @@
           <div class="stat-content">
             <div class="stat-text">
               <p class="stat-label">平均分</p>
-              <p class="stat-value text-purple">{{ mockUser.averageScore }}</p>
+              <p class="stat-value text-purple">{{ averageScore }}</p>
             </div>
             <div class="stat-icon-bg bg-purple">
-              <el-icon><User /></el-icon>
+              <el-icon><Document /></el-icon>
             </div>
           </div>
         </el-card>
@@ -68,11 +70,11 @@
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
             <div class="stat-text">
-              <p class="stat-label">学习时长</p>
-              <p class="stat-value text-orange">{{ mockUser.totalTime }}</p>
+              <p class="stat-label">最高分</p>
+              <p class="stat-value text-orange">{{ highestScore }}</p>
             </div>
             <div class="stat-icon-bg bg-orange">
-              <el-icon><Clock /></el-icon>
+              <el-icon><Star /></el-icon>
             </div>
           </div>
         </el-card>
@@ -107,23 +109,29 @@
           <span>最近考试记录</span>
         </div>
       </template>
-      <el-table :data="scoreHistory" style="width: 100%" stripe>
-        <el-table-column prop="name" label="考试名称" min-width="120" />
-        <el-table-column prop="date" label="考试日期" width="120" />
+      <el-table
+        :data="scoreHistory"
+        style="width: 100%"
+        stripe
+        v-loading="loading"
+      >
+        <el-table-column prop="examName" label="考试名称" min-width="120" />
+        <el-table-column label="考试日期" width="120">
+          <template #default="scope">
+            {{ formatDate(scope.row.examTime) }}
+          </template>
+        </el-table-column>
         <el-table-column label="得分" width="100">
           <template #default="scope">
-            <span :class="getScoreClass(scope.row.score)">
-              {{ scope.row.score }}分
+            <span :class="getScoreClass(scope.row)">
+              {{ scope.row.examScore ?? "--" }}分
             </span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="scope">
-            <el-tag
-              :type="scope.row.score >= 60 ? 'success' : 'danger'"
-              effect="light"
-            >
-              {{ scope.row.score >= 60 ? "通过" : "未通过" }}
+            <el-tag :type="getStatusType(scope.row)" effect="light">
+              {{ getStatusText(scope.row) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -133,59 +141,110 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import * as echarts from "echarts";
 import {
-  Message,
+  User,
   Calendar,
   Trophy,
   TrendCharts,
-  User,
-  Clock,
+  Document,
+  Star,
 } from "@element-plus/icons-vue";
+import { useUserStore } from "@/stores/user";
+import { getAllExamResult } from "@/api/examTask";
+
+const userStore = useUserStore();
 
 // --- 数据定义 ---
-const mockUser = ref({
-  name: "张三",
-  email: "zhangsan@example.com",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=zhangsan",
-  joinDate: "2024-01-15",
-  totalExams: 12,
-  passedExams: 10,
-  averageScore: 85,
-  totalTime: "48小时",
+const userInfo = computed(() => userStore.userInfo);
+const userAvatar = computed(() => {
+  const name = userInfo.value.realName || userInfo.value.username || "user";
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
 });
 
-const scoreHistory = ref([
-  { name: "数学基础", score: 92, date: "2024-03-01" },
-  { name: "英语听力", score: 78, date: "2024-03-05" },
-  { name: "物理力学", score: 88, date: "2024-03-10" },
-  { name: "化学实验", score: 95, date: "2024-03-15" },
-  { name: "历史常识", score: 82, date: "2024-03-20" },
-  { name: "编程基础", score: 90, date: "2024-03-25" },
-]);
+const examList = ref([]);
+const loading = ref(false);
 
-const trendData = ref([
-  { month: "1月", score: 75 },
-  { month: "2月", score: 78 },
-  { month: "3月", score: 85 },
-  { month: "4月", score: 82 },
-  { month: "5月", score: 88 },
-  { month: "6月", score: 90 },
-]);
+// 计算通过考试数（得分 >= 总分 60%）
+const passedCount = computed(() => {
+  return examList.value.filter((item) => {
+    const score = item.examScore;
+    const total = item.totalScore;
+    if (score == null || !total) return false;
+    return score >= total * 0.6;
+  }).length;
+});
+
+// 计算平均分
+const averageScore = computed(() => {
+  const scoredExams = examList.value.filter(
+    (item) => item.examScore !== null && item.examScore !== undefined
+  );
+  if (scoredExams.length === 0) return 0;
+  const sum = scoredExams.reduce((acc, item) => acc + item.examScore, 0);
+  return Math.round(sum / scoredExams.length);
+});
+
+// 计算最高分
+const highestScore = computed(() => {
+  const scoredExams = examList.value.filter(
+    (item) => item.examScore !== null && item.examScore !== undefined
+  );
+  if (scoredExams.length === 0) return 0;
+  return Math.max(...scoredExams.map((item) => item.examScore));
+});
+
+// 成绩历史（用于表格和图表）
+const scoreHistory = computed(() => {
+  return examList.value
+    .filter((item) => item.examScore !== null && item.examScore !== undefined)
+    .slice(0, 6); // 只显示最近6条
+});
 
 // --- 图表引用 ---
 const barChartRef = ref(null);
 const lineChartRef = ref(null);
 
 // --- 方法 ---
-const getScoreClass = (score) => {
-  if (score >= 80) return "text-success";
-  if (score >= 60) return "text-warning";
+const getScoreClass = (row) => {
+  const score = row.examScore;
+  const total = row.totalScore;
+  if (score == null || !total) return "";
+  const rate = (score / total) * 100;
+  if (rate >= 80) return "text-success";
+  if (rate >= 60) return "text-warning";
   return "text-danger";
 };
 
+const getStatusType = (row) => {
+  if (row.examScore == null) return "warning";
+  const score = row.examScore;
+  const total = row.totalScore;
+  if (score >= total * 0.6) return "success";
+  return "danger";
+};
+
+const getStatusText = (row) => {
+  if (row.examScore == null) return "待批阅";
+  const score = row.examScore;
+  const total = row.totalScore;
+  if (score >= total * 0.6) return "通过";
+  return "未通过";
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return "--";
+  const date = new Date(dateStr);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}-${day}`;
+};
+
 const initCharts = () => {
+  const historyData = scoreHistory.value;
+  if (historyData.length === 0) return;
+
   // 初始化柱状图
   if (barChartRef.value) {
     const myChart = echarts.init(barChartRef.value);
@@ -194,7 +253,11 @@ const initCharts = () => {
       grid: { left: "3%", right: "4%", bottom: "3%", containLabel: true },
       xAxis: {
         type: "category",
-        data: scoreHistory.value.map((item) => item.name),
+        data: historyData.map((item) => {
+          // 截取考试名称，太长则省略
+          const name = item.examName || "";
+          return name.length > 6 ? name.substring(0, 6) + "..." : name;
+        }),
         axisLabel: { fontSize: 12 },
       },
       yAxis: { type: "value", min: 0, max: 100 },
@@ -202,35 +265,36 @@ const initCharts = () => {
         {
           name: "分数",
           type: "bar",
-          data: scoreHistory.value.map((item) => item.score),
+          data: historyData.map((item) => item.examScore),
           itemStyle: { color: "#3b82f6", borderRadius: [4, 4, 0, 0] },
         },
       ],
     };
     myChart.setOption(option);
-
-    // 响应式调整
     window.addEventListener("resize", () => myChart.resize());
   }
 
-  // 初始化折线图
+  // 初始化折线图（成绩趋势）
   if (lineChartRef.value) {
     const myChart = echarts.init(lineChartRef.value);
+    // 按时间排序
+    const sortedData = [...historyData].sort((a, b) => {
+      return new Date(a.examTime) - new Date(b.examTime);
+    });
     const option = {
       tooltip: { trigger: "axis" },
       grid: { left: "3%", right: "4%", bottom: "3%", containLabel: true },
       xAxis: {
         type: "category",
-        data: trendData.value.map((item) => item.month),
+        data: sortedData.map((item) => formatDate(item.examTime)),
       },
-      yAxis: { type: "value", min: 60, max: 100 },
+      yAxis: { type: "value", min: 0, max: 100 },
       series: [
         {
           name: "分数",
           type: "line",
           smooth: true,
-          data: trendData.value.map((item) => item.score),
-          // 合并后的 itemStyle，包含线条颜色、符号边框及填充色
+          data: sortedData.map((item) => item.examScore),
           itemStyle: {
             color: "#fff",
             borderColor: "#10b981",
@@ -243,23 +307,35 @@ const initCharts = () => {
       ],
     };
     myChart.setOption(option);
-
-    // 响应式调整
     window.addEventListener("resize", () => myChart.resize());
   }
 };
 
-onMounted(() => {
-  nextTick(() => {
+// 加载数据
+const loadData = async () => {
+  loading.value = true;
+  try {
+    const res = await getAllExamResult();
+    examList.value = res.data || [];
+    // 数据加载完成后初始化图表
+    await nextTick();
     initCharts();
-  });
+  } catch (error) {
+    console.error("获取考试数据失败:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  loadData();
 });
 </script>
 
 <style scoped>
 .profile-container {
   padding: 24px;
-  background-color: #f9fafb; /* bg-gray-50 */
+  background-color: #f9fafb;
   min-height: 100vh;
   max-width: 1200px;
   margin: 0 auto;
@@ -277,11 +353,11 @@ onMounted(() => {
 .page-title {
   font-size: 30px;
   font-weight: bold;
-  color: #111827; /* text-gray-900 */
+  color: #111827;
   margin: 0 0 8px 0;
 }
 .page-subtitle {
-  color: #4b5563; /* text-gray-600 */
+  color: #4b5563;
   margin: 0;
 }
 
@@ -330,7 +406,7 @@ onMounted(() => {
   gap: 16px;
 }
 .user-avatar {
-  background-color: #dbeafe; /* bg-blue-100 */
+  background-color: #dbeafe;
 }
 .user-name {
   font-size: 20px;
@@ -341,7 +417,7 @@ onMounted(() => {
 .detail-item {
   display: flex;
   align-items: center;
-  color: #6b7280; /* text-gray-500 */
+  color: #6b7280;
   font-size: 14px;
   margin-top: 4px;
 }

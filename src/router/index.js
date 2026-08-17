@@ -43,6 +43,12 @@ const asyncStandaloneRoutes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/exam/:id/review",
+    name: "examReview",
+    component: () => import("@/views/student/Exam/ExamReview.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/teacher/onlineGrade",
     name: "onlineGrade",
     component: () => import("@/views/teacher/OnlineGrading/OnlineGrading.vue"),

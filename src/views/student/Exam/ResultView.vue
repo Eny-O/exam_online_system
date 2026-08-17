@@ -4,7 +4,7 @@
       <!-- 标题部分 -->
       <div class="header-section fade-in">
         <h1 class="page-title">成绩查询</h1>
-        <p class="page-subtitle">查看您的所有考试成绩和排名</p>
+        <p class="page-subtitle">查看您的所有考试成绩</p>
       </div>
 
       <!-- 统计卡片 -->
@@ -44,7 +44,7 @@
         </div>
       </div>
 
-      <!-- 搜索和过滤栏 -->
+      <!-- 搜索栏 -->
       <div class="filter-section fade-in-delay-2">
         <div class="filter-row">
           <div class="search-input-wrapper">
@@ -54,17 +54,6 @@
               prefix-icon="Search"
               class="custom-search-input"
             />
-          </div>
-          <div class="subject-filters">
-            <el-button
-              v-for="subject in subjects"
-              :key="subject"
-              :type="selectedSubject === subject ? 'primary' : 'default'"
-              @click="selectedSubject = subject"
-              class="subject-btn"
-            >
-              {{ subject }}
-            </el-button>
           </div>
         </div>
       </div>
@@ -80,51 +69,78 @@
             fontWeight: '500',
           }"
           row-class-name="custom-table-row"
+          v-loading="loading"
         >
-          <el-table-column prop="title" label="考试名称" min-width="180">
+          <el-table-column prop="examName" label="考试名称" min-width="180">
             <template #default="scope">
-              <span class="font-medium">{{ scope.row.title }}</span>
+              <span class="font-medium">{{ scope.row.examName }}</span>
             </template>
           </el-table-column>
 
-          <el-table-column prop="subject" label="科目" width="100" />
-
-          <el-table-column prop="date" label="考试日期" width="120">
+          <el-table-column prop="examTime" label="考试时间" width="160">
             <template #default="scope">
               <div class="date-cell">
                 <Calendar class="date-icon" />
-                <span>{{ scope.row.date }}</span>
+                <span>{{ scope.row.examTime ?? '--' }}</span>
               </div>
             </template>
           </el-table-column>
 
-          <el-table-column prop="score" label="得分" width="120">
+          <el-table-column label="得分/总分" width="120" align="center">
             <template #default="scope">
-              <span :class="getScoreClass(scope.row.score)">
-                {{ scope.row.score }}/{{ scope.row.totalScore }}
+              <span v-if="scope.row.studentExamStatus === 'absent'" class="text-muted">--</span>
+              <span v-else :class="getScoreClass(scope.row)">
+                {{ scope.row.examScore ?? '--' }}/{{ scope.row.totalScore ?? '--' }}
               </span>
             </template>
           </el-table-column>
 
-          <el-table-column prop="rank" label="排名" width="100">
-            <template #default="scope"> 第 {{ scope.row.rank }} 名 </template>
+          <el-table-column label="得分率" width="100" align="center">
+            <template #default="scope">
+              <span v-if="scope.row.studentExamStatus === 'absent'" class="text-muted">--</span>
+              <span v-else :class="getScoreRateClass(scope.row)">
+                {{ getScoreRate(scope.row) }}
+              </span>
+            </template>
           </el-table-column>
 
-          <el-table-column prop="status" label="状态" width="100">
+          <el-table-column label="实际用时" width="120" align="center">
+            <template #default="scope">
+              <span v-if="scope.row.studentExamStatus === 'absent'" class="text-muted">--</span>
+              <span v-else>{{ getActualDuration(scope.row) }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="状态" width="100" align="center">
             <template #default="scope">
               <el-tag
-                :type="scope.row.status === 'passed' ? 'success' : 'danger'"
+                :type="getStatusType(scope.row)"
                 effect="light"
                 round
               >
-                {{ scope.row.status === "passed" ? "通过" : "未通过" }}
+                {{ getStatusText(scope.row) }}
               </el-tag>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="操作" width="100" align="center" fixed="right">
+            <template #default="scope">
+              <el-button
+                v-if="scope.row.examScore !== null && scope.row.studentExamStatus !== 'absent'"
+                link
+                type="primary"
+                size="small"
+                @click="handleViewDetail(scope.row)"
+              >
+                详情
+              </el-button>
+              <span v-else class="text-muted">--</span>
             </template>
           </el-table-column>
         </el-table>
 
         <!-- 空状态 -->
-        <div v-if="filteredResults.length === 0" class="empty-state">
+        <div v-if="filteredResults.length === 0 && !loading" class="empty-state">
           <Search class="empty-icon" />
           <p>没有找到匹配的成绩记录</p>
         </div>
@@ -134,7 +150,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import {
   TrendCharts,
   Trophy,
@@ -142,132 +159,166 @@ import {
   Search,
   Calendar,
 } from "@element-plus/icons-vue";
+import { getAllExamResult } from "@/api/examTask";
 
-// 模拟数据
-const mockResults = [
-  {
-    id: "1",
-    title: "高等数学期中考试",
-    subject: "数学",
-    date: "2024-01-15",
-    score: 85,
-    totalScore: 100,
-    rank: 12,
-    status: "passed",
-  },
-  {
-    id: "2",
-    title: "大学英语四级模拟",
-    subject: "英语",
-    date: "2024-01-10",
-    score: 78,
-    totalScore: 100,
-    rank: 25,
-    status: "passed",
-  },
-  {
-    id: "3",
-    title: "计算机基础测试",
-    subject: "计算机",
-    date: "2024-01-08",
-    score: 92,
-    totalScore: 100,
-    rank: 5,
-    status: "passed",
-  },
-  {
-    id: "4",
-    title: "线性代数期末考试",
-    subject: "数学",
-    date: "2024-01-05",
-    score: 55,
-    totalScore: 100,
-    rank: 45,
-    status: "failed",
-  },
-  {
-    id: "5",
-    title: "数据结构期中考试",
-    subject: "计算机",
-    date: "2024-01-03",
-    score: 88,
-    totalScore: 100,
-    rank: 8,
-    status: "passed",
-  },
-];
+const router = useRouter();
 
-const subjects = ["全部", "数学", "英语", "计算机"];
-
-// 响应式状态
+// 数据状态
+const examList = ref([]);
+const loading = ref(false);
 const searchQuery = ref("");
-const selectedSubject = ref("全部");
 
 // 计算属性
 const filteredResults = computed(() => {
-  return mockResults.filter((result) => {
-    const matchesSearch = result.title
-      .toLowerCase()
-      .includes(searchQuery.value.toLowerCase());
-    const matchesSubject =
-      selectedSubject.value === "全部" ||
-      result.subject === selectedSubject.value;
-    return matchesSearch && matchesSubject;
-  });
+  if (!searchQuery.value) return examList.value;
+  return examList.value.filter((item) =>
+    item.examName?.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
 });
 
 const averageScore = computed(() => {
-  if (mockResults.length === 0) return 0;
-  const sum = mockResults.reduce((sum, r) => sum + r.score, 0);
-  return Math.round(sum / mockResults.length);
+  const scoredExams = examList.value.filter(
+    (item) =>
+      item.examScore !== null &&
+      item.examScore !== undefined &&
+      item.studentExamStatus !== "absent"
+  );
+  if (scoredExams.length === 0) return 0;
+  const sum = scoredExams.reduce((acc, item) => acc + item.examScore, 0);
+  return Math.round(sum / scoredExams.length);
 });
 
 const passedCount = computed(() => {
-  return mockResults.filter((r) => r.status === "passed").length;
+  return examList.value.filter((item) => {
+    if (item.studentExamStatus === "absent") return false;
+    const score = item.examScore;
+    const total = item.totalScore;
+    if (score == null || !total) return false;
+    return score >= total * 0.6;
+  }).length;
 });
 
-const totalCount = computed(() => mockResults.length);
+const totalCount = computed(() => examList.value.length);
 
 const highestScore = computed(() => {
-  if (mockResults.length === 0) return 0;
-  return Math.max(...mockResults.map((r) => r.score));
+  const scoredExams = examList.value.filter(
+    (item) =>
+      item.examScore !== null &&
+      item.examScore !== undefined &&
+      item.studentExamStatus !== "absent"
+  );
+  if (scoredExams.length === 0) return 0;
+  return Math.max(...scoredExams.map((item) => item.examScore));
 });
 
 // 方法
-const getScoreClass = (score) => {
-  if (score >= 80) return "score-high";
-  if (score >= 60) return "score-medium";
+const getScoreClass = (row) => {
+  const score = row.examScore;
+  const total = row.totalScore;
+  if (score == null || !total) return "";
+  const rate = (score / total) * 100;
+  if (rate >= 80) return "score-high";
+  if (rate >= 60) return "score-medium";
   return "score-low";
 };
+
+const getScoreRate = (row) => {
+  const score = row.examScore;
+  const total = row.totalScore;
+  if (score == null || !total) return "--";
+  return Math.round((score / total) * 100) + "%";
+};
+
+const getScoreRateClass = (row) => {
+  const score = row.examScore;
+  const total = row.totalScore;
+  if (score == null || !total) return "";
+  const rate = (score / total) * 100;
+  if (rate >= 80) return "score-high";
+  if (rate >= 60) return "score-medium";
+  return "score-low";
+};
+
+const getActualDuration = (row) => {
+  const start = row.examTime;
+  const end = row.submitTime;
+  if (!start || !end) return "--";
+  const diffMs = new Date(end) - new Date(start);
+  if (diffMs <= 0) return "--";
+  const minutes = Math.round(diffMs / 60000);
+  if (minutes < 60) return `${minutes}分钟`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
+};
+
+const getStatusType = (row) => {
+  if (row.studentExamStatus === "absent") return "danger";
+  if (row.examScore == null) return "warning";
+  const score = row.examScore;
+  const total = row.totalScore;
+  if (score >= total * 0.6) return "success";
+  return "danger";
+};
+
+const getStatusText = (row) => {
+  if (row.studentExamStatus === "absent") return "缺考";
+  if (row.examScore == null) return "待批阅";
+  const score = row.examScore;
+  const total = row.totalScore;
+  if (score >= total * 0.6) return "通过";
+  return "未通过";
+};
+
+const handleViewDetail = (row) => {
+  router.push(`/exam/${row.examId}/result`);
+};
+
+// 加载数据
+const loadData = async () => {
+  loading.value = true;
+  try {
+    const res = await getAllExamResult();
+    examList.value = res.data || [];
+  } catch (error) {
+    console.error("获取成绩列表失败:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  loadData();
+});
 </script>
 
 <style scoped>
 .result-view-container {
   min-height: 100vh;
-  background-color: #f9fafb; /* bg-gray-50 */
-  padding: 24px; /* p-6 */
+  background-color: #f9fafb;
+  padding: 24px;
 }
 
 .content-wrapper {
-  max-width: 1152px; /* max-w-6xl */
+  max-width: 1152px;
   margin: 0 auto;
 }
 
 /* 标题样式 */
 .header-section {
-  margin-bottom: 32px; /* mb-8 */
+  margin-bottom: 32px;
 }
 
 .page-title {
-  font-size: 30px; /* text-3xl */
-  font-weight: 700; /* font-bold */
-  color: #111827; /* text-gray-900 */
-  margin-bottom: 8px; /* mb-2 */
+  font-size: 30px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
   margin-top: 0;
 }
 
 .page-subtitle {
-  color: #4b5563; /* text-gray-600 */
+  color: #4b5563;
   margin: 0;
 }
 
@@ -275,21 +326,21 @@ const getScoreClass = (score) => {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(1, 1fr);
-  gap: 16px; /* gap-4 */
-  margin-bottom: 24px; /* mb-6 */
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 @media (min-width: 768px) {
   .stats-grid {
-    grid-template-columns: repeat(3, 1fr); /* md:grid-cols-3 */
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 .stat-card {
   background-color: white;
-  border-radius: 12px; /* rounded-xl */
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
-  padding: 24px; /* p-6 */
+  border-radius: 12px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  padding: 24px;
 }
 
 .stat-content {
@@ -304,58 +355,58 @@ const getScoreClass = (score) => {
 }
 
 .stat-label {
-  color: #6b7280; /* text-gray-500 */
-  font-size: 14px; /* text-sm */
+  color: #6b7280;
+  font-size: 14px;
   margin: 0 0 4px 0;
 }
 
 .stat-value {
-  font-size: 30px; /* text-3xl */
-  font-weight: 700; /* font-bold */
+  font-size: 30px;
+  font-weight: 700;
   margin: 0;
 }
 
 .stat-icon-bg {
-  width: 48px; /* w-12 */
-  height: 48px; /* h-12 */
-  border-radius: 8px; /* rounded-lg */
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .stat-icon {
-  width: 24px; /* w-6 */
-  height: 24px; /* h-6 */
+  width: 24px;
+  height: 24px;
 }
 
 /* 主题颜色 */
 .blue-theme .stat-value {
   color: #2563eb;
-} /* text-blue-600 */
+}
 .blue-theme .stat-icon-bg {
   background-color: #dbeafe;
-} /* bg-blue-100 */
+}
 .blue-theme .stat-icon {
   color: #2563eb;
 }
 
 .green-theme .stat-value {
   color: #16a34a;
-} /* text-green-600 */
+}
 .green-theme .stat-icon-bg {
   background-color: #dcfce7;
-} /* bg-green-100 */
+}
 .green-theme .stat-icon {
   color: #16a34a;
 }
 
 .purple-theme .stat-value {
   color: #9333ea;
-} /* text-purple-600 */
+}
 .purple-theme .stat-icon-bg {
   background-color: #f3e8ff;
-} /* bg-purple-100 */
+}
 .purple-theme .stat-icon {
   color: #9333ea;
 }
@@ -375,21 +426,15 @@ const getScoreClass = (score) => {
   gap: 16px;
 }
 
-@media (min-width: 768px) {
-  .filter-row {
-    flex-direction: row;
-  }
-}
-
 .search-input-wrapper {
   flex: 1;
   position: relative;
 }
 
 .custom-search-input :deep(.el-input__wrapper) {
-  padding-left: 40px; /* 为图标留空间 */
+  padding-left: 40px;
   border-radius: 8px;
-  box-shadow: 0 0 0 1px #e5e7eb inset; /* border border-gray-200 */
+  box-shadow: 0 0 0 1px #e5e7eb inset;
 }
 
 .custom-search-input :deep(.el-input__wrapper:hover) {
@@ -397,18 +442,7 @@ const getScoreClass = (score) => {
 }
 
 .custom-search-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #3b82f6 inset !important; /* focus:ring-2 focus:ring-blue-500 */
-}
-
-.subject-filters {
-  display: flex;
-  gap: 8px; /* gap-2 */
-}
-
-.subject-btn {
-  padding: 12px 16px; /* px-4 py-3 */
-  border-radius: 8px; /* rounded-lg */
-  font-weight: 500; /* font-medium */
+  box-shadow: 0 0 0 1px #3b82f6 inset !important;
 }
 
 /* 表格区域 */
@@ -438,34 +472,38 @@ const getScoreClass = (score) => {
 
 .score-high {
   font-weight: 700;
-  color: #16a34a; /* text-green-600 */
+  color: #16a34a;
 }
 
 .score-medium {
   font-weight: 700;
-  color: #ca8a04; /* text-yellow-600 */
+  color: #ca8a04;
 }
 
 .score-low {
   font-weight: 700;
-  color: #dc2626; /* text-red-600 */
+  color: #dc2626;
+}
+
+.text-muted {
+  color: #c0c4cc;
 }
 
 .empty-state {
   text-align: center;
-  padding: 48px 0; /* py-12 */
+  padding: 48px 0;
   color: #6b7280;
 }
 
 .empty-icon {
   width: 48px;
   height: 48px;
-  color: #d1d5db; /* text-gray-300 */
+  color: #d1d5db;
   margin: 0 auto 16px auto;
   display: block;
 }
 
-/* 简单动画替代 framer-motion */
+/* 简单动画 */
 .fade-in {
   animation: fadeInUp 0.5s ease-out forwards;
 }

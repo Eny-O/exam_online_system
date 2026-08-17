@@ -171,7 +171,6 @@ const fetchExamDetail = async () => {
     exam.value = res.data;
   } catch (error) {
     console.error("获取考试详情失败:", error);
-    ElMessage.error("获取考试详情失败");
     exam.value = null;
   } finally {
     loading.value = false;

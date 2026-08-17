@@ -229,7 +229,6 @@ const handleUpdateStatus = (row, newStatus) => {
         fetchPaperList();
       } catch (error) {
         console.error("状态更新失败:", error);
-        ElMessage.error(`${actionText}失败，请重试`);
       }
     })
     .catch(() => {

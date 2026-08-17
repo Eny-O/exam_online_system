@@ -1,6 +1,12 @@
 <template>
   <div class="exam-result-container">
-    <div class="content-wrapper">
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-wrapper">
+      <el-icon class="is-loading loading-icon"><Loading /></el-icon>
+      <p>正在加载考试结果...</p>
+    </div>
+
+    <div v-else class="content-wrapper">
       <!-- 返回按钮 -->
       <el-button type="primary" link @click="handleBack" class="back-btn">
         <el-icon><ArrowLeft /></el-icon>
@@ -12,58 +18,59 @@
         <div class="header-section">
           <div
             class="trophy-icon-wrapper"
-            :class="mockResult.passed ? 'passed' : 'failed'"
+            :class="isPassed ? 'passed' : 'failed'"
           >
             <el-icon :size="48">
               <Trophy />
             </el-icon>
           </div>
-          <h1 class="exam-title">{{ mockResult.examName }}</h1>
-          <p class="exam-date">{{ mockResult.examDate }}</p>
+          <h1 class="exam-title">{{ examResult.examName }}</h1>
+          <div class="exam-time-info">
+            <span>考试时间：{{ formatDateTime(examResult.examTime) }}</span>
+            <span>提交时间：{{ formatDateTime(examResult.submitTime) }}</span>
+          </div>
         </div>
 
         <!-- 统计数据网格 -->
         <div class="stats-grid">
           <div class="stat-item blue-theme">
-            <div class="stat-value">{{ mockResult.score }}</div>
-            <div class="stat-label">得分</div>
+            <div class="stat-value">{{ examResult.examScore ?? "--" }}</div>
+            <div class="stat-label">得分 / {{ examResult.totalScore }}</div>
           </div>
           <div class="stat-item green-theme">
             <div class="stat-value">
-              {{ mockResult.correctCount }}/{{ mockResult.totalQuestions }}
+              {{ correctCount }}/{{ questions.length }}
             </div>
             <div class="stat-label">答对题数</div>
           </div>
           <div class="stat-item purple-theme">
-            <div class="stat-value">{{ mockResult.duration }}分钟</div>
-            <div class="stat-label">用时</div>
+            <div class="stat-value">{{ actualDuration }}</div>
+            <div class="stat-label">实际用时</div>
           </div>
           <div
             class="stat-item"
-            :class="mockResult.passed ? 'green-theme' : 'red-theme'"
+            :class="isPassed ? 'green-theme' : 'red-theme'"
           >
             <div class="stat-value">
-              {{ mockResult.passed ? "通过" : "未通过" }}
+              {{ statusText }}
             </div>
             <div class="stat-label">考试结果</div>
           </div>
         </div>
 
-        <!-- 正确率进度条 -->
+        <!-- 得分率进度条 -->
         <div class="progress-section">
           <div class="progress-header">
-            <span class="progress-label">正确率</span>
-            <span class="progress-percent">{{ accuracyPercentage }}%</span>
+            <span class="progress-label">得分率</span>
+            <span class="progress-percent">{{ scorePercentage }}%</span>
           </div>
-          <div class="demo-progress">
-            <el-progress
-              :percentage="accuracyPercentage"
-              :color="customColors"
-              :stroke-width="12"
-              :show-text="true"
-              class="custom-progress-bar"
-            />
-          </div>
+          <el-progress
+            :percentage="scorePercentage"
+            :color="customColors"
+            :stroke-width="12"
+            :show-text="false"
+            class="custom-progress-bar"
+          />
         </div>
       </div>
 
@@ -73,44 +80,86 @@
 
         <div class="question-list">
           <div
-            v-for="(q, index) in mockQuestions"
+            v-for="(q, index) in questions"
             :key="q.id"
             class="question-item fade-in-left"
-            :style="{ animationDelay: `${index * 0.1}s` }"
-            :class="q.isCorrect ? 'correct-border' : 'wrong-border'"
+            :style="{ animationDelay: `${index * 0.05}s` }"
+            :class="getBorderClass(q)"
           >
             <div class="question-content">
-              <div
-                class="status-icon"
-                :class="q.isCorrect ? 'bg-green' : 'bg-red'"
-              >
+              <div class="status-icon" :class="getStatusIconClass(q)">
                 <el-icon :size="20" color="#fff">
-                  <Check v-if="q.isCorrect" />
-                  <Close v-else />
+                  <Check v-if="q.answerData?.isCorrect === 1" />
+                  <Close v-else-if="q.answerData?.isCorrect === 0" />
+                  <span v-else style="font-size: 12px; color: #fff">--</span>
                 </el-icon>
               </div>
 
               <div class="question-info">
-                <h3 class="question-text">{{ index + 1 }}. {{ q.question }}</h3>
+                <h3 class="question-text">
+                  {{ index + 1 }}. {{ q.content }}
+                  <el-tag
+                    size="small"
+                    :type="typeTagColor(q.type)"
+                    style="margin-left: 8px"
+                  >
+                    {{ typeLabel(q.type) }}
+                  </el-tag>
+                </h3>
 
                 <div class="answer-details">
-                  <div class="answer-row">
-                    <span class="label">你的答案:</span>
-                    <span
-                      class="value"
-                      :class="q.isCorrect ? 'text-green' : 'text-red'"
-                    >
-                      {{ q.userAnswer }}
-                    </span>
-                  </div>
+                  <!-- 客观题 -->
+                  <template v-if="q.type !== 'essay'">
+                    <div class="options-compact">
+                      <div
+                        v-for="opt in q.options"
+                        :key="opt.label"
+                        :class="[
+                          'option-compact',
+                          getOptionClass(q, opt.label),
+                        ]"
+                      >
+                        <span class="opt-label">{{ opt.label }}</span>
+                        <span class="opt-text">{{ opt.content }}</span>
+                      </div>
+                    </div>
+                    <div class="answer-row">
+                      <span class="label">你的答案:</span>
+                      <span
+                        class="value"
+                        :class="
+                          q.answerData?.isCorrect === 1
+                            ? 'text-green'
+                            : 'text-red'
+                        "
+                      >
+                        {{ q.answerData?.studentAnswer || "未作答" }}
+                      </span>
+                    </div>
+                  </template>
 
-                  <div v-if="!q.isCorrect" class="answer-row">
-                    <span class="label">正确答案:</span>
-                    <span class="value text-green">{{ q.correctAnswer }}</span>
-                  </div>
+                  <!-- 主观题 -->
+                  <template v-else>
+                    <div class="answer-row">
+                      <span class="label">你的回答:</span>
+                    </div>
+                    <div class="essay-answer-display">
+                      {{ q.answerData?.studentAnswer || "（未作答）" }}
+                    </div>
+                  </template>
 
-                  <div class="explanation-box">
-                    {{ q.explanation }}
+                  <!-- 批阅状态 -->
+                  <div
+                    v-if="q.answerData?.isCorrect === null"
+                    class="grade-pending"
+                  >
+                    <el-tag type="warning" size="small">待批阅</el-tag>
+                  </div>
+                  <div
+                    v-else-if="q.answerData?.isCorrect === 2"
+                    class="grade-partial"
+                  >
+                    <el-tag type="warning" size="small">部分正确</el-tag>
                   </div>
                 </div>
               </div>
@@ -118,11 +167,11 @@
               <div class="score-section">
                 <span
                   class="score-value"
-                  :class="q.isCorrect ? 'text-green' : 'text-red'"
+                  :class="q.answerData?.score > 0 ? 'text-green' : 'text-red'"
                 >
-                  +{{ q.score }}
+                  {{ q.answerData?.score ?? 0 }}
                 </span>
-                <span class="score-total">/5</span>
+                <span class="score-total">/ {{ q.score }}</span>
               </div>
             </div>
           </div>
@@ -134,65 +183,98 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { ArrowLeft, Trophy, Check, Close } from "@element-plus/icons-vue";
-import { ElProgress, ElButton, ElIcon } from "element-plus";
+import { useRoute, useRouter } from "vue-router";
+import {
+  ArrowLeft,
+  Trophy,
+  Check,
+  Close,
+  Loading,
+} from "@element-plus/icons-vue";
+import {
+  getExamResult,
+  getExamInfo,
+  getExamPaper,
+  getStudentAnswer,
+} from "@/api/examTask";
+import { useUserStore } from "@/stores/user";
 
+const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
 
-// 模拟数据
-const mockResult = ref({
-  examName: "JavaScript 基础测试",
-  examDate: "2024-01-15 14:30",
-  duration: 45,
-  totalScore: 100,
-  score: 85,
-  correctCount: 17,
-  totalQuestions: 20,
-  passScore: 60,
-  passed: true,
+// ========== 题型映射 ==========
+const TYPE_LABEL = {
+  single: "单选",
+  multiple: "多选",
+  judge: "判断",
+  essay: "简答",
+};
+const TYPE_TAG_COLOR = {
+  single: "",
+  multiple: "warning",
+  judge: "success",
+  essay: "danger",
+};
+const typeLabel = (type) => TYPE_LABEL[type] ?? "未知";
+const typeTagColor = (type) => TYPE_TAG_COLOR[type] ?? "info";
+
+// ========== 状态定义 ==========
+const loading = ref(true);
+const examResult = ref({
+  examId: null,
+  examName: "",
+  totalScore: 0,
+  examTime: "",
+  examDuration: 0,
+  submitTime: "",
+  examScore: null,
+});
+const questions = ref([]);
+
+// ========== 计算属性 ==========
+// 答对题数（客观题 isCorrect === 1）
+const correctCount = computed(() => {
+  return questions.value.filter((q) => q.answerData?.isCorrect === 1).length;
 });
 
-const mockQuestions = ref([
-  {
-    id: 1,
-    question: "React中useState的作用是什么？",
-    userAnswer: "A",
-    correctAnswer: "A",
-    isCorrect: true,
-    explanation: "useState是React的Hook，用于在函数组件中添加状态管理功能。",
-    score: 5,
-  },
-  {
-    id: 2,
-    question: "JavaScript中const声明的变量可以重新赋值吗？",
-    userAnswer: "A",
-    correctAnswer: "B",
-    isCorrect: false,
-    explanation:
-      "const声明的是常量，不能重新赋值，但如果是对象或数组，可以修改其属性或元素。",
-    score: 0,
-  },
-  {
-    id: 3,
-    question: "CSS中flex-direction的默认值是什么？",
-    userAnswer: "A",
-    correctAnswer: "A",
-    isCorrect: true,
-    explanation: "flex-direction默认值为row，表示主轴方向为水平方向。",
-    score: 5,
-  },
-]);
-
-// 计算正确率
-const accuracyPercentage = computed(() => {
-  if (mockResult.value.totalQuestions === 0) return 0;
-  return Math.round(
-    (mockResult.value.correctCount / mockResult.value.totalQuestions) * 100
-  );
+// 实际用时（根据考试开始时间和提交时间计算）
+const actualDuration = computed(() => {
+  const start = examResult.value.examTime;
+  const end = examResult.value.submitTime;
+  if (!start || !end) return "--";
+  const diffMs = new Date(end) - new Date(start);
+  if (diffMs <= 0) return "--";
+  const minutes = Math.round(diffMs / 60000);
+  if (minutes < 60) return `${minutes}分钟`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
 });
 
-// Element Plus Progress 颜色配置
+// 得分率
+const scorePercentage = computed(() => {
+  if (!examResult.value.totalScore || examResult.value.totalScore === 0)
+    return 0;
+  const score = examResult.value.examScore ?? 0;
+  return Math.round((score / examResult.value.totalScore) * 100);
+});
+
+// 是否通过（得分 >= 总分60%）
+const isPassed = computed(() => {
+  const score = examResult.value.examScore;
+  const total = examResult.value.totalScore;
+  if (score == null || !total) return false;
+  return score >= total * 0.6;
+});
+
+// 考试结果文字
+const statusText = computed(() => {
+  if (examResult.value.examScore == null) return "待批阅";
+  return isPassed.value ? "通过" : "不通过";
+});
+
+// Progress 颜色配置
 const customColors = [
   { color: "#f56c6c", percentage: 20 },
   { color: "#e6a23c", percentage: 40 },
@@ -201,27 +283,134 @@ const customColors = [
   { color: "#6f7ad3", percentage: 100 },
 ];
 
-// 方法
-const handleBack = () => {
-  router.back();
+// ========== 辅助方法 ==========
+const formatDateTime = (dt) => {
+  if (!dt) return "";
+  return dt.replace("T", " ").substring(0, 16);
 };
 
+// 题目边框样式
+const getBorderClass = (q) => {
+  const isCorrect = q.answerData?.isCorrect;
+  if (isCorrect === 1) return "correct-border";
+  if (isCorrect === 0) return "wrong-border";
+  return "pending-border";
+};
+
+// 状态图标样式
+const getStatusIconClass = (q) => {
+  const isCorrect = q.answerData?.isCorrect;
+  if (isCorrect === 1) return "bg-green";
+  if (isCorrect === 0) return "bg-red";
+  return "bg-gray";
+};
+
+// 选项样式：高亮学生的选择，正确/错误用不同颜色
+const getOptionClass = (q, optLabel) => {
+  const answer = q.answerData;
+  if (!answer || !answer.studentAnswer) return "";
+
+  const selected = answer.studentAnswer.split(",").map((s) => s.trim());
+  const isSelected = selected.includes(optLabel);
+  if (!isSelected) return "";
+
+  // 学生选了该选项
+  if (answer.isCorrect === 1) return "opt-selected opt-correct";
+  if (answer.isCorrect === 0) return "opt-selected opt-wrong";
+  return "opt-selected opt-neutral";
+};
+
+// ========== 数据获取 ==========
+const fetchData = async () => {
+  loading.value = true;
+  const examId = route.params.id;
+  const studentId = userStore.userInfo?.id;
+
+  try {
+    // 并行获取考试结果和考试信息
+    const [resultRes, infoRes] = await Promise.all([
+      getExamResult(examId),
+      getExamInfo(examId),
+    ]);
+
+    // 填充考试结果
+    examResult.value = resultRes.data;
+
+    // 获取试卷内容
+    const paperId = infoRes.data.paperId;
+    const paperRes = await getExamPaper(paperId);
+    const rawQuestions = (paperRes.data.stuPaperQuestionVOS || []).map(
+      (pq) => ({
+        sortOrder: pq.sortOrder,
+        score: pq.score,
+        id: pq.stuQuestionCompleteVO.id,
+        content: pq.stuQuestionCompleteVO.content,
+        type: pq.stuQuestionCompleteVO.type?.toLowerCase(),
+        options: pq.stuQuestionCompleteVO.options || [],
+        answerData: null,
+      })
+    );
+
+    // 获取学生答题情况
+    const answerRes = await getStudentAnswer(studentId, examId);
+    const answerList = answerRes.data || [];
+
+    // 构建 questionId → answerData 映射
+    const answerMap = {};
+    answerList.forEach((a) => {
+      answerMap[a.questionId] = a;
+    });
+
+    // 合并答题数据到题目
+    rawQuestions.forEach((q) => {
+      q.answerData = answerMap[q.id] || null;
+    });
+
+    questions.value = rawQuestions;
+  } catch (error) {
+    console.error("加载考试结果失败:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// ========== 方法 ==========
+const handleBack = () => {
+  router.push("/exam/list");
+};
+
+// ========== 生命周期 ==========
 onMounted(() => {
-  // 可以在这里根据 route.params.id 获取真实数据
-  console.log("Exam Result Page Loaded");
+  fetchData();
 });
 </script>
 
 <style scoped>
+/* 加载状态 */
+.loading-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 0;
+  color: #6b7280;
+}
+
+.loading-icon {
+  font-size: 32px;
+  color: #2563eb;
+  margin-bottom: 16px;
+}
+
 /* 容器样式 */
 .exam-result-container {
   min-height: 100vh;
-  background-color: #f9fafb; /* bg-gray-50 */
+  background-color: #f9fafb;
   padding: 24px;
 }
 
 .content-wrapper {
-  max-width: 896px; /* max-w-4xl */
+  max-width: 896px;
   margin: 0 auto;
 }
 
@@ -230,20 +419,20 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #4b5563; /* text-gray-600 */
+  color: #4b5563;
   margin-bottom: 24px;
   font-size: 16px;
 }
 .back-btn:hover {
-  color: #111827; /* hover:text-gray-900 */
+  color: #111827;
 }
 
 /* 卡片通用样式 */
 .result-card,
 .detail-card {
   background-color: #ffffff;
-  border-radius: 12px; /* rounded-xl */
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-sm */
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   padding: 32px;
   margin-bottom: 24px;
 }
@@ -258,32 +447,36 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 96px; /* w-24 */
-  height: 96px; /* h-24 */
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   margin-bottom: 16px;
 }
 
 .trophy-icon-wrapper.passed {
-  background-color: #dcfce7; /* bg-green-100 */
-  color: #16a34a; /* text-green-600 */
+  background-color: #dcfce7;
+  color: #16a34a;
 }
 
 .trophy-icon-wrapper.failed {
-  background-color: #fee2e2; /* bg-red-100 */
-  color: #dc2626; /* text-red-600 */
+  background-color: #fee2e2;
+  color: #dc2626;
 }
 
 .exam-title {
   font-size: 24px;
   font-weight: 700;
-  color: #111827; /* text-gray-900 */
+  color: #111827;
   margin: 0 0 8px 0;
 }
 
-.exam-date {
-  color: #6b7280; /* text-gray-500 */
-  margin: 0;
+.exam-time-info {
+  color: #6b7280;
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 4px;
 }
 
 /* 统计网格 */
@@ -295,54 +488,54 @@ onMounted(() => {
 }
 
 .stat-item {
-  border-radius: 8px; /* rounded-lg */
+  border-radius: 8px;
   padding: 16px;
   text-align: center;
 }
 
 .stat-value {
-  font-size: 30px; /* text-3xl */
+  font-size: 30px;
   font-weight: 700;
   margin-bottom: 4px;
 }
 
 .stat-label {
-  font-size: 14px; /* text-sm */
-  color: #4b5563; /* text-gray-600 */
+  font-size: 14px;
+  color: #4b5563;
 }
 
 /* 主题颜色 */
 .blue-theme .stat-value {
   color: #2563eb;
-} /* text-blue-600 */
+}
 .blue-theme {
   background-color: #eff6ff;
-} /* bg-blue-50 */
+}
 
 .green-theme .stat-value {
   color: #16a34a;
-} /* text-green-600 */
+}
 .green-theme {
   background-color: #f0fdf4;
-} /* bg-green-50 */
+}
 
 .purple-theme .stat-value {
   color: #9333ea;
-} /* text-purple-600 */
+}
 .purple-theme {
   background-color: #faf5ff;
-} /* bg-purple-50 */
+}
 
 .red-theme .stat-value {
   color: #dc2626;
-} /* text-red-600 */
+}
 .red-theme {
   background-color: #fef2f2;
-} /* bg-red-50 */
+}
 
 /* 进度条区域 */
 .progress-section {
-  background-color: #f9fafb; /* bg-gray-50 */
+  background-color: #f9fafb;
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -355,11 +548,10 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
-  background-color: red;
 }
 
 .progress-label {
-  color: #374151; /* text-gray-700 */
+  color: #374151;
   font-weight: 500;
 }
 
@@ -368,12 +560,7 @@ onMounted(() => {
   font-weight: 700;
 }
 .custom-progress-bar {
-  width: 100%; /* 确保占满父容器宽度 */
-  --el-progress-bezier: cubic-bezier(0.4, 0, 0.2, 1);
-}
-.demo-progress .el-progress--line {
-  margin-bottom: 15px;
-  max-width: 600px;
+  width: 100%;
 }
 
 /* 详情部分 */
@@ -391,20 +578,25 @@ onMounted(() => {
 }
 
 .question-item {
-  border-radius: 0 8px 8px 0; /* rounded-r-lg */
+  border-radius: 0 8px 8px 0;
   padding: 16px;
   border-left-width: 4px;
   border-left-style: solid;
 }
 
 .correct-border {
-  border-left-color: #22c55e; /* border-green-500 */
-  background-color: #f0fdf4; /* bg-green-50 */
+  border-left-color: #22c55e;
+  background-color: #f0fdf4;
 }
 
 .wrong-border {
-  border-left-color: #ef4444; /* border-red-500 */
-  background-color: #fef2f2; /* bg-red-50 */
+  border-left-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.pending-border {
+  border-left-color: #d1d5db;
+  background-color: #f9fafb;
 }
 
 .question-content {
@@ -429,6 +621,9 @@ onMounted(() => {
 .bg-red {
   background-color: #ef4444;
 }
+.bg-gray {
+  background-color: #9ca3af;
+}
 
 .question-info {
   flex: 1;
@@ -439,6 +634,9 @@ onMounted(() => {
   color: #111827;
   margin: 0 0 8px 0;
   font-size: 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .answer-details {
@@ -450,10 +648,11 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
+  margin-top: 8px;
 }
 
 .label {
-  color: #6b7280; /* text-gray-500 */
+  color: #6b7280;
 }
 
 .value {
@@ -467,17 +666,101 @@ onMounted(() => {
   color: #dc2626;
 }
 
-.explanation-box {
-  color: #4b5563; /* text-gray-600 */
+/* 紧凑选项列表 */
+.options-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin-top: 8px;
+}
+
+.option-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 14px;
+}
+
+.opt-label {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: #f3f4f6;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.opt-text {
+  color: #374151;
+}
+
+/* 学生选中的选项 */
+.opt-selected {
+  border-width: 2px;
+}
+
+.opt-correct {
+  border-color: #22c55e;
+  background-color: #f0fdf4;
+}
+
+.opt-correct .opt-label {
+  background-color: #22c55e;
+  color: #fff;
+}
+
+.opt-wrong {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.opt-wrong .opt-label {
+  background-color: #ef4444;
+  color: #fff;
+}
+
+.opt-neutral {
+  border-color: #93c5fd;
+  background-color: #eff6ff;
+}
+
+.opt-neutral .opt-label {
+  background-color: #3b82f6;
+  color: #fff;
+}
+
+/* 简答回答展示 */
+.essay-answer-display {
   padding: 12px;
   background-color: #ffffff;
-  border-radius: 8px;
   border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 60px;
+  margin-top: 4px;
+}
+
+/* 批阅状态标签 */
+.grade-pending,
+.grade-partial {
+  margin-top: 8px;
 }
 
 .score-section {
   text-align: right;
+  flex-shrink: 0;
 }
 
 .score-value {
@@ -486,11 +769,11 @@ onMounted(() => {
 }
 
 .score-total {
-  color: #9ca3af; /* text-gray-400 */
+  color: #9ca3af;
   font-size: 12px;
 }
 
-/* 动画效果 (替代 framer-motion) */
+/* 动画效果 */
 .fade-in-up {
   animation: fadeInUp 0.5s ease-out forwards;
   opacity: 0;

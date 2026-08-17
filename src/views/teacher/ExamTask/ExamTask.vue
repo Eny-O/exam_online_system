@@ -158,35 +158,15 @@
             </el-button>
           </template>
 
-          <!-- 待批阅(5)：继续批阅 -->
+          <!-- 批阅完成(5)：删除考试 -->
           <template v-else-if="getRealStatus(row) === 5">
             <el-button
               link
-              type="warning"
+              type="danger"
               size="small"
-              @click="handleReview(row)"
+              @click="handleDelete(row)"
             >
-              继续批阅
-            </el-button>
-          </template>
-
-          <!-- 批阅完成(6)：查看成绩 / 公布成绩 -->
-          <template v-else-if="getRealStatus(row) === 6">
-            <el-button
-              link
-              type="success"
-              size="small"
-              @click="handleViewScore(row)"
-            >
-              查看成绩
-            </el-button>
-            <el-button
-              link
-              type="primary"
-              size="small"
-              @click="handlePublishScore(row)"
-            >
-              公布成绩
+              删除考试
             </el-button>
           </template>
         </template>
@@ -337,7 +317,6 @@ const fetchExamList = async () => {
     tableData.value = res.data.records;
   } catch (error) {
     console.error("获取考试列表失败:", error);
-    ElMessage.error("获取考试列表失败");
   } finally {
     loading.value = false;
   }
@@ -369,21 +348,12 @@ const handleEdit = (row) => {
   router.push(`/teacher/addExam?examId=${row.id}`);
 };
 
-// 批阅 / 继续批阅
-const handleReview = async (row) => {
-  try {
-    // 待批阅(4) → 批阅完成(5)，需要调用后端更新状态
-    if (getRealStatus(row) === 4) {
-      await updateExamStatus(row.id, 5);
-    }
-    router.push({
-      path: "/teacher/onlineGrade",
-      query: { examId: row.id },
-    });
-  } catch (error) {
-    console.error("状态更新失败:", error);
-    ElMessage.error("操作失败，请重试");
-  }
+// 批阅 / 继续批阅（仅跳转，不改变状态）
+const handleReview = (row) => {
+  router.push({
+    path: "/teacher/onlineGrade",
+    query: { examId: row.id },
+  });
 };
 
 // 查看成绩
@@ -409,7 +379,6 @@ const handlePublish = async (row) => {
   } catch (error) {
     if (error !== "cancel") {
       console.error("发布失败:", error);
-      ElMessage.error("发布失败");
     }
   }
 };
@@ -432,7 +401,6 @@ const handleEndExam = async (row) => {
   } catch (error) {
     if (error !== "cancel") {
       console.error("结束考试失败:", error);
-      ElMessage.error("操作失败");
     }
   }
 };
@@ -455,7 +423,6 @@ const handleCancelPublish = async (row) => {
   } catch (error) {
     if (error !== "cancel") {
       console.error("取消发布失败:", error);
-      ElMessage.error("操作失败");
     }
   }
 };

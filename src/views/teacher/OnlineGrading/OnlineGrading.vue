@@ -216,6 +216,13 @@
         </div>
         <div class="action-buttons">
           <el-button @click="handleGoBack">返回</el-button>
+          <el-button
+            v-if="hasUngradedObjective && currentStudentId"
+            type="warning"
+            @click="handleAutoGradeObjective"
+          >
+            自动批阅客观题
+          </el-button>
           <el-button @click="handleSaveCurrent">保存当前学生</el-button>
           <el-button type="primary" @click="handleSaveAndNext">
             保存并下一位
@@ -238,6 +245,8 @@ import {
   getGradeStudentList,
   getStudentAnswer,
   updateGradeStudentScore,
+  updateExamStatus,
+  autoGradeObjectiveQuestions,
 } from "@/api/examTask";
 
 const route = useRoute();
@@ -299,6 +308,13 @@ const totalScore = computed(() => {
   return displayQuestions.value.reduce(
     (sum, q) => sum + (typeof q.score === "number" ? q.score : 0),
     0
+  );
+});
+
+// 当前学生是否有未批阅的客观题
+const hasUngradedObjective = computed(() => {
+  return displayQuestions.value.some(
+    (q) => isObjective(q.type) && q.isCorrect === null
   );
 });
 
@@ -368,7 +384,6 @@ const loadPaper = async () => {
     }));
   } catch (e) {
     console.error("加载批阅试卷失败:", e);
-    ElMessage.error("加载试卷内容失败");
   } finally {
     loadingAnswers.value = false;
   }
@@ -381,7 +396,6 @@ const loadStudentList = async () => {
     studentList.value = res.data || [];
   } catch (e) {
     console.error("加载学生列表失败:", e);
-    ElMessage.error("加载学生列表失败");
   } finally {
     loadingStudents.value = false;
   }
@@ -394,7 +408,6 @@ const loadStudentAnswers = async (studentId) => {
     studentAnswers.value = res.data || [];
   } catch (e) {
     console.error("加载学生答题失败:", e);
-    ElMessage.error("加载学生答题情况失败");
     studentAnswers.value = [];
   } finally {
     loadingAnswers.value = false;
@@ -523,7 +536,6 @@ const saveGrading = async () => {
     return true;
   } catch (e) {
     console.error("保存批阅失败:", e);
-    ElMessage.error("保存批阅失败，请重试");
     return false;
   }
 };
@@ -561,6 +573,22 @@ const handleSaveAndNext = async () => {
   }
 };
 
+// 自动批阅客观题
+const handleAutoGradeObjective = async () => {
+  if (!currentStudentId.value) {
+    ElMessage.warning("请先选择一位学生");
+    return;
+  }
+  try {
+    await autoGradeObjectiveQuestions(examId, currentStudentId.value);
+    ElMessage.success("客观题自动批阅完成");
+    // 重新加载该学生的答题数据以刷新页面
+    await loadStudentAnswers(currentStudentId.value);
+  } catch (e) {
+    console.error("自动批阅客观题失败:", e);
+  }
+};
+
 const handleGoBack = () => {
   router.push("/teacher/examTask/myexam");
 };
@@ -571,10 +599,14 @@ const handleGradingComplete = () => {
     cancelButtonText: "继续批阅",
     type: "warning",
   })
-    .then(() => {
-      // TODO: 调用后端提交批阅结果的API
-      ElMessage.success("批阅完成，已提交所有成绩！");
-      router.push("/teacher/examTask/myexam");
+    .then(async () => {
+      try {
+        await updateExamStatus(examId, 5);
+        ElMessage.success("批阅完成！");
+        router.push("/teacher/examTask/myexam");
+      } catch (error) {
+        console.error("批阅完成状态更新失败:", error);
+      }
     })
     .catch(() => {
       // 用户取消，继续批阅

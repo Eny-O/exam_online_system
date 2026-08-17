@@ -80,19 +80,9 @@
 
       <el-table-column label="操作" width="150" align="center" fixed="right">
         <template #default="{ row }">
-          <!-- 进行中(3)：进入考试 -->
+          <!-- 未开始(2) + pending = 查看详情 -->
           <el-button
-            v-if="getRealStatus(row) === 3"
-            link
-            type="success"
-            size="small"
-            @click="handleEnterExam(row)"
-          >
-            进入考试
-          </el-button>
-          <!-- 未开始(2)：查看详情 -->
-          <el-button
-            v-if="getRealStatus(row) === 2"
+            v-if="getRealStatus(row) === 2 && row.studentExamStatus === 'pending'"
             link
             type="primary"
             size="small"
@@ -100,9 +90,39 @@
           >
             查看详情
           </el-button>
-          <!-- 待批阅(4) / 批阅完成(5)：查看成绩 -->
+          <!-- 进行中(3) + pending = 进入考试 -->
           <el-button
-            v-if="getRealStatus(row) >= 4"
+            v-if="getRealStatus(row) === 3 && row.studentExamStatus === 'pending'"
+            link
+            type="success"
+            size="small"
+            @click="handleEnterExam(row)"
+          >
+            进入考试
+          </el-button>
+          <!-- 进行中(3) + submitted = 查看考试 -->
+          <el-button
+            v-if="getRealStatus(row) === 3 && row.studentExamStatus === 'submitted'"
+            link
+            type="info"
+            size="small"
+            @click="handleViewReview(row)"
+          >
+            查看考试
+          </el-button>
+          <!-- 待批阅(4) + submitted = 查看考试 -->
+          <el-button
+            v-if="getRealStatus(row) === 4 && row.studentExamStatus === 'submitted'"
+            link
+            type="info"
+            size="small"
+            @click="handleViewReview(row)"
+          >
+            查看考试
+          </el-button>
+          <!-- 批阅完成(5) + graded = 查看成绩 -->
+          <el-button
+            v-if="getRealStatus(row) === 5 && row.studentExamStatus === 'graded'"
             link
             type="warning"
             size="small"
@@ -110,6 +130,14 @@
           >
             查看成绩
           </el-button>
+          <!-- 待批阅(4)/批阅完成(5) + absent = 缺考（仅展示） -->
+          <el-tag
+            v-if="(getRealStatus(row) === 4 || getRealStatus(row) === 5) && row.studentExamStatus === 'absent'"
+            type="danger"
+            size="small"
+          >
+            缺考
+          </el-tag>
         </template>
       </el-table-column>
     </el-table>
@@ -232,7 +260,6 @@ const fetchExamList = async () => {
     tableData.value = res.data.records;
   } catch (error) {
     console.error("获取考试列表失败:", error);
-    ElMessage.error("获取考试列表失败");
   } finally {
     loading.value = false;
   }
@@ -264,7 +291,12 @@ const handleExamDetail = (row) => {
   router.push(`/exam/detail/${row.id}`);
 };
 
-// 查看成绩（待批阅/批阅完成）
+// 查看考试（待批阅）
+const handleViewReview = (row) => {
+  router.push(`/exam/${row.id}/review`);
+};
+
+// 查看成绩（批阅完成）
 const handleViewResult = (row) => {
   router.push(`/exam/${row.id}/result`);
 };

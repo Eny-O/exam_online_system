@@ -55,15 +55,33 @@ watch(
     if (val) {
       if (props.editData) {
         // 编辑模式，填充完整数据（含选项）
+        const editType = props.editData.type;
+        let options = props.editData.options ? [...props.editData.options] : [];
+        let answer = props.editData.answer || "";
+        
+        // 判断题强制使用固定选项，并转换答案值
+        if (editType === "judge") {
+          options = [
+            { label: "A", content: "正确" },
+            { label: "B", content: "错误" },
+          ];
+          // 转换答案：true -> A, false -> B
+          if (answer === "true" || answer === true) {
+            answer = "A";
+          } else if (answer === "false" || answer === false) {
+            answer = "B";
+          }
+        }
+        
         Object.assign(formData, {
           id: props.editData.id,
           content: props.editData.content,
-          type: props.editData.type,
+          type: editType,
           difficulty: props.editData.difficulty,
           knowledgePoint: props.editData.knowledgePoint,
-          answer: props.editData.answer,
+          answer: answer,
           analysis: props.editData.analysis,
-          options: props.editData.options ? [...props.editData.options] : [],
+          options: options,
         });
       } else {
         // 新增模式，重置并初始化选项
@@ -80,14 +98,26 @@ watch(drawerVisible, (val) => {
   }
 });
 
-// 初始化选项（单选题默认4个选项）
+// 初始化选项（根据题型）
 const initOptions = () => {
-  formData.options = [
-    { label: "A", content: "" },
-    { label: "B", content: "" },
-    { label: "C", content: "" },
-    { label: "D", content: "" },
-  ];
+  if (formData.type === "judge") {
+    // 判断题固定选项
+    formData.options = [
+      { label: "A", content: "正确" },
+      { label: "B", content: "错误" },
+    ];
+  } else if (formData.type === "essay") {
+    // 简答题无选项
+    formData.options = [];
+  } else {
+    // 单选/多选题默认4个选项
+    formData.options = [
+      { label: "A", content: "" },
+      { label: "B", content: "" },
+      { label: "C", content: "" },
+      { label: "D", content: "" },
+    ];
+  }
   formData.answer = "";
 };
 
@@ -290,9 +320,9 @@ const resetForm = () => {
         />
       </el-form-item>
 
-      <!-- 选项配置（单选、多选） -->
+      <!-- 选项配置（单选、多选、判断） -->
       <template
-        v-if="formData.type === 'single' || formData.type === 'multiple'"
+        v-if="formData.type === 'single' || formData.type === 'multiple' || formData.type === 'judge'"
       >
         <el-form-item label="选项配置">
           <div class="options-container">
@@ -306,8 +336,10 @@ const resetForm = () => {
                 v-model="option.content"
                 placeholder="请输入选项内容"
                 class="option-input"
+                :disabled="formData.type === 'judge'"
               />
               <el-button
+                v-if="formData.type !== 'judge'"
                 type="danger"
                 link
                 :icon="Delete"
@@ -316,6 +348,7 @@ const resetForm = () => {
               />
             </div>
             <el-button
+              v-if="formData.type !== 'judge'"
               type="primary"
               link
               :icon="Plus"
@@ -363,19 +396,24 @@ const resetForm = () => {
             </el-checkbox>
           </el-checkbox-group>
         </el-form-item>
-      </template>
 
-      <!-- 正确答案（判断） -->
-      <el-form-item
-        v-else-if="formData.type === 'judge'"
-        label="正确答案"
-        prop="answer"
-      >
-        <el-radio-group v-model="formData.answer">
-          <el-radio label="true">正确</el-radio>
-          <el-radio label="false">错误</el-radio>
-        </el-radio-group>
-      </el-form-item>
+        <!-- 正确答案（判断） -->
+        <el-form-item
+          v-else-if="formData.type === 'judge'"
+          label="正确答案"
+          prop="answer"
+        >
+          <el-radio-group v-model="formData.answer">
+            <el-radio
+              v-for="option in formData.options"
+              :key="option.label"
+              :label="option.label"
+            >
+              {{ option.label }}. {{ option.content }}
+            </el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </template>
 
       <!-- 参考答案（简答） -->
       <el-form-item

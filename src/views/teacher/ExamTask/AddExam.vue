@@ -41,7 +41,7 @@
                 v-model="formData.startTime"
                 type="datetime"
                 placeholder="请选择开始时间"
-                format="YYYY-MM-DD HH:mm"
+                format="YYYY年MM月DD日 HH时mm分"
                 value-format="YYYY-MM-DD HH:mm"
                 style="width: 100%"
               />
@@ -52,8 +52,8 @@
               <div class="duration-wrapper">
                 <el-input-number
                   v-model="formData.duration"
-                  :min="10"
-                  :max="300"
+                  :min="5"
+                  :max="999"
                   :step="5"
                   placeholder="请输入时长"
                   style="width: 180px"
@@ -323,9 +323,9 @@ const formRules = {
     { required: true, message: "请输入考试时长", trigger: "blur" },
     {
       type: "number",
-      min: 10,
-      max: 300,
-      message: "时长范围为 10-300 分钟",
+      min: 5,
+      max: 999,
+      message: "时长范围为 5-999 分钟",
       trigger: "blur",
     },
   ],
@@ -542,7 +542,6 @@ const loadExamData = async (id) => {
     manuallyAddedStudents.value = [...students];
   } catch (error) {
     console.error("获取考试详情失败:", error);
-    ElMessage.error("获取考试详情失败");
   } finally {
     isLoadingData.value = false;
   }

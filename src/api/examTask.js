@@ -68,6 +68,31 @@ export function submitPaper(data) {
   return request.post("/stu/exam/submitPaper", data);
 }
 
+// 初始化学生考试数据（返回 questionId -> studentAnswer主键id 的映射）
+export function initStuExam(examId) {
+  return request.get("/stu/exam/initStuExam", { params: { examId } });
+}
+
+// 学生修改答案（实时保存）
+export function updateAnswer(data) {
+  return request.put("/stu/exam/updateAnswer", data);
+}
+
+// 学生获取答题详情
+export function getAnswerDetail(examId) {
+  return request.get("/stu/exam/getAnswerDetail", { params: { examId } });
+}
+
+// 学生获取考试结果
+export function getExamResult(examId) {
+  return request.get("/stu/exam/getExamResult", { params: { examId } });
+}
+
+// 学生获取所有考试成绩
+export function getAllExamResult() {
+  return request.get("/stu/exam/getAllExamResult");
+}
+
 // 获取批阅试卷内容
 export function getGradePaper(examId) {
   return request.get("/gradePaper/getGradePaper", { params: { examId } });
@@ -88,4 +113,11 @@ export function getStudentAnswer(studentId, examId) {
 // 更新批阅的学生得分
 export function updateGradeStudentScore(data) {
   return request.put("/gradePaper/updateGradeStudentScore", data);
+}
+
+// 自动批阅客观题
+export function autoGradeObjectiveQuestions(examId, studentId) {
+  return request.put("/gradePaper/autoGradeObjectiveQuestions", null, {
+    params: { examId, studentId },
+  });
 }

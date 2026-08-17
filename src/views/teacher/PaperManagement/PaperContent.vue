@@ -458,7 +458,6 @@ const handleManualSubmit = async () => {
     resetManualForm();
   } catch (error) {
     console.error("手动录入失败:", error);
-    ElMessage.error("题目添加失败，请重试");
   } finally {
     manualSubmitting.value = false;
   }

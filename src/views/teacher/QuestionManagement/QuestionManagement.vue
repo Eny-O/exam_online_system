@@ -370,7 +370,7 @@ const handleEdit = async (row) => {
     currentEditData.value = res.data;
     drawerVisible.value = true;
   } catch (error) {
-    ElMessage.error("获取题目详情失败");
+    console.error("获取题目详情失败:", error);
   }
 };
 
@@ -391,7 +391,7 @@ const handleDelete = (row) => {
         ElMessage.success("删除成功");
         fetchQuestionList();
       } catch (error) {
-        ElMessage.error("删除失败");
+        console.error("删除失败:", error);
       }
     })
     .catch(() => {
@@ -427,7 +427,7 @@ const handleBatchDelete = () => {
         selectedRows.value = [];
         fetchQuestionList();
       } catch (error) {
-        ElMessage.error("批量删除失败");
+        console.error("批量删除失败:", error);
       }
     })
     .catch(() => {
