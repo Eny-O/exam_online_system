@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ai.exam_spring.mapper.StuExamMapper">
+    <select id="getAllExamResult" resultType="com.ai.exam_spring.pojo.vo.exam.ExamResultVO">
+        SELECT
+            e.id            AS examId,
+            e.exam_name     AS examName,
+            p.total_score   AS totalScore,
+            e.start_time    AS examTime,
+            es.submit_time  AS submitTime,
+            es.total_score  AS examScore,
+            e.duration      AS examDuration,
+            es.status       AS studentExamStatus
+        FROM exam_student es
+                 INNER JOIN exam e ON es.exam_id = e.id
+                 INNER JOIN paper p ON e.paper_id = p.id
+        WHERE es.student_id = #{studentId}
+        ORDER BY e.start_time DESC
+    </select>
+</mapper>

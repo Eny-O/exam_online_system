@@ -13,11 +13,29 @@ import java.util.List;
 @Schema(description = "用户信息展示对象")
 public class UserInfoVO {
 
+    @Schema(description = "用户ID", example = "1")
+    private Integer id;
+
     @Schema(description = "用户名", example = "zhangsan")
     private String username;
 
     @Schema(description = "真实姓名", example = "张三")
     private String realName;
+
+    @Schema(description = "学号", example = "20200001")
+    private String studentNo;
+
+    @Schema(description = "工号", example = "20200001")
+    private String staffNo;
+
+    @Schema(description = "手机号", example = "12345678901")
+    private String phone;
+
+    @Schema(description = "专业")
+    private String major;
+
+    @Schema(description = "用户类型:1-学生,2-老师,-3-管理员")
+    private Integer userType;
 
     @Schema(description = "班级ID（管理员为null）", example = "101")
     private Integer classId;

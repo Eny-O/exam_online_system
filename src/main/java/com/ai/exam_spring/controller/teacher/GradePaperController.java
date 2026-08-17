@@ -1,17 +1,18 @@
 package com.ai.exam_spring.controller.teacher;
 
 import com.ai.exam_spring.common.result.ResponseResult;
-import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerAddDTO;
 import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerUpdateDTO;
 import com.ai.exam_spring.pojo.vo.grade.GradePaperContentVO;
 import com.ai.exam_spring.pojo.vo.grade.GradeStudentVO;
 import com.ai.exam_spring.pojo.vo.stu_answer.StudentAnswerVO;
+import com.ai.exam_spring.service.exam.StuExamService;
 import com.ai.exam_spring.service.grading.GradePaperService;
 import com.ai.exam_spring.service.grading.IStudentAnswerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.parameters.P;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ public class GradePaperController {
 
     @Autowired
     private IStudentAnswerService studentAnswerService;
+
 
     @Operation(summary = "获取批阅试卷")
     @GetMapping("/getGradePaper")
@@ -55,9 +57,17 @@ public class GradePaperController {
 
     @Operation(summary = "更新批阅的学生得分")
     @PutMapping("/updateGradeStudentScore")
-    public ResponseResult<Void> updateGradeStudentScore(@RequestBody List<StudentAnswerUpdateDTO> studentAnswerUpdateDTOS) {
+    public ResponseResult<Void> updateGradeStudentScore(@Validated @RequestBody List<StudentAnswerUpdateDTO> studentAnswerUpdateDTOS) {
         log.info("更新批阅的学生得分 {}", studentAnswerUpdateDTOS);
         studentAnswerService.updateScoreAndGrade(studentAnswerUpdateDTOS);
+        return ResponseResult.success();
+    }
+
+    @Operation(summary = "自动批阅客观题")
+    @PutMapping("/autoGradeObjectiveQuestions")
+    public ResponseResult<Void> autoGradeObjectiveQuestions(@RequestParam Integer examId, @RequestParam Integer studentId) {
+        log.info("自动批阅客观题: {}, {}", examId, studentId);
+        gradePaperService.autoGradeObjectiveQuestions(examId, studentId);
         return ResponseResult.success();
     }
 

@@ -4,14 +4,11 @@ import cn.hutool.core.bean.BeanUtil;
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
 import com.ai.exam_spring.mapper.StudentAnswerMapper;
-import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerAddDTO;
 import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerUpdateDTO;
 import com.ai.exam_spring.pojo.entity.exam.ExamStudent;
 import com.ai.exam_spring.pojo.entity.stu_answer.StudentAnswer;
 import com.ai.exam_spring.pojo.enums.exam.StudentExamEnum;
 import com.ai.exam_spring.pojo.enums.question.QuestionTypeEnum;
-import com.ai.exam_spring.pojo.vo.paper.PaperContentVO;
-import com.ai.exam_spring.pojo.vo.paper.PaperQuestionVO;
 import com.ai.exam_spring.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.service.exam.IExamStudentService;
 import com.ai.exam_spring.service.grading.IStudentAnswerService;
@@ -20,15 +17,12 @@ import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.NonNull;
-import org.apache.ibatis.executor.BatchResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, StudentAnswer> implements IStudentAnswerService {
@@ -60,7 +54,7 @@ public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, S
                         .eq(StudentAnswer::getStudentId, studentId)
                         .eq(StudentAnswer::getExamId, examId));
         if (studentAnswers == null || studentAnswers.isEmpty()) {
-            return null;
+            return List.of();
         }
         return studentAnswers.stream().map(studentAnswer -> {
             StudentAnswerVO studentAnswerVO = new StudentAnswerVO();
@@ -146,58 +140,44 @@ public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, S
         return examStudent;
     }
 
-    /**
-     * 批量保存学生答案
-     *
-     * @param studentAnswerAddDTO
-     */
-    @Override
-    public Boolean batchSaveStudentAnswers(StudentAnswerAddDTO studentAnswerAddDTO) {
-        String currentUserId = SecurityUtil.getCurrentUserId();
-        if (currentUserId == null) {
-            throw new BusinessException(ErrorCodeEnum.USER_NOT_LOGIN);
-        }
-        PaperContentVO paperContentVO = paperManagementService.getPaperById(studentAnswerAddDTO.getPaperId());
-        // 获取该试卷的的题目列表(包含答案)
-        List<PaperQuestionVO> paperQuestionVOS = paperContentVO.getPaperQuestionVOS();
-        if (paperQuestionVOS == null || paperQuestionVOS.isEmpty()) {
-            throw new BusinessException(ErrorCodeEnum.PAPER_CONTENT_EMPTY_NOT_GRADE);
-        }
-        // 将题目列表转换为Map，方便后续根据题序快速查找题目
-        Map<Integer, PaperQuestionVO> paperQuestionVOHashMap = paperQuestionVOS
-                .stream()
-                .collect(Collectors.toMap(PaperQuestionVO::getSortOrder, paperQuestionVO -> paperQuestionVO));
-        Integer examId = studentAnswerAddDTO.getExamId();
-        // 遍历学生答案列表，封装到StudentAnswer对象中,实现批量插入
-        List<StudentAnswer> studentAnswers = studentAnswerAddDTO.getAnswers().stream().map(answerDTO -> {
-            StudentAnswer studentAnswerObject = new StudentAnswer();
-            PaperQuestionVO paperQuestionVO = paperQuestionVOHashMap.get(answerDTO.getSortOrder());
-            String answer = paperQuestionVO.getQuestionCompleteVO().getAnswer();
-            String studentAnswer = answerDTO.getStudentAnswer();
-            studentAnswerObject.setExamId(examId);
-            studentAnswerObject.setStudentId(Integer.parseInt(currentUserId));
-            studentAnswerObject.setQuestionId(answerDTO.getQuestionId());
-            studentAnswerObject.setStudentAnswer(studentAnswer);
-            // 非简答题直接批阅
-            if (paperQuestionVO.getQuestionCompleteVO().getType() != QuestionTypeEnum.ESSAY) {
-                if (answer.equals(studentAnswer)) {
-                    studentAnswerObject.setIsCorrect(1);
-                    studentAnswerObject.setScore(paperQuestionVO.getScore());
-                } else {
-                    studentAnswerObject.setIsCorrect(0);
-                    studentAnswerObject.setScore(0.0);
-                }
-                studentAnswerObject.setFullScore(paperQuestionVO.getScore());
-            } else {
-                studentAnswerObject.setFullScore(paperQuestionVO.getScore());
-            }
-            return studentAnswerObject;
-        }).toList();
-        Boolean isInsertSuccess = false;
-        isInsertSuccess = transactionTemplate.execute(status -> {
-            baseMapper.insert(studentAnswers);
-            return true;
-        });
-        return isInsertSuccess;
-    }
+//    /**
+//     * 批量保存学生答案
+//     *
+//     * @param studentUpdateAnswerDTO
+//     */
+//    @Override
+//    public List<Integer> batchSaveStudentAnswers(StudentUpdateAnswerDTO studentUpdateAnswerDTO) {
+//        String currentUserId = SecurityUtil.getCurrentUserId();
+//        if (currentUserId == null) {
+//            throw new BusinessException(ErrorCodeEnum.USER_NOT_LOGIN);
+//        }
+//        PaperContentVO paperContentVO = paperManagementService.getPaperById(studentUpdateAnswerDTO.getPaperId());
+//        // 获取该试卷的的题目列表(包含答案)
+//        List<PaperQuestionVO> paperQuestionVOS = paperContentVO.getPaperQuestionVOS();
+//        if (paperQuestionVOS == null || paperQuestionVOS.isEmpty()) {
+//            throw new BusinessException(ErrorCodeEnum.PAPER_CONTENT_EMPTY_NOT_GRADE);
+//        }
+//        // 将题目列表转换为Map，方便后续根据题序快速查找题目
+//        Map<Integer, PaperQuestionVO> paperQuestionVOHashMap = paperQuestionVOS
+//                .stream()
+//                .collect(Collectors.toMap(PaperQuestionVO::getSortOrder, paperQuestionVO -> paperQuestionVO));
+//        Integer examId = studentUpdateAnswerDTO.getExamId();
+//        List<AnswerDTO> answers = studentUpdateAnswerDTO.getAnswers();
+//        // 遍历学生答案列表，封装到StudentAnswer对象中,实现批量插入
+//        List<StudentAnswer> studentAnswers = answers.stream().map(answerDTO -> {
+//            StudentAnswer studentAnswerObject = new StudentAnswer();
+//            PaperQuestionVO paperQuestionVO = paperQuestionVOHashMap.get(answerDTO.getSortOrder());
+//            studentAnswerObject.setExamId(examId);
+//            studentAnswerObject.setStudentId(Integer.parseInt(currentUserId));
+//            studentAnswerObject.setQuestionId(answerDTO.getQuestionId());
+//            studentAnswerObject.setFullScore(paperQuestionVO.getScore());
+//            return studentAnswerObject;
+//        }).toList();
+//       transactionTemplate.execute(status -> {
+//           baseMapper.insert(studentAnswers);
+//           return null;
+//        });
+//
+//        return studentAnswers.stream().map(StudentAnswer::getId).toList();
+//    }
 }

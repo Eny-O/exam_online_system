@@ -3,16 +3,23 @@ package com.ai.exam_spring.service.grading.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerAddDTO;
+import com.ai.exam_spring.mapper.GradePaperMapper;
+import com.ai.exam_spring.pojo.dto.stu_answer.StudentUpdateAnswerDTO;
 import com.ai.exam_spring.pojo.entity.exam.Exam;
+import com.ai.exam_spring.pojo.entity.exam.ExamStudent;
 import com.ai.exam_spring.pojo.entity.stu_answer.StudentAnswer;
 import com.ai.exam_spring.pojo.entity.user.User;
+import com.ai.exam_spring.pojo.enums.exam.StudentExamEnum;
+import com.ai.exam_spring.pojo.enums.question.QuestionTypeEnum;
 import com.ai.exam_spring.pojo.vo.grade.GradePaperContentVO;
 import com.ai.exam_spring.pojo.vo.grade.GradePaperQuestionVO;
 import com.ai.exam_spring.pojo.vo.grade.GradeStudentVO;
 import com.ai.exam_spring.pojo.vo.paper.*;
 import com.ai.exam_spring.pojo.vo.question.QuestionCompleteVO;
+import com.ai.exam_spring.pojo.vo.stu_answer.ExamAnswerVO;
 import com.ai.exam_spring.service.exam.IExamManagementService;
+import com.ai.exam_spring.service.exam.IExamStudentService;
+import com.ai.exam_spring.service.exam.StuExamService;
 import com.ai.exam_spring.service.grading.GradePaperService;
 import com.ai.exam_spring.service.grading.IStudentAnswerService;
 import com.ai.exam_spring.service.paper.IPaperManagementService;
@@ -20,6 +27,7 @@ import com.ai.exam_spring.service.user.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -33,10 +41,16 @@ public class GradePaperServiceImpl implements GradePaperService {
     private IExamManagementService examManagementService;
 
     @Autowired
+    private IExamStudentService examStudentService;
+
+    @Autowired
     private IStudentAnswerService studentAnswerService;
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private GradePaperMapper gradePaperMapper;
 
     /**
      * 根据考试id获取试卷内容
@@ -92,9 +106,13 @@ public class GradePaperServiceImpl implements GradePaperService {
         if (examId == null) {
             throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
         }
-        List<StudentAnswer> studentAnswers = studentAnswerService.list(new LambdaQueryWrapper<StudentAnswer>()
-                .eq(StudentAnswer::getExamId, examId));
-        List<Integer> studentIds = studentAnswers.stream().map(StudentAnswer::getStudentId).toList();
+        List<ExamStudent> examStudents = examStudentService.list(new LambdaQueryWrapper<ExamStudent>()
+                .eq(ExamStudent::getExamId, examId)
+                .ne(ExamStudent::getStatus, StudentExamEnum.ABSENT));
+        if (examStudents.isEmpty()) {
+            return List.of();
+        }
+        List<Integer> studentIds = examStudents.stream().map(ExamStudent::getStudentId).toList();
         if (studentIds.isEmpty()) {
             return List.of();
         }
@@ -113,12 +131,33 @@ public class GradePaperServiceImpl implements GradePaperService {
     }
 
     /**
-     * 保存批阅学生答案
+     * 自动批改客观题
      *
-     * @param studentAnswerAddDTO
+     * @param examId
      */
+    @Transactional(rollbackFor = Exception.class)
     @Override
-    public void saveGradeStudentAnswer(StudentAnswerAddDTO studentAnswerAddDTO) {
-
+    public void autoGradeObjectiveQuestions(Integer examId, Integer studentId) {
+        List<ExamAnswerVO> examAnswerVOS = gradePaperMapper.getExamAnswerDetail(examId, studentId);
+        if (examAnswerVOS == null || examAnswerVOS.isEmpty()) {
+            throw new BusinessException(ErrorCodeEnum.EXAM_ANSWER_NOT_FOUND_NOT_AUTO_GRADE);
+        }
+        List<StudentAnswer> studentAnswers = examAnswerVOS.stream().map(examAnswerVO -> {
+            StudentAnswer studentAnswer = new StudentAnswer();
+            // 简答题不批阅
+            if (examAnswerVO.getType() != QuestionTypeEnum.ESSAY) {
+                if (examAnswerVO.getAnswer().equals(examAnswerVO.getStudentAnswer())) {
+                    studentAnswer.setIsCorrect(1);
+                    studentAnswer.setScore(examAnswerVO.getFullScore());
+                } else {
+                    studentAnswer.setIsCorrect(0);
+                    studentAnswer.setScore(0.0);
+                }
+                studentAnswer.setId(examAnswerVO.getId());
+            }
+            return studentAnswer;
+        }).toList();
+        studentAnswerService.updateBatchById(studentAnswers);
     }
+
 }

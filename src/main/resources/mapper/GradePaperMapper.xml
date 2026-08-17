@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ai.exam_spring.mapper.GradePaperMapper">
+    <select id="getExamAnswerDetail" resultType="com.ai.exam_spring.pojo.vo.stu_answer.ExamAnswerVO">
+        SELECT
+            sa.id AS id,
+            sa.student_answer AS studentAnswer,
+            sa.full_score,
+            q.answer,
+            q.type
+        FROM student_answer sa LEFT JOIN question q ON sa.question_id = q.id
+        WHERE sa.exam_id = #{examId}
+          AND sa.student_id = #{studentId}
+    </select>
+</mapper>

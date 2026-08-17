@@ -45,6 +45,9 @@ public enum ErrorCodeEnum {
     EXAM_STATUS_CHANGE_FAIL("3003","考试状态改变失败"),
     EXAM_STATUS_NOT_PENDING_NOT_SUBMIT("3004", "考试状态不是待考试不能提交"),
     EXAM_STUDENT_NOT_FOUND("3005", "考试学生关联数据不存在"),
+    EXAM_NOT_ALL_GRADED("3006", "考试并没有全部阅卷完成"),
+    EXAM_STATUS_NOT_GRADED("3007", "考试状态不是已阅卷不能查看试卷结果"),
+    EXAM_REFERENCE_PAPER_NOT_FOUND("3008", "考试关联的试卷不存在"),
 
     // 文件与导入错误码
     FILE_FORMAT_ERROR("4001", "仅支持 .xlsx 格式文件"),
@@ -68,6 +71,7 @@ public enum ErrorCodeEnum {
     // 阅卷错误码
     PAPER_CONTENT_EMPTY_NOT_GRADE("7001", "试卷内容为空，不能阅卷"),
     PAPER_STATUS_ERROR_NOT_GRADE("7002", "试卷状态错误，不能阅卷"),
+    EXAM_ANSWER_NOT_FOUND_NOT_AUTO_GRADE("7003", "考试答案不存在,不能自动阅卷"),
 
 
 

@@ -13,6 +13,5 @@ public class AnswerDTO {
     @Schema(description = "题目ID", example = "303")
     private Integer questionId;
 
-    @Schema(description = "学生作答内容", example = "A")
-    private String studentAnswer;
+
 }

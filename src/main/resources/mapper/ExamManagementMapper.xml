@@ -41,20 +41,11 @@
         e.status,
         e.duration,
         e.start_time,
-        e.paper_id
+        e.paper_id,
+        es.status as studentExamStatus
         from exam e
-        WHERE (
-        EXISTS (
-        SELECT 1 FROM exam_student es
-        WHERE es.exam_id = e.id AND es.student_id = #{stuId}
-        )
-        OR
-        EXISTS (
-        SELECT 1 FROM exam_class ec
-        INNER JOIN sys_user u ON u.class_id = ec.class_id
-        WHERE ec.exam_id = e.id AND u.id = #{stuId}
-        )
-        ) AND e.status != 0
+        INNER JOIN exam_student es ON es.exam_id = e.id AND es.student_id = #{stuId}
+        WHERE e.status != 0
         ${ew.customSqlSegment}
         <choose>
             <when test="viewStatus != null and viewStatus.code == 2">
@@ -63,7 +54,6 @@
             <when test="viewStatus != null and viewStatus.code == 3">
                 AND e.status = 1 AND #{now} &gt;= e.start_time AND #{now} &lt;= DATE_ADD(e.start_time, INTERVAL e.duration MINUTE)
             </when>
-            <!-- 新增：待批阅 = 已发布 + 时间已过 -->
             <when test="viewStatus != null and viewStatus.code == 4">
                 AND e.status = 1 AND #{now} &gt; DATE_ADD(e.start_time, INTERVAL e.duration MINUTE)
             </when>

@@ -1,9 +1,12 @@
 package com.ai.exam_spring.pojo.enums.exam;
 
+import com.ai.exam_spring.common.status.PaperStatus;
 import com.baomidou.mybatisplus.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
+
+import java.util.List;
 
 @Getter
 public enum ExamEnum {
@@ -34,6 +37,23 @@ public enum ExamEnum {
         return null;
     }
 
+    public List<ExamEnum> getAllowedTargets() {
+        return switch (this) {
+            case NOT_POST -> List.of(ALREADY_POST);
+            case ALREADY_POST -> List.of(NOT_START, PENDING_REVIEW);
+            case NOT_START -> List.of(ALREADY_POST, PENDING_REVIEW);
+            case ONGOING -> List.of(PENDING_REVIEW);
+            case PENDING_REVIEW -> List.of(REVIEW_FINISHED);
+            case REVIEW_FINISHED -> List.of();
+        };
+    }
+
+    /**
+     * 校验是否允许流转到目标状态
+     */
+    public boolean canTransferTo(ExamEnum target) {
+        return getAllowedTargets().contains(target);
+    }
 
     /**
      * 判断枚举类型是否存在

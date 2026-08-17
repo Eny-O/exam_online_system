@@ -17,4 +17,8 @@ public class ExamStatusUpdateDTO {
     @Schema(description = "考试状态")
     private ExamEnum status;
 
+    public ExamStatusUpdateDTO(Integer examId, ExamEnum examEnum) {
+        this.id = examId;
+        this.status = examEnum;
+    }
 }

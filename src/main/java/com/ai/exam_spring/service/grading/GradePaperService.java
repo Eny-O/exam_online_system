@@ -1,8 +1,14 @@
 package com.ai.exam_spring.service.grading;
 
-import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerAddDTO;
+import com.ai.exam_spring.common.enums.ErrorCodeEnum;
+import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_spring.pojo.dto.stu_answer.StudentUpdateAnswerDTO;
+import com.ai.exam_spring.pojo.entity.stu_answer.StudentAnswer;
+import com.ai.exam_spring.pojo.enums.question.QuestionTypeEnum;
 import com.ai.exam_spring.pojo.vo.grade.GradePaperContentVO;
 import com.ai.exam_spring.pojo.vo.grade.GradeStudentVO;
+import com.ai.exam_spring.pojo.vo.stu_answer.ExamAnswerVO;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,9 +29,11 @@ public interface GradePaperService {
      */
     List<GradeStudentVO> getGradeStudentList(Integer examId);
 
+
     /**
-     * 保存批阅学生答案
-     * @param studentAnswerAddDTO
+     * 自动批改客观题
+     * @param examId
      */
-    void saveGradeStudentAnswer(StudentAnswerAddDTO studentAnswerAddDTO);
+    void autoGradeObjectiveQuestions(Integer examId, Integer studentId);
+
 }

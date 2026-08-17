@@ -27,4 +27,7 @@ public class StuExamVO {
     @Schema(description = "试卷id")
     private Integer paperId;
 
+    @Schema(description = "学生考试状态")
+    private String studentExamStatus;
+
 }

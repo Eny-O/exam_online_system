@@ -1,6 +1,5 @@
 package com.ai.exam_spring.service.grading;
 
-import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerAddDTO;
 import com.ai.exam_spring.pojo.dto.stu_answer.StudentAnswerUpdateDTO;
 import com.ai.exam_spring.pojo.entity.stu_answer.StudentAnswer;
 import com.ai.exam_spring.pojo.vo.stu_answer.StudentAnswerVO;
@@ -9,11 +8,11 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import java.util.List;
 
 public interface IStudentAnswerService extends IService<StudentAnswer> {
-    /**
-     * 批量保存学生答案
-     * @param studentAnswerAddDTO
-     */
-    Boolean batchSaveStudentAnswers(StudentAnswerAddDTO studentAnswerAddDTO);
+//    /**
+//     * 批量保存学生答案
+//     * @param studentUpdateAnswerDTO
+//     */
+//    Boolean batchSaveStudentAnswers(StudentUpdateAnswerDTO studentUpdateAnswerDTO);
 
     /**
      * 获取学生答题情况
