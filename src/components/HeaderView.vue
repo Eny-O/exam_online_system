@@ -1,14 +1,6 @@
 <template>
   <header class="app-header">
     <div class="header-content">
-      <!-- 左侧：Logo 和标题 -->
-      <div class="header-left">
-        <div class="logo-box">
-          <span class="logo-text">E</span>
-        </div>
-        <h1 class="app-title">在线考试系统</h1>
-      </div>
-
       <!-- 右侧：用户信息和退出 -->
       <div class="header-right">
         <div class="user-info">
@@ -65,9 +57,7 @@ const handleLogout = async () => {
 .header-content {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  max-width: 80rem;
-  margin: 0 auto;
+  justify-content: flex-end;
 }
 
 .header-left {

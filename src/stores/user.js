@@ -134,10 +134,14 @@ export const useUserStore = defineStore("user", () => {
 
   /**
    * 权限树 -> Vue Router 路由对象数组（用于 addRoute）
+   * 只为 type=1(目录) 和 type=2(菜单) 生成路由，跳过 type=3(按钮) 和 type=4(API)
    */
   function buildRoutesFromPermissions(tree) {
     const routes = [];
     tree.forEach((perm) => {
+      // 按钮(3)和API(4)权限不生成路由
+      if (perm.type === 3 || perm.type === 4) return;
+
       const route = {
         path: perm.path,
         name: perm.permCode,
@@ -157,19 +161,22 @@ export const useUserStore = defineStore("user", () => {
 
   /**
    * 权限树 -> 侧边栏菜单项
+   * 只为 type=1(目录) 和 type=2(菜单) 生成菜单项，跳过 type=3(按钮) 和 type=4(API)
    */
   function buildMenuFromPermissions(tree) {
-    return tree.map((perm) => {
-      const item = {
-        title: perm.permName,
-        path: perm.path,
-        icon: resolveIcon(perm.icon),
-      };
-      if (perm.children && perm.children.length > 0) {
-        item.children = buildMenuFromPermissions(perm.children);
-      }
-      return item;
-    });
+    return tree
+      .filter((perm) => perm.type !== 3 && perm.type !== 4)
+      .map((perm) => {
+        const item = {
+          title: perm.permName,
+          path: perm.path,
+          icon: resolveIcon(perm.icon),
+        };
+        if (perm.children && perm.children.length > 0) {
+          item.children = buildMenuFromPermissions(perm.children);
+        }
+        return item;
+      });
   }
 
   return {

@@ -3,12 +3,12 @@
     <el-card class="header-card" shadow="never">
       <div class="header-content">
         <h1 class="page-title">个人中心</h1>
-        <p class="page-subtitle">查看您的学习进度和考试记录</p>
+        <p class="page-subtitle">{{ subtitleText }}</p>
       </div>
     </el-card>
 
     <!-- 顶部信息区域 -->
-    <div class="info-grid">
+    <div class="info-grid" :class="{ 'full-width': !isStudent }">
       <!-- 用户基本信息卡片 -->
       <el-card class="user-card" shadow="hover">
         <div class="user-info-flex">
@@ -16,6 +16,9 @@
           <div class="user-details">
             <h2 class="user-name">
               {{ userInfo.realName || userInfo.username || "--" }}
+              <el-tag :type="roleTagType" size="small" class="role-tag">
+                {{ roleLabel }}
+              </el-tag>
             </h2>
             <div class="detail-item">
               <el-icon><User /></el-icon>
@@ -29,8 +32,8 @@
         </div>
       </el-card>
 
-      <!-- 统计数据卡片 -->
-      <div class="stats-grid">
+      <!-- 学生：统计数据卡片 -->
+      <div v-if="isStudent" class="stats-grid">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
             <div class="stat-text">
@@ -79,64 +82,79 @@
           </div>
         </el-card>
       </div>
+
+      <!-- 教师/管理员：角色概览卡片 -->
+      <div v-else class="role-overview">
+        <el-card class="overview-card" shadow="hover">
+          <div class="overview-content">
+            <el-icon :size="48" class="overview-icon"><Monitor /></el-icon>
+            <div class="overview-text">
+              <h3>{{ overviewTitle }}</h3>
+              <p>{{ overviewDesc }}</p>
+            </div>
+          </div>
+        </el-card>
+      </div>
     </div>
 
-    <!-- 图表区域 -->
-    <div class="chart-grid">
-      <el-card class="chart-card" shadow="hover">
+    <!-- 学生：图表区域 -->
+    <template v-if="isStudent">
+      <div class="chart-grid">
+        <el-card class="chart-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>考试成绩分布</span>
+            </div>
+          </template>
+          <div ref="barChartRef" class="chart-container"></div>
+        </el-card>
+
+        <el-card class="chart-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>成绩趋势</span>
+            </div>
+          </template>
+          <div ref="lineChartRef" class="chart-container"></div>
+        </el-card>
+      </div>
+
+      <!-- 学生：最近考试记录表格 -->
+      <el-card class="table-card" shadow="hover">
         <template #header>
           <div class="card-header">
-            <span>考试成绩分布</span>
+            <span>最近考试记录</span>
           </div>
         </template>
-        <div ref="barChartRef" class="chart-container"></div>
+        <el-table
+          :data="scoreHistory"
+          style="width: 100%"
+          stripe
+          v-loading="loading"
+        >
+          <el-table-column prop="examName" label="考试名称" min-width="120" />
+          <el-table-column label="考试日期" width="120">
+            <template #default="scope">
+              {{ formatDate(scope.row.examTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="得分" width="100">
+            <template #default="scope">
+              <span :class="getScoreClass(scope.row)">
+                {{ scope.row.examScore ?? "--" }}分
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="scope">
+              <el-tag :type="getStatusType(scope.row)" effect="light">
+                {{ getStatusText(scope.row) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
       </el-card>
-
-      <el-card class="chart-card" shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <span>成绩趋势</span>
-          </div>
-        </template>
-        <div ref="lineChartRef" class="chart-container"></div>
-      </el-card>
-    </div>
-
-    <!-- 最近考试记录表格 -->
-    <el-card class="table-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span>最近考试记录</span>
-        </div>
-      </template>
-      <el-table
-        :data="scoreHistory"
-        style="width: 100%"
-        stripe
-        v-loading="loading"
-      >
-        <el-table-column prop="examName" label="考试名称" min-width="120" />
-        <el-table-column label="考试日期" width="120">
-          <template #default="scope">
-            {{ formatDate(scope.row.examTime) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="得分" width="100">
-          <template #default="scope">
-            <span :class="getScoreClass(scope.row)">
-              {{ scope.row.examScore ?? "--" }}分
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="scope">
-            <el-tag :type="getStatusType(scope.row)" effect="light">
-              {{ getStatusText(scope.row) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    </template>
   </div>
 </template>
 
@@ -150,11 +168,43 @@ import {
   TrendCharts,
   Document,
   Star,
+  Monitor,
 } from "@element-plus/icons-vue";
 import { useUserStore } from "@/stores/user";
 import { getAllExamResult } from "@/api/examTask";
 
 const userStore = useUserStore();
+
+// --- 用户类型判断 ---
+const isStudent = computed(() => userInfo.value.userType === 1);
+const isTeacher = computed(() => userInfo.value.userType === 2);
+
+const roleLabel = computed(() => {
+  const map = { 1: "学生", 2: "教师", 3: "管理员" };
+  return map[userInfo.value.userType] || "用户";
+});
+
+const roleTagType = computed(() => {
+  const map = { 1: "primary", 2: "success", 3: "warning" };
+  return map[userInfo.value.userType] || "info";
+});
+
+const subtitleText = computed(() => {
+  if (isStudent.value) return "查看您的学习进度和考试记录";
+  if (isTeacher.value) return "教学管理概览";
+  return "系统管理概览";
+});
+
+const overviewTitle = computed(() => {
+  if (isTeacher.value) return "教师工作台";
+  return "管理员控制台";
+});
+
+const overviewDesc = computed(() => {
+  if (isTeacher.value)
+    return "您可以在左侧菜单中管理题库、创建考试和批阅试卷。";
+  return "您可以在左侧菜单中管理系统用户、角色和权限配置。";
+});
 
 // --- 数据定义 ---
 const userInfo = computed(() => userStore.userInfo);
@@ -199,7 +249,7 @@ const highestScore = computed(() => {
 const scoreHistory = computed(() => {
   return examList.value
     .filter((item) => item.examScore !== null && item.examScore !== undefined)
-    .slice(0, 6); // 只显示最近6条
+    .slice(0, 6);
 });
 
 // --- 图表引用 ---
@@ -254,7 +304,6 @@ const initCharts = () => {
       xAxis: {
         type: "category",
         data: historyData.map((item) => {
-          // 截取考试名称，太长则省略
           const name = item.examName || "";
           return name.length > 6 ? name.substring(0, 6) + "..." : name;
         }),
@@ -277,7 +326,6 @@ const initCharts = () => {
   // 初始化折线图（成绩趋势）
   if (lineChartRef.value) {
     const myChart = echarts.init(lineChartRef.value);
-    // 按时间排序
     const sortedData = [...historyData].sort((a, b) => {
       return new Date(a.examTime) - new Date(b.examTime);
     });
@@ -311,13 +359,13 @@ const initCharts = () => {
   }
 };
 
-// 加载数据
+// 加载数据（仅学生需要加载考试成绩）
 const loadData = async () => {
+  if (!isStudent.value) return;
   loading.value = true;
   try {
     const res = await getAllExamResult();
     examList.value = res.data || [];
-    // 数据加载完成后初始化图表
     await nextTick();
     initCharts();
   } catch (error) {
@@ -368,9 +416,15 @@ onMounted(() => {
   gap: 24px;
   margin-bottom: 32px;
 }
+.info-grid.full-width {
+  grid-template-columns: 1fr;
+}
 @media (min-width: 1024px) {
   .info-grid {
     grid-template-columns: 1fr 2fr;
+  }
+  .info-grid.full-width {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -413,6 +467,12 @@ onMounted(() => {
   font-weight: bold;
   color: #111827;
   margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.role-tag {
+  vertical-align: middle;
 }
 .detail-item {
   display: flex;
@@ -424,6 +484,37 @@ onMounted(() => {
 .detail-item .el-icon {
   margin-right: 4px;
   font-size: 16px;
+}
+
+/* Role Overview (teacher/admin) */
+.role-overview {
+  display: flex;
+  align-items: stretch;
+}
+.overview-card {
+  width: 100%;
+}
+.overview-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 0;
+}
+.overview-icon {
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+.overview-text h3 {
+  font-size: 20px;
+  font-weight: bold;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+.overview-text p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.6;
 }
 
 /* Stat Cards */

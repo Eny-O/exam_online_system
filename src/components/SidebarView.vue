@@ -125,10 +125,6 @@ const handleLogout = async () => {
   color: #ffffff;
   display: flex;
   flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 50;
   animation: slideIn 0.3s ease-out forwards;
 }
 
@@ -172,6 +168,12 @@ const handleLogout = async () => {
   flex: 1;
   padding: 1rem;
   overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 /* --- Element Plus 核心样式覆盖 --- */
