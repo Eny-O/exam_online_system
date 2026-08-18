@@ -2,6 +2,16 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.ai.exam_spring.mapper.PermissionMapper">
     <select id="getPermissionsByUserId" resultType="com.ai.exam_spring.pojo.entity.user.Permission">
+        /* 管理员：直接返回全部权限 */
+        SELECT DISTINCT p.id, p.parent_id, p.perm_code, p.perm_name, p.type, p.path, p.icon, p.component
+        FROM sys_permission p
+        WHERE EXISTS (
+            SELECT 1 FROM sys_user_role ur
+                JOIN sys_role r ON ur.role_id = r.id
+            WHERE ur.user_id = #{userId} AND r.role_code = 'ROLE_ADMIN'
+        )
+        UNION
+        /* 普通用户：返回角色关联的权限 */
         SELECT DISTINCT p.id, p.parent_id, p.perm_code, p.perm_name, p.type, p.path, p.icon, p.component
         FROM sys_user u
                  JOIN sys_user_role ur ON u.id = ur.user_id
@@ -9,10 +19,5 @@
                  JOIN sys_role_permission rp ON r.id = rp.role_id
                  JOIN sys_permission p ON rp.permission_id = p.id
         WHERE u.id = #{userId}
-           OR EXISTS (
-            SELECT 1 FROM sys_user_role ur2
-                              JOIN sys_role r2 ON ur2.role_id = r2.id
-            WHERE ur2.user_id = #{userId} AND r2.role_code = 'ROLE_ADMIN'
-        );
     </select>
 </mapper>

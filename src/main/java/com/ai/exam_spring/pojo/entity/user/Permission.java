@@ -28,7 +28,7 @@ public class Permission {
     @Schema(description = "权限/菜单名称", example = "用户管理")
     private String permName;
 
-    @Schema(description = "权限类型：1-目录，2-菜单，3-按钮", example = "2")
+    @Schema(description = "权限类型：1-目录，2-菜单，3-按钮，4-API", example = "2")
     private Integer type;
 
     @Schema(description = "前端路由路径", example = "/system/user")

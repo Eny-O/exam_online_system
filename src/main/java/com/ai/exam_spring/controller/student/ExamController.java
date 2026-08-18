@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +34,7 @@ public class ExamController {
     private StuExamService stuExamService;
 
     @Operation(summary = "学生考试分页条件查询")
+    @PreAuthorize("hasAuthority('stu:exam:view')")
     @GetMapping("/page")
     public ResponseResult<PageResult<StuExamVO>> page(StuExamQueryDTO stuExamQueryDTO) {
         log.info("学生考试分页条件查询: {}", stuExamQueryDTO);
@@ -41,6 +43,7 @@ public class ExamController {
     }
 
     @Operation(summary = "学生查看考试详情")
+    @PreAuthorize("hasAuthority('stu:exam:view')")
     @GetMapping("/getExamInfo")
     public ResponseResult<StuExamVO> getExamInfoById(@RequestParam Integer id) {
         log.info("学生查看考试详情: {}", id);
@@ -49,6 +52,7 @@ public class ExamController {
     }
 
     @Operation(summary = "学生获取试卷内容")
+    @PreAuthorize("hasAuthority('stu:exam:view')")
     @GetMapping("/getExamPaper")
     public ResponseResult<StuPaperVO> getPaperById(@RequestParam Integer id) {
         log.info("学生获取试卷内容: {}", id);
@@ -57,6 +61,7 @@ public class ExamController {
     }
 
     @Operation(summary = "学生提交试卷")
+    @PreAuthorize("hasAuthority('stu:exam:submit')")
     @PostMapping("/submitPaper")
     public ResponseResult<Void> submitPaper(@RequestBody List<StudentUpdateAnswerDTO> studentUpdateAnswerDTOS) {
         log.info("学生提交试卷: {}", studentUpdateAnswerDTOS);
@@ -65,6 +70,7 @@ public class ExamController {
     }
 
     @Operation(summary = "学生获取答题详情")
+    @PreAuthorize("hasAuthority('stu:exam:view')")
     @GetMapping("/getAnswerDetail")
     public ResponseResult<List<BaseStudentAnswerVO>> getAnswerDetail(@RequestParam Integer examId) {
         log.info("学生获取答题详情: {}", examId);
@@ -73,6 +79,7 @@ public class ExamController {
     }
 
     @Operation(summary = "学生获取考试结果")
+    @PreAuthorize("hasAuthority('stu:exam:view')")
     @GetMapping("/getExamResult")
     public ResponseResult<ExamResultVO> getExamResult(@RequestParam Integer examId) {
         log.info("学生获取考试结果: {}", examId);
@@ -81,6 +88,7 @@ public class ExamController {
     }
 
     @Operation(summary = "学生获取所有考试成绩")
+    @PreAuthorize("hasAuthority('stu:exam:view')")
     @GetMapping("/getAllExamResult")
     public ResponseResult<List<ExamResultVO>> getAllExamResult() {
         log.info("学生获取所有考试成绩");
@@ -89,6 +97,7 @@ public class ExamController {
     }
 
     @Operation(summary = "初始化学生考试数据",description = "返回的数据为(questionId->id),id为学生答案的主键id,学生修改答案会用到")
+    @PreAuthorize("hasAuthority('stu:exam:view')")
     @GetMapping("/initStuExam")
     public ResponseResult<Map<Integer, Integer>> initStuExam(@RequestParam Integer examId) {
         log.info("初始化学生考试数据: {}", examId);
@@ -96,6 +105,7 @@ public class ExamController {
     }
 
     @Operation(summary = "学生修改答案")
+    @PreAuthorize("hasAuthority('stu:exam:answer')")
     @PutMapping("/updateAnswer")
     public ResponseResult<Void> updateAnswer(@RequestBody StudentUpdateAnswerDTO studentUpdateAnswerDTO) {
         log.info("学生修改答案: {}", studentUpdateAnswerDTO);

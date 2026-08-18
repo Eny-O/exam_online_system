@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +33,7 @@ public class GradePaperController {
 
 
     @Operation(summary = "获取批阅试卷")
+    @PreAuthorize("hasAuthority('tch:grade:view')")
     @GetMapping("/getGradePaper")
     public ResponseResult<GradePaperContentVO> getGradePaper(@Validated @RequestParam Integer examId) {
         log.info("获取批阅试卷 {}", examId);
@@ -40,6 +42,7 @@ public class GradePaperController {
     }
 
     @Operation(summary = "获取学生答题情况")
+    @PreAuthorize("hasAuthority('tch:grade:view')")
     @GetMapping("/getStudentAnswer")
     public ResponseResult<List<StudentAnswerVO>> getStudentAnswer(@Validated @RequestParam Integer studentId, Integer examId) {
         log.info("获取学生答题情况 {}, {}", studentId, examId);
@@ -48,6 +51,7 @@ public class GradePaperController {
     }
 
     @Operation(summary = "获取要批阅学生列表")
+    @PreAuthorize("hasAuthority('tch:grade:view')")
     @GetMapping("/getGradeStudentList")
     public ResponseResult<List<GradeStudentVO>> getGradeStudentList(@Validated @RequestParam Integer examId) {
         log.info("获取要批阅学生列表 {}", examId);
@@ -56,6 +60,7 @@ public class GradePaperController {
     }
 
     @Operation(summary = "更新批阅的学生得分")
+    @PreAuthorize("hasAuthority('tch:grade:score')")
     @PutMapping("/updateGradeStudentScore")
     public ResponseResult<Void> updateGradeStudentScore(@Validated @RequestBody List<StudentAnswerUpdateDTO> studentAnswerUpdateDTOS) {
         log.info("更新批阅的学生得分 {}", studentAnswerUpdateDTOS);
@@ -64,6 +69,7 @@ public class GradePaperController {
     }
 
     @Operation(summary = "自动批阅客观题")
+    @PreAuthorize("hasAuthority('tch:grade:auto')")
     @PutMapping("/autoGradeObjectiveQuestions")
     public ResponseResult<Void> autoGradeObjectiveQuestions(@RequestParam Integer examId, @RequestParam Integer studentId) {
         log.info("自动批阅客观题: {}, {}", examId, studentId);

@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -48,6 +49,7 @@ public class UserController {
     }
 
     @Operation(summary = "根据班级id获取班级成员")
+    @PreAuthorize("hasAuthority('sys:user:view')")
     @GetMapping("/getClassMember")
     public ResponseResult<List<UStudentVO>> getClassMember(Integer classId) {
         log.info("根据班级id获取班级成员 {}", classId);
@@ -56,6 +58,7 @@ public class UserController {
     }
 
     @Operation(summary = "分页条件查询学生")
+    @PreAuthorize("hasAuthority('sys:user:view')")
     @GetMapping("/pageStudent")
     public ResponseResult<PageResult<UStudentVO>> pageStudent(StudentQueryDTO studentQueryDTO) {
         log.info("分页条件查询学生: {}", studentQueryDTO);

@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ public class QuestionManagementController {
     private QuestionManagementService questionManagementService;
 
     @Operation(summary = "分页查询题目列表", description = "支持按题目内容,题型和难度进行条件查询")
+    @PreAuthorize("hasAuthority('tch:question:view')")
     @GetMapping("/page")
     public ResponseResult<PageResult<QuestionVO>> page(@ModelAttribute QuestionQueryDTO queryDTO){
         log.info("分页查询题目列表");
@@ -37,6 +39,7 @@ public class QuestionManagementController {
 
 
     @Operation(summary = "批量添加题目", description = "添加完整题目")
+    @PreAuthorize("hasAuthority('tch:question:add')")
     @PostMapping("/addQuestionComplete")
     public ResponseResult<BatchInsertResult> addQuestionComplete(@Validated @RequestBody List<QuestionAddDTO> questionAddDTOS){
         log.info("添加题目: {}", questionAddDTOS);
@@ -47,6 +50,7 @@ public class QuestionManagementController {
         return ResponseResult.success(batchInsertResult);
     }
     @Operation(summary = "更新题目", description = "更新完整题目")
+    @PreAuthorize("hasAuthority('tch:question:edit')")
     @PutMapping("/updateQuestionComplete")
     public ResponseResult<Void> updateQuestionComplete(@Validated @RequestBody QuestionUpdateDTO questionUpdateDTO){
         log.info("更新题目: {}", questionUpdateDTO);
@@ -55,6 +59,7 @@ public class QuestionManagementController {
     }
 
     @Operation(summary = "查询题目(ById)", description = "根据id查询完整题目")
+    @PreAuthorize("hasAuthority('tch:question:view')")
     @GetMapping("/getQuestionCompleteById/{id}")
     public ResponseResult<QuestionCompleteVO> getQuestionById(@PathVariable Integer id){
         log.info("查询题目: {}", id);
@@ -63,6 +68,7 @@ public class QuestionManagementController {
     }
 
     @Operation(summary = "删除题目", description = "根据ids批量删除题目")
+    @PreAuthorize("hasAuthority('tch:question:delete')")
     @DeleteMapping("/deleteQuestionById")
     public ResponseResult<Void> deleteQuestionById(@RequestBody List<Integer> ids){
         log.info("删除题目: {}", ids);
