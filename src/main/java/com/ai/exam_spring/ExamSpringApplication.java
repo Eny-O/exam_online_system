@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @EnableScheduling
 @SpringBootApplication
-@MapperScan("com.ai.exam_spring.mapper")
+@MapperScan("com.ai.exam_spring.modules.*.mapper")
 public class ExamSpringApplication {
 
     public static void main(String[] args) {

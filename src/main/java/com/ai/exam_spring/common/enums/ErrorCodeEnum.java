@@ -64,6 +64,7 @@ public enum ErrorCodeEnum {
     PAPER_REFERENCE_ANY_EXAM("5006", "试卷已被考试引用"),
     PAPER_STATUS_CHANGE_FAIL("5007","试卷状态改变失败"),
     STUDENT_SUBMIT_PAPER_FAILED("5008", "学生提交试卷失败"),
+    NOT_SUBMIT_EMPTY_PAPER("5009", "不能提交空试卷"),
 
     // 班级错误码
     CLASS_NOT_FOUND("6001", "班级不存在"),

@@ -58,7 +58,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/user/login", "/user/logout",
+                        .requestMatchers("/user/login", "/user/logout","/actuator/prometheus",
                                 "/doc.html",
                                 "/webjars/**",
                                 "/swagger-resources/**",

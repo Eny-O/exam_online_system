@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.ai.exam_spring.mapper.StuExamMapper">
-    <select id="getAllExamResult" resultType="com.ai.exam_spring.pojo.vo.exam.ExamResultVO">
+<mapper namespace="com.ai.exam_spring.modules.exam.mapper.StuExamMapper">
+    <select id="getAllExamResult" resultType="com.ai.exam_spring.modules.exam.pojo.vo.ExamResultVO">
         SELECT
             e.id            AS examId,
             e.exam_name     AS examName,

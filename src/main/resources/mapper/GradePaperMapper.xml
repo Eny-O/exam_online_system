@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.ai.exam_spring.mapper.GradePaperMapper">
-    <select id="getExamAnswerDetail" resultType="com.ai.exam_spring.pojo.vo.stu_answer.ExamAnswerVO">
+<mapper namespace="com.ai.exam_spring.modules.grade.mapper.GradePaperMapper">
+    <select id="getExamAnswerDetail" resultType="com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.ExamAnswerVO">
         SELECT
             sa.id AS id,
             sa.student_answer AS studentAnswer,

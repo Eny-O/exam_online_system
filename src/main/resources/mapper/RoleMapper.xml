@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.ai.exam_spring.mapper.RoleMapper">
+<mapper namespace="com.ai.exam_spring.modules.user.mapper.RoleMapper">
 
     <!-- 查询指定角色已关联的权限ID -->
     <select id="getPermissionIdsByRoleId" resultType="java.lang.Integer">

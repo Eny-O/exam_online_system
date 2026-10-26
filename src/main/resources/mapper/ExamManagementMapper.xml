@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.ai.exam_spring.mapper.ExamManagementMapper">
+<mapper namespace="com.ai.exam_spring.modules.exam.mapper.ExamManagementMapper">
 
-    <select id="pageExam" resultType="com.ai.exam_spring.pojo.vo.exam.ExamVO">
+    <select id="pageExam" resultType="com.ai.exam_spring.modules.exam.pojo.vo.ExamVO">
         SELECT
         exam.id,
         exam_name,
@@ -34,7 +34,7 @@
         </choose>
         ORDER BY exam.update_time DESC
     </select>
-    <select id="pageStuExam" resultType="com.ai.exam_spring.pojo.vo.exam.StuExamVO">
+    <select id="pageStuExam" resultType="com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO">
         select
         e.id,
         e.exam_name,

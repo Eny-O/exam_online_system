@@ -1,7 +1,7 @@
 package com.ai.exam_spring.handler;
 
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.result.ResponseResult;
+import com.ai.exam_spring.common.pojo.result.ResponseResult;
 import com.alibaba.fastjson2.JSON;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

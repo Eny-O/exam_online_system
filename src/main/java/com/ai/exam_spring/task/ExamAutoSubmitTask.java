@@ -1,18 +1,17 @@
 package com.ai.exam_spring.task;
 
 
-import com.ai.exam_spring.pojo.dto.exam.ExamStatusUpdateDTO;
-import com.ai.exam_spring.pojo.entity.exam.Exam;
-import com.ai.exam_spring.pojo.entity.exam.ExamStudent;
-import com.ai.exam_spring.pojo.entity.stu_answer.StudentAnswer;
-import com.ai.exam_spring.pojo.enums.exam.ExamEnum;
-import com.ai.exam_spring.pojo.enums.exam.StudentExamEnum;
-import com.ai.exam_spring.service.exam.IExamManagementService;
-import com.ai.exam_spring.service.exam.IExamStudentService;
-import com.ai.exam_spring.service.grading.IStudentAnswerService;
+import com.ai.exam_spring.modules.exam.pojo.dto.ExamStatusUpdateDTO;
+import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
+import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
+import com.ai.exam_spring.modules.exam.pojo.dos.stu_answer.StudentAnswer;
+import com.ai.exam_spring.modules.exam.pojo.enums.ExamEnum;
+import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
+import com.ai.exam_spring.modules.exam.service.IExamManagementService;
+import com.ai.exam_spring.modules.exam.service.IExamStudentService;
+import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -30,7 +29,7 @@ public class ExamAutoSubmitTask {
     @Autowired
     private IStudentAnswerService studentAnswerService;
 
-    @Scheduled(fixedRate = 60000)
+    //@Scheduled(fixedRate = 6000000)
     public void autoSubmitExpiredExams() {
         // 查询考试超时的列表
         LocalDateTime now = LocalDateTime.now();

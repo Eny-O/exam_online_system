@@ -201,6 +201,47 @@ public class RedisUtil {
         }
     }
 
+    /**
+     * HashGetAll 获取hash表中所有字段和值 (反序列化为对象)
+     * @param key 键
+     * @param clazz 目标对象的 Class 类型
+     * @return 反序列化后的对象Map (field -> object)
+     */
+    public <T> Map<String, T> hGetAll(String key, Class<T> clazz) {
+        Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(key);
+        if (entries == null || entries.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        Map<String, T> result = new java.util.HashMap<>();
+        for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+            try {
+                T value = objectMapper.readValue(entry.getValue().toString(), clazz);
+                result.put(entry.getKey().toString(), value);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("从Redis Hash读取对象失败: " + e.getMessage(), e);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * HashGetAll 轻量版 - 只返回原始 JSON 字符串，不做反序列化
+     * 适用于只需要提取部分字段的场景，避免 N 次 JSON 解析开销
+     * @param key 键
+     * @return 原始 JSON 字符串 Map (field -> json string)
+     */
+    public Map<String, String> hGetAllRaw(String key) {
+        Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(key);
+        if (entries == null || entries.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        Map<String, String> result = new java.util.HashMap<>(entries.size());
+        for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+            result.put(entry.getKey().toString(), entry.getValue().toString());
+        }
+        return result;
+    }
+
     // ============================= List (列表操作) =============================
 
     /**

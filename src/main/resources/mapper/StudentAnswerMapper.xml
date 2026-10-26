@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ai.exam_spring.modules.grade.mapper.StudentAnswerMapper">
+
+    <!-- CASE WHEN 批量更新评分：1条SQL完成多条记录的 is_correct 和 score 更新 -->
+    <update id="batchUpdateScore">
+        UPDATE student_answer
+        SET is_correct = CASE id
+            <foreach collection="gradeList" item="item">
+                WHEN #{item.id} THEN #{item.isCorrect}
+            </foreach>
+        END,
+        score = CASE id
+            <foreach collection="gradeList" item="item">
+                WHEN #{item.id} THEN #{item.score}
+            </foreach>
+        END
+        WHERE id IN
+        <foreach collection="gradeList" item="item" open="(" separator="," close=")">
+            #{item.id}
+        </foreach>
+    </update>
+
+    <!-- 多值批量插入：1条SQL插入多条记录 -->
+    <insert id="batchInsert">
+        INSERT INTO student_answer (exam_id, student_id, question_id, student_answer, full_score, create_time, update_time)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.examId}, #{item.studentId}, #{item.questionId}, #{item.studentAnswer}, #{item.fullScore}, #{item.createTime}, #{item.updateTime})
+        </foreach>
+    </insert>
+
+</mapper>
