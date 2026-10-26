@@ -74,6 +74,9 @@ public class GradePaperServiceImpl implements GradePaperService {
             throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
         }
         PaperContentVO paperContentVO = paperManagementService.getPaperById(paperId);
+        if (paperContentVO == null) {
+            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
+        }
         GradePaperContentVO gradePaperContentVO = new GradePaperContentVO();
         BeanUtil.copyProperties(paperContentVO, gradePaperContentVO);
         // 封装批阅试卷题目列表
@@ -86,6 +89,9 @@ public class GradePaperServiceImpl implements GradePaperService {
             gradePaperQuestionVO.setSortOrder(paperQuestionVO.getSortOrder());
             gradePaperQuestionVO.setScore(paperQuestionVO.getScore());
             QuestionCompleteVO questionCompleteVO = paperQuestionVO.getQuestionCompleteVO();
+            if (questionCompleteVO == null) {
+                throw new BusinessException(ErrorCodeEnum.PAPER_INCOMPLETE_NOT_GRADE);
+            }
             gradePaperQuestionVO.setContent(questionCompleteVO.getContent());
             gradePaperQuestionVO.setId(questionCompleteVO.getId());
             gradePaperQuestionVO.setCorrectAnswer(questionCompleteVO.getAnswer());

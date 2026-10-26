@@ -3,9 +3,15 @@ package com.ai.exam_spring.modules.exam.service.impl;
 import com.ai.exam_spring.common.enums.ErrorCodeEnum;
 import com.ai.exam_spring.common.exception.BusinessException;
 import com.ai.exam_spring.modules.grade.pojo.dto.GradeMessageDTO;
+import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
+import com.ai.exam_spring.modules.exam.pojo.enums.ExamEnum;
 import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
 import com.ai.exam_spring.modules.exam.mapper.StuExamMapper;
+import com.ai.exam_spring.modules.exam.pojo.vo.ExamResultVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.BaseStudentAnswerVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
@@ -56,7 +62,8 @@ class StuExamServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        when(securityUtil.getCurrentUserId()).thenReturn(STUDENT_ID.toString());
+        // lenient: examInfoById 不调用 getCurrentUserId，避免被严格 stub 判定为多余
+        lenient().when(securityUtil.getCurrentUserId()).thenReturn(STUDENT_ID.toString());
         // 让 TransactionTemplate 真正执行回调（模拟事务提交）
         lenient().when(transactionTemplate.execute(any(TransactionCallback.class)))
                 .thenAnswer(inv -> ((TransactionCallback<?>) inv.getArgument(0)).doInTransaction(null));
@@ -122,5 +129,120 @@ class StuExamServiceImplTest {
 
         BusinessException ex = assertThrows(BusinessException.class, () -> stuExamService.getExamResult(EXAM_ID));
         assertEquals(ErrorCodeEnum.EXAM_STATUS_NOT_GRADED.getCode(), ex.getErrorCode());
+    }
+
+    // ===================== examInfoById =====================
+
+    @Test
+    @DisplayName("examInfoById 考试不存在 -> 抛 EXAM_NOT_FOUND")
+    void examInfoById_examNotFound() {
+        when(examManagementService.getById(any())).thenReturn(null);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> stuExamService.examInfoById(EXAM_ID));
+        assertEquals(ErrorCodeEnum.EXAM_NOT_FOUND.getCode(), ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("examInfoById 正常 -> 拷贝为 StuExamVO 且字段正确")
+    void examInfoById_normal() {
+        Exam exam = new Exam();
+        exam.setId(EXAM_ID);
+        exam.setExamName("期末数学");
+        exam.setStatus(ExamEnum.ONGOING);
+        exam.setPaperId(5);
+        when(examManagementService.getById(any())).thenReturn(exam);
+
+        StuExamVO result = stuExamService.examInfoById(EXAM_ID);
+
+        assertNotNull(result);
+        assertEquals(EXAM_ID, result.getId());
+        assertEquals("期末数学", result.getExamName());
+        assertEquals(ExamEnum.ONGOING, result.getStatus());
+        assertEquals(5, result.getPaperId());
+    }
+
+    // ===================== getAnswerDetail =====================
+
+    @Test
+    @DisplayName("getAnswerDetail 无答案 -> 返回空列表")
+    void getAnswerDetail_empty() {
+        when(studentAnswerService.getStudentAnswer(eq(STUDENT_ID), eq(EXAM_ID))).thenReturn(List.of());
+
+        List<BaseStudentAnswerVO> result = stuExamService.getAnswerDetail(EXAM_ID);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(studentAnswerService).getStudentAnswer(STUDENT_ID, EXAM_ID);
+    }
+
+    @Test
+    @DisplayName("getAnswerDetail 正常 -> 映射为 BaseStudentAnswerVO 且字段透传")
+    void getAnswerDetail_normal() {
+        StudentAnswerVO a1 = new StudentAnswerVO();
+        a1.setId(1);
+        a1.setQuestionId(101);
+        a1.setStudentAnswer("A");
+        a1.setIsCorrect(1);
+        a1.setScore(2.0);
+        StudentAnswerVO a2 = new StudentAnswerVO();
+        a2.setId(2);
+        a2.setQuestionId(102);
+        a2.setStudentAnswer("B");
+        a2.setIsCorrect(0);
+        a2.setScore(0.0);
+        when(studentAnswerService.getStudentAnswer(eq(STUDENT_ID), eq(EXAM_ID))).thenReturn(List.of(a1, a2));
+
+        List<BaseStudentAnswerVO> result = stuExamService.getAnswerDetail(EXAM_ID);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        BaseStudentAnswerVO r1 = result.get(0);
+        assertEquals(1, r1.getId());
+        assertEquals(101, r1.getQuestionId());
+        assertEquals("A", r1.getStudentAnswer());
+        BaseStudentAnswerVO r2 = result.get(1);
+        assertEquals(2, r2.getId());
+        assertEquals(102, r2.getQuestionId());
+        assertEquals("B", r2.getStudentAnswer());
+    }
+
+    // ===================== getAllExamResult =====================
+
+    @Test
+    @DisplayName("getAllExamResult 无结果 -> 返回空列表")
+    void getAllExamResult_empty() {
+        when(stuExamMapper.getAllExamResult(eq(STUDENT_ID))).thenReturn(List.of());
+
+        List<ExamResultVO> result = stuExamService.getAllExamResult();
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(stuExamMapper).getAllExamResult(STUDENT_ID);
+    }
+
+    @Test
+    @DisplayName("getAllExamResult 正常 -> 透传 ExamResultVO 列表且按当前用户查询")
+    void getAllExamResult_normal() {
+        ExamResultVO r1 = new ExamResultVO();
+        r1.setExamId(10);
+        r1.setExamName("期末数学");
+        r1.setExamScore(88.0);
+        ExamResultVO r2 = new ExamResultVO();
+        r2.setExamId(11);
+        r2.setExamName("期中英语");
+        r2.setExamScore(92.0);
+        when(stuExamMapper.getAllExamResult(eq(STUDENT_ID))).thenReturn(List.of(r1, r2));
+
+        List<ExamResultVO> result = stuExamService.getAllExamResult();
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals(10, result.get(0).getExamId());
+        assertEquals("期末数学", result.get(0).getExamName());
+        assertEquals(88.0, result.get(0).getExamScore());
+        assertEquals(11, result.get(1).getExamId());
+        assertEquals("期中英语", result.get(1).getExamName());
+        verify(stuExamMapper).getAllExamResult(STUDENT_ID);
     }
 }

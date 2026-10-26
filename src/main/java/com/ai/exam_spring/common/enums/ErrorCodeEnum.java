@@ -73,6 +73,7 @@ public enum ErrorCodeEnum {
     PAPER_CONTENT_EMPTY_NOT_GRADE("7001", "试卷内容为空，不能阅卷"),
     PAPER_STATUS_ERROR_NOT_GRADE("7002", "试卷状态错误，不能阅卷"),
     EXAM_ANSWER_NOT_FOUND_NOT_AUTO_GRADE("7003", "考试答案不存在,不能自动阅卷"),
+    PAPER_INCOMPLETE_NOT_GRADE("7004", "试卷不完整，不能阅卷"),
 
 
 
