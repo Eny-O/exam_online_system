@@ -72,6 +72,9 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
     @Autowired
     private RedisUtil redisUtil;
 
+    @Autowired
+    private SecurityUtil securityUtil;
+
     /**
      * 分页查询考试
      * @param examQueryDTO
@@ -79,7 +82,7 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
      */
     @Override
     public PageResult<ExamVO> pageExam(ExamQueryDTO examQueryDTO) {
-        String currentUserId = SecurityUtil.getCurrentUserId();
+        String currentUserId = securityUtil.getCurrentUserId();
         if (currentUserId == null) throw new BusinessException(ErrorCodeEnum.USER_NOT_LOGIN);
         Page<ExamVO> page  = Page.of(examQueryDTO.getPageNum(), examQueryDTO.getPageSize());
         Wrapper<Exam> wrapper = new LambdaQueryWrapper<Exam>()
@@ -172,7 +175,7 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
     public PageResult<StuExamVO> pageStuExam(StuExamQueryDTO stuExamQueryDTO) {
         if (stuExamQueryDTO == null) throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
         // 从security上下文中获取id
-        Integer stuId = Integer.parseInt(Objects.requireNonNull(SecurityUtil.getCurrentUserId()));
+        Integer stuId = Integer.parseInt(Objects.requireNonNull(securityUtil.getCurrentUserId()));
         // 设置分页插件
         Page<Exam> examPage = Page.of(stuExamQueryDTO.getPageNum(), stuExamQueryDTO.getPageSize());
         // 设置条件

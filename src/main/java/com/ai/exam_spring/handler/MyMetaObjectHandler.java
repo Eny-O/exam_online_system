@@ -4,6 +4,7 @@ import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -52,8 +53,11 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
      * 将 SecurityUtil 返回的 String 类型用户ID 转为 Integer，
      * 与实体类字段类型保持一致，strictInsertFill/strictUpdateFill 才能匹配成功。
      */
+    @Autowired
+    private SecurityUtil securityUtil;
+
     private Integer parseCurrentUserId() {
-        String userId = SecurityUtil.getCurrentUserId();
+        String userId = securityUtil.getCurrentUserId();
         if (userId == null) return null;
         try {
             return Integer.parseInt(userId);

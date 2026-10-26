@@ -53,6 +53,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Autowired
     private RedisUtil redisUtil;
 
+    @Autowired
+    private SecurityUtil securityUtil;
+
     /**
      * 用户登录
      * <p>
@@ -89,7 +92,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public void logout() {
-        redisUtil.delete(RedisConstant.LOGIN_USER_PREFIX_KEY+ SecurityUtil.getCurrentUserId());
+        redisUtil.delete(RedisConstant.LOGIN_USER_PREFIX_KEY+ securityUtil.getCurrentUserId());
     }
 
     /**

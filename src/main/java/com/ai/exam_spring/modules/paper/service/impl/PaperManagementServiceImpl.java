@@ -60,6 +60,9 @@ public class PaperManagementServiceImpl extends ServiceImpl<PaperManagementMappe
     @Autowired
     private TransactionTemplate transactionTemplate;
 
+    @Autowired
+    private SecurityUtil securityUtil;
+
     @Override
     public PageResult<PaperVO> pagePaper(PaperQueryDTO paperQueryDTO) {
         Page<PaperVO> page = new Page<>(paperQueryDTO.getPageNum(), paperQueryDTO.getPageSize());
@@ -81,7 +84,7 @@ public class PaperManagementServiceImpl extends ServiceImpl<PaperManagementMappe
     @Override
     public void addPaper(BasePaperDTO paperUpdateDTO) {
         // 安全校验并获取当前用户的 id
-        String currentUserId = SecurityUtil.getCurrentUserId();
+        String currentUserId = securityUtil.getCurrentUserId();
         if (currentUserId == null) throw new BusinessException(ErrorCodeEnum.USER_NOT_LOGIN);
         Paper paper = new Paper();
         BeanUtil.copyProperties(paperUpdateDTO, paper);

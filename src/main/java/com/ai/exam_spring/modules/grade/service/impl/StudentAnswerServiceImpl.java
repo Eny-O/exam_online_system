@@ -36,6 +36,9 @@ public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, S
     @Autowired
     private IExamStudentService examStudentService;
 
+    @Autowired
+    private SecurityUtil securityUtil;
+
 
     /**
      * 根据学生id和考试id获取学生答案
@@ -74,7 +77,7 @@ public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, S
      */
     @Override
     public void updateScoreAndGrade(List<StudentAnswerUpdateDTO> studentAnswerUpdateDTOS) {
-        String currentUserId = SecurityUtil.getCurrentUserId();
+        String currentUserId = securityUtil.getCurrentUserId();
         if (currentUserId == null) {
             throw new BusinessException(ErrorCodeEnum.USER_NOT_LOGIN);
         }

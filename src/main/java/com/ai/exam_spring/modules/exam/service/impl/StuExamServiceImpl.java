@@ -69,6 +69,9 @@ public class StuExamServiceImpl implements StuExamService {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
+    @Autowired
+    private SecurityUtil securityUtil;
+
 
     @Override
     public StuExamVO examInfoById(Integer id) {
@@ -173,8 +176,8 @@ public class StuExamServiceImpl implements StuExamService {
      *
      * @return
      */
-    private static @NonNull Integer getCurrentUserId() {
-        String currentUserId = SecurityUtil.getCurrentUserId();
+    private @NonNull Integer getCurrentUserId() {
+        String currentUserId = securityUtil.getCurrentUserId();
         if (currentUserId == null) {
             throw new BusinessException(ErrorCodeEnum.USER_NOT_LOGIN);
         }
