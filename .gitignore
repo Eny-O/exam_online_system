@@ -1,0 +1,38 @@
+# ================== Java / Maven ==================
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# ================== IDE ==================
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.vscode/
+
+# ================== 日志 ==================
+*.log
+logs/
+
+# ================== 操作系统 ==================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ================== 其他 ==================
+*.swp
+*.swo
+*~
+
+# ================== Docker 中间件运行时数据 ==================
+# RocketMQ 消息存储与日志（由 compose 挂载到宿主目录，仅本地保留）
+rocketmq/store/
+rocketmq/logs/
+rocketmq/store.bak-*/
+
+# ================== 说明 ==================
+# 后端专属规则（含敏感配置 application.yml 的排除）见 exam_spring/.gitignore
+# 前端专属规则（node_modules、dist 等）见 exam-vue/.gitignore
