@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: exam-gateway
+  cloud:
+    gateway:
+      # 关闭"服务自动路由"（它会为每个注册服务自动生成一条路由），只用下面显式声明的路由
+      discovery:
+        locator:
+          enabled: false
+      routes:
+        - id: exam-spring
+          # lb:// 表示走 Spring Cloud LoadBalancer，从 Nacos 拿实例列表做负载均衡
+          uri: lb://exam-spring
+          predicates:
+            # 对外统一暴露 /api 前缀
+            - Path=/api/**
+          filters:
+            # 转发给后端时剥掉 /api，与后端 Controller 实际路径（/user/login 等）对齐
+            - StripPrefix=1
+      # 网关级 CORS（后端 CorsConfig 是 MVC 的，两套机制，互不冲突）
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      httpclient:
+        # 后端慢接口的响应超时（默认 0 = 不超时，实践上建议显式设）
+        response-timeout: 30s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    gateway:
+      # 打开后可访问 /actuator/gateway/routes 查看生效的路由
+      enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

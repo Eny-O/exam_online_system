@@ -1,0 +1,20 @@
+# Spring Cloud Bootstrap 配置：Nacos 注册中心接入
+# 与 exam_spring 保持同一风格，便于后续把路由规则搬到 Nacos 配置中心
+spring:
+  application:
+    name: exam-gateway
+  cloud:
+    nacos:
+      # Docker 中 Nacos 映射：宿主 18848 -> 容器 8848
+      # 客户端 gRPC 端口 = HTTP 端口 + 1000 = 19848，由客户端自动推导
+      server-addr: 127.0.0.1:18848
+      username: nacos
+      password: nacos
+      discovery:
+        namespace: public
+        group: DEFAULT_GROUP
+      config:
+        namespace: public
+        group: DEFAULT_GROUP
+        file-extension: yaml
+        refresh-enabled: true
