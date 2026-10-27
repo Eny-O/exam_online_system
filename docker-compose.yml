@@ -34,6 +34,21 @@ services:
     ports:
       - "18858:8858"   # Dashboard 控制台 UI
       - "18719:8719"   # 客户端上报通道：Spring 应用连这个端口才能上报心跳/拉取规则
+    # 本地 dev 关鉴权（与 Nacos 的 NACOS_AUTH_ENABLE=false 保持一致）：
+    #   Dashboard 默认 auth.enabled=true，UI 与 API 都需要登录，
+    #   置 false 后走 FakeAuthServiceImpl 直接放行，便于本机配置流控规则。
+    #   属性来自 com.alibaba.csp.sentinel.dashboard.config.AuthProperties（prefix="auth"）。
+    #   镜像 entrypoint 是写死的 java 命令，不读 JAVA_OPTS，只能整体覆盖。
+    entrypoint:
+      - java
+      - -Djava.security.egd=file:/dev/./urandom
+      - -Dserver.port=8858
+      - -Dcsp.sentinel.api.port=8719
+      - -Dcsp.sentinel.dashboard.server=localhost:8858
+      - -Dproject.name=sentinel-dashboard
+      - -Dauth.enabled=false
+      - -jar
+      - app.jar
     restart: unless-stopped
 
   # ==================== RocketMQ ====================
