@@ -24,11 +24,12 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // 所有 /api 开头的请求代理到后端，去掉 /api 前缀
+      // 所有 /api 开头的请求代理到 API 网关（:8080）
+      // 注意：这里不再剥掉 /api 前缀 —— 由网关的 StripPrefix=1 统一剥离，
+      // 保证「开发走 vite 代理」与「生产走 Nginx 代理」的请求路径完全一致。
       "/api": {
-        target: "http://localhost:8081",
+        target: "http://localhost:8080",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
   },
