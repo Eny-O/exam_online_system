@@ -1,0 +1,23 @@
+# Spring Cloud Bootstrap 配置：Nacos 注册中心 / 配置中心接入
+# 注意：Spring Boot 3 默认不加载 bootstrap.yml，
+#      需引入 spring-cloud-starter-bootstrap 才会生效（见 pom.xml）
+spring:
+  application:
+    name: exam_spring
+  cloud:
+    nacos:
+      # Docker 中 Nacos 映射：宿主 18848 -> 容器 8848
+      # 客户端 gRPC 端口 = HTTP 端口 + 1000 = 19848（容器内 9848），已由客户端自动推导
+      server-addr: 127.0.0.1:18848
+      username: nacos
+      password: nacos
+      discovery:
+        namespace: public
+        group: DEFAULT_GROUP
+        # 单机模式未开鉴权，auth 已在 compose 中关闭
+      config:
+        namespace: public
+        group: DEFAULT_GROUP
+        file-extension: yaml
+        # 暂不强制从 Nacos 拉取远程配置，本地 application.yml 仍是主配置源
+        refresh-enabled: true

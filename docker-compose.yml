@@ -1,0 +1,77 @@
+# 本地开发用中间件：Nacos（注册/配置中心）+ Sentinel Dashboard（流控熔断）
+#
+#   端口说明（Windows 特有坑）：
+#   本机 netsh 显示 TCP 排除端口段 8798-9197（Hyper-V/WSL 动态预留），
+#   标准端口 8848 / 8858 正落在该区段内，容器绑定会报
+#   "ports are not available ... forbidden by its access permissions"。
+#   因此宿主端口统一改到 1xxxx 段。
+#
+#   Nacos 2.x 客户端规则：gRPC 端口 = HTTP 端口 + 1000
+#     宿主 HTTP 18848  → 容器 8848
+#     宿主 gRPC 19848  → 容器 9848   (= 18848 + 1000，客户端自动推导，勿改)
+#     宿主 gRPC 19849  → 容器 9849   (集群 gRPC，单机也需保留)
+#
+#   Sentinel Dashboard：容器内 server.port=8858，传输/命令端口 csp.sentinel.api.port=8719
+#     宿主 18858 → 容器 8858  (控制台 UI)
+#     宿主 18719 → 容器 8719  (客户端心跳/规则下发通道)
+
+services:
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: nacos
+    ports:
+      - "18848:8848"   # HTTP：配置/注册端口
+      - "19848:9848"   # 客户端 gRPC 端口（Nacos 2.x 必开，= 18848+1000）
+      - "19849:9849"   # 集群 gRPC 端口
+    environment:
+      - MODE=standalone          # 单机模式
+      - NACOS_AUTH_ENABLE=false  # 本地 dev 关鉴权
+    restart: unless-stopped
+
+  sentinel:
+    image: bladex/sentinel-dashboard:1.8.6
+    container_name: sentinel
+    ports:
+      - "18858:8858"   # Dashboard 控制台 UI
+      - "18719:8719"   # 客户端上报通道：Spring 应用连这个端口才能上报心跳/拉取规则
+    restart: unless-stopped
+
+  # ==================== RocketMQ ====================
+  # 端口说明：9876 / 10909 / 10911 / 10912 均不在 Windows 保留端口段
+  # （保留段为 8798-9197、9201-9400、50000-50059），因此可直接沿用标准端口。
+  #
+  # 关键：broker.conf 里 brokerIP1=127.0.0.1，宿主机上的 Spring 应用
+  #      通过 10911 端口映射回到容器，勿改成容器 IP（172.x.x.x 会连不上）。
+
+  rmqnamesrv:
+    image: apache/rocketmq:5.3.2
+    container_name: rmqnamesrv
+    command: sh mqnamesrv
+    ports:
+      - "9876:9876"    # NameServer：客户端查路由
+    environment:
+      - JAVA_OPT_EXT=-server -Xms256m -Xmx512m -Xmn128m
+    restart: unless-stopped
+
+  rmqbroker:
+    image: apache/rocketmq:5.3.2
+    container_name: rmqbroker
+    depends_on:
+      - rmqnamesrv
+    # 显式指定配置文件，不依赖官方镜像 entrypoint 的隐式行为
+    command: sh mqbroker -c /home/rocketmq/rocketmq-5.3.2/conf/broker.conf
+    ports:
+      - "10909:10909"  # VIP 通道
+      - "10911:10911"  # 消息收发主端口
+      - "10912:10912"  # HA 端口
+    environment:
+      - NAMESRV_ADDR=rmqnamesrv:9876
+      - JAVA_OPT_EXT=-server -Xms512m -Xmx1g -Xmn256m
+    volumes:
+      # broker.conf 不加 :ro —— broker 启动时会回写自身配置，只读挂载会失败
+      - ./rocketmq/broker.conf:/home/rocketmq/rocketmq-5.3.2/conf/broker.conf
+      # 用宿主目录 bind mount，而非 named volume：
+      # named volume 新建时属主是 root:root，而镜像以 rocketmq(uid 3000) 运行 → 写不进去 → 启动 NPE
+      - ./rocketmq/store:/home/rocketmq/store      # 消息存储：重启不丢
+      - ./rocketmq/logs:/home/rocketmq/logs
+    restart: unless-stopped

@@ -16,7 +16,31 @@
 
     <properties>
         <java.version>17</java.version>
+        <spring-cloud.version>2023.0.1</spring-cloud.version>
+        <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Cloud 2023.0.1（与 Spring Boot 3.2.x 匹配） -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Spring Cloud Alibaba 2023.0.1.0（内置 Nacos 2.3.2 / Sentinel 1.8.6） -->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <!-- ================== Web 基础 ================== -->
 
@@ -130,11 +154,42 @@
         </dependency>
 
         <!-- ================== 中间件 ================== -->
+        <!-- Spring Cloud Alibaba：Nacos 注册中心（服务注册/发现） -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <!-- Spring Cloud Alibaba：Nacos 配置中心（配置外置） -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+        <!-- Spring Cloud Bootstrap：Boot 3 默认不加载 bootstrap.yml，需此 starter 开启 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bootstrap</artifactId>
+        </dependency>
+
         <!-- RocketMQ Spring Boot Starter -->
         <dependency>
             <groupId>org.apache.rocketmq</groupId>
             <artifactId>rocketmq-spring-boot-starter</artifactId>
             <version>2.3.1</version>
+        </dependency>
+        <!-- 显式锁定 rocketmq-client / acl 为 5.3.0：
+             Spring Cloud Alibaba BOM 会把 rocketmq-client 降级到 5.1.4，
+             而 5.1.4 的 DefaultMQPushConsumer 没有 setNamespaceV2 方法，
+             与 rocketmq-spring-boot 2.3.1 不兼容（启动即 NoSuchMethodError）。
+             BOM 的属性（rocketmq.version）在项目 pom 中覆盖无效，只能显式声明版本。 -->
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-client</artifactId>
+            <version>5.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-acl</artifactId>
+            <version>5.3.0</version>
         </dependency>
 
         <!-- ================== 工具类 ================== -->

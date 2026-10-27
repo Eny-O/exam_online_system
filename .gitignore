@@ -35,3 +35,9 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+# ================== Docker 中间件运行时数据 ==================
+# RocketMQ 消息存储与日志（由 compose 挂载到宿主目录，仅本地保留）
+rocketmq/store/
+rocketmq/logs/
+rocketmq/store.bak-*/
