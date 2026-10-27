@@ -63,19 +63,19 @@ export function getExamPaper(id) {
   return request.get("/stu/exam/getExamPaper", { params: { id } });
 }
 
-// 学生提交试卷
-export function submitPaper(data) {
-  return request.post("/stu/exam/submitPaper", data);
+// 学生提交试卷（仅更新考试状态，答案已通过updateAnswer实时保存）
+export function submitPaper(examId) {
+  return request.post("/stu/exam/submitPaper", null, { params: { examId } });
 }
 
-// 初始化学生考试数据（返回 questionId -> studentAnswer主键id 的映射）
+// 初始化学生考试（校验考试和学生状态）
 export function initStuExam(examId) {
   return request.get("/stu/exam/initStuExam", { params: { examId } });
 }
 
-// 学生修改答案（实时保存）
+// 学生修改答案（实时保存到Redis，提交时批量写入数据库）
 export function updateAnswer(data) {
-  return request.put("/stu/exam/updateAnswer", data);
+  return request.put("/stu/exam/updateAnswer", [data]);
 }
 
 // 学生获取答题详情

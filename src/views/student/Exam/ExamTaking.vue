@@ -218,7 +218,6 @@ const answers = ref({}); // { questionId: ['A'] or ['A','B'] }
 const essayAnswers = ref({}); // { questionId: '文本内容' }
 const markedIndices = ref(new Set());
 const timeLeft = ref(0);
-const questionIdMap = ref({}); // { questionId: studentAnswer主键id }
 const essayTimers = {}; // 主观题防抖定时器 { questionId: timer }
 let timer = null;
 
@@ -261,10 +260,8 @@ const fetchData = async () => {
       questions.value.map((q) => ({ id: q.id, type: q.type }))
     );
 
-    // 初始化学生考试数据，获取 questionId -> studentAnswer主键id 的映射
-    const initRes = await initStuExam(examId.value);
-    questionIdMap.value = initRes.data || {};
-    console.log("题目ID映射:", questionIdMap.value);
+    // 初始化学生考试（校验考试和学生状态）
+    await initStuExam(examId.value);
   } catch (error) {
     console.error("加载试卷失败:", error);
   } finally {
@@ -298,14 +295,16 @@ const handleSelect = (optionLabel) => {
     }
   }
 
-  // 实时保存到后端
-  const answerId = questionIdMap.value[q.id];
-  if (answerId) {
-    const studentAnswer = answers.value[q.id].sort().join(",");
-    updateAnswer({ id: answerId, studentAnswer }).catch((err) => {
-      console.warn("保存答案失败:", err);
-    });
-  }
+  // 实时保存到Redis
+  const studentAnswer = answers.value[q.id].sort().join(",");
+  updateAnswer({
+    examId: examId.value,
+    questionId: q.id,
+    studentAnswer,
+    fullScore: q.score,
+  }).catch((err) => {
+    console.warn("保存答案失败:", err);
+  });
 };
 
 const isSelected = (optionLabel) => {
@@ -315,10 +314,8 @@ const isSelected = (optionLabel) => {
 };
 
 const handleEssayInput = () => {
-  // 主观题防抖保存：停止输入1秒后自动保存
+  // 主观题防抖保存：停止输入1秒后自动保存到Redis
   const q = currentQuestion.value;
-  const answerId = questionIdMap.value[q.id];
-  if (!answerId) return;
 
   // 清除该题目之前的定时器
   if (essayTimers[q.id]) {
@@ -327,7 +324,12 @@ const handleEssayInput = () => {
   // 设置新的防抖定时器
   essayTimers[q.id] = setTimeout(() => {
     const studentAnswer = essayAnswers.value[q.id] || "";
-    updateAnswer({ id: answerId, studentAnswer }).catch((err) => {
+    updateAnswer({
+      examId: examId.value,
+      questionId: q.id,
+      studentAnswer,
+      fullScore: q.score,
+    }).catch((err) => {
       console.warn("保存主观题答案失败:", err);
     });
     delete essayTimers[q.id];
@@ -397,21 +399,9 @@ const submitExam = async (autoSubmit = false) => {
     }
   }
 
-  // 构建提交数据：[{id, studentAnswer}]，id 为 studentAnswer 主键
-  const payload = questions.value.map((q) => {
-    const id = questionIdMap.value[q.id];
-    let studentAnswer = "";
-    if (q.type === "essay") {
-      studentAnswer = essayAnswers.value[q.id] || "";
-    } else {
-      const selected = answers.value[q.id] || [];
-      studentAnswer = selected.sort().join(",");
-    }
-    return { id, studentAnswer };
-  });
-
   try {
-    await submitPaper(payload);
+    // 答案已通过 updateAnswer 实时保存，提交时只需更新考试状态
+    await submitPaper(examId.value);
     ElMessage.success("试卷提交成功！");
     router.push("/exam/list");
   } catch (error) {
