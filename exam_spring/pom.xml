@@ -14,6 +14,14 @@
     <name>exam_spring</name>
     <description>exam_spring</description>
 
+    <!--
+      本地开发说明（Nacos 走 Docker，端口映射见仓库根 docker-compose.yml）：
+        宿主 18848(HTTP) -> 容器 8848，宿主 19848(gRPC) -> 容器 9848
+      Nacos 2.x 客户端 gRPC 端口 = HTTP 端口 + 1000，因此 bootstrap.yml 的 server-addr
+      必须写 127.0.0.1:18848（客户端自动推导 gRPC 19848）。
+      若写成 127.0.0.1:8848，客户端会去连 9848，宿主未映射该端口 → Connection refused。
+    -->
+
     <properties>
         <java.version>17</java.version>
         <spring-cloud.version>2023.0.1</spring-cloud.version>
