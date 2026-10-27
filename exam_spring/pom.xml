@@ -178,6 +178,13 @@
             <artifactId>spring-cloud-starter-bootstrap</artifactId>
         </dependency>
 
+        <!-- Spring Cloud Alibaba：Sentinel 流控熔断（Dashboard 由 Docker 提供，见 docker-compose.yml） -->
+        <!-- 版本由 SCA BOM 统一管理（内部 sentinel 1.8.6），此处不显式声明 -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+        </dependency>
+
         <!-- RocketMQ Spring Boot Starter -->
         <dependency>
             <groupId>org.apache.rocketmq</groupId>

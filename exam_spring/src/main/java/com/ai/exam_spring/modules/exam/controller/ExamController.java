@@ -10,6 +10,8 @@ import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.BaseStudentAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.exam.service.StuExamService;
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -60,11 +62,22 @@ public class ExamController {
 
     @Operation(summary = "学生提交试卷（从Redis读取答案批量写入DB，更新状态，自动批阅客观题）")
     @PreAuthorize("hasAuthority('stu:exam:submit')")
+    @SentinelResource(value = "submitPaper", blockHandler = "submitPaperBlocked")
     @PostMapping("/submitPaper")
     public ResponseResult<Void> submitPaper(@RequestParam Integer examId) {
         log.info("学生提交试卷, examId: {}", examId);
         stuExamService.submitPaper(examId);
         return ResponseResult.success();
+    }
+
+    /**
+     * 交卷接口限流降级。
+     * 签名要求：参数列表与原方法完全一致，末尾追加 BlockException，返回类型相同。
+     * 降级响应仍走统一响应封装，前端无需特殊处理。
+     */
+    public ResponseResult<Void> submitPaperBlocked(Integer examId, BlockException ex) {
+        log.warn("交卷接口触发 Sentinel 限流, examId: {}, cause: {}", examId, ex.getClass().getSimpleName());
+        return ResponseResult.error("交卷请求过于频繁，请稍后重试");
     }
 
     @Operation(summary = "学生获取答题详情")

@@ -21,3 +21,16 @@ spring:
         file-extension: yaml
         # 暂不强制从 Nacos 拉取远程配置，本地 application.yml 仍是主配置源
         refresh-enabled: true
+
+    # Sentinel 流控熔断客户端
+    # Dashboard 容器：UI/主端口 宿主 18858 -> 容器 8858。
+    # 客户端必须连 Dashboard 的【主端口】：新协议的 /registry/machine、/app/heartbeat
+    # 挂在主端口的 Spring MVC 上；8719（csp.sentinel.api.port）是老 SPI 命令通道，
+    # 只认 /metric 等命令，连它会返回 "Unknown command"（400）。
+    sentinel:
+      transport:
+        dashboard: 127.0.0.1:18858
+        # 客户端自身监听的端口；8719 不在 Windows 保留端口段(8798-9197)内
+        port: 8719
+      # 启动即初始化 Sentinel，不等首个请求触发
+      eager: true

@@ -7,6 +7,8 @@ import com.ai.exam_spring.modules.user.pojo.dto.UserLoginDTO;
 import com.ai.exam_spring.modules.user.pojo.vo.UserInfoVO;
 import com.ai.exam_spring.modules.user.pojo.vo.UStudentVO;
 import com.ai.exam_spring.modules.user.service.user.UserService;
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -34,10 +36,21 @@ public class UserController {
     }
 
     @Operation(summary = "用户登录")
+    @SentinelResource(value = "login", blockHandler = "loginBlocked")
     @PostMapping("/login")
     public ResponseResult<HashMap<String,String>> login(@RequestBody UserLoginDTO userLoginDTO) {
         log.info("用户登录：{}", userLoginDTO);
         return ResponseResult.success(userService.login(userLoginDTO));
+    }
+
+    /**
+     * 登录接口限流降级。
+     * 签名要求：参数列表与原方法完全一致，末尾追加 BlockException，返回类型相同。
+     * 降级响应仍走统一响应封装，前端无需特殊处理。
+     */
+    public ResponseResult<HashMap<String,String>> loginBlocked(UserLoginDTO userLoginDTO, BlockException ex) {
+        log.warn("登录接口触发 Sentinel 限流：{}", ex.getClass().getSimpleName());
+        return ResponseResult.error("系统繁忙，请稍后重试");
     }
 
     @Operation(summary = "用户登出")
