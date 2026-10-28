@@ -11,7 +11,7 @@
 # ============================================================
 spring:
   application:
-    name: exam-spring
+    name: exam-core
   datasource:
     # 数据库需提前创建：CREATE DATABASE exam_online_system DEFAULT CHARSET utf8mb4;
     url: jdbc:mysql://localhost:3306/exam_online_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true
@@ -72,7 +72,7 @@ management:
         include: health,info,prometheus,metrics
   metrics:
     tags:
-      application: exam-spring
+      application: exam-core
   endpoint:
     prometheus:
       enabled: true

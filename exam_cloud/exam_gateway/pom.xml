@@ -21,7 +21,7 @@
         宿主 18848(HTTP) -> 容器 8848，宿主 19848(gRPC) -> 容器 9848
       Nacos 2.x 客户端 gRPC 端口 = HTTP 端口 + 1000，因此 bootstrap.yml 的 server-addr
       必须写 127.0.0.1:18848（客户端自动推导 gRPC 19848）。
-      网关路由 lb://exam-spring 依赖 Nacos 里的实例列表，服务名中的下划线会导致
+      网关路由 lb://exam-core 依赖 Nacos 里的实例列表，服务名中的下划线会导致
       URI host 解析为 null，故服务名统一使用连字符格式。
     -->
 

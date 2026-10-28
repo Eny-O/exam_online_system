@@ -10,7 +10,7 @@
         start_time,
         duration,
         exam.status,
-        exam.creator_id,
+        exam.creator_id AS creatorId,
         exam.create_time,
         exam.update_time
         FROM exam left join paper on exam.paper_id = paper.id

@@ -18,6 +18,6 @@ public class SwaggerConfig {
                 .info(new Info()
                         .title("在线考试系统API文档")
                         .version("1.0.0")
-                        .contact(new Contact().name("wangjian").url("https://test.com/ai-exam-spring")));
+                        .contact(new Contact().name("wangjian").url("https://test.com/ai-exam-core")));
     }
 }

@@ -9,11 +9,10 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>com.ai</groupId>
-    <artifactId>exam_spring</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>exam_spring</name>
-    <description>exam_spring</description>
+
+    <artifactId>exam-core</artifactId>
+    <name>exam-core</name>
+    <description>exam-core</description>
 
     <!--
       本地开发说明（Nacos 走 Docker，端口映射见仓库根 docker-compose.yml）：

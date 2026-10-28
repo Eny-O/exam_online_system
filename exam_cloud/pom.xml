@@ -25,7 +25,7 @@
     </properties>
 
     <modules>
-        <module>exam_spring</module>
+        <module>exam-core</module>
         <module>exam_gateway</module>
         <module>exam_common</module>
         <module>exam_auth_user</module>

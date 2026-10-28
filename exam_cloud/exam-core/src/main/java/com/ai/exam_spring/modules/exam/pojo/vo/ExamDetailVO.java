@@ -34,4 +34,10 @@ public class ExamDetailVO {
 
     @Schema(description = "试卷基本信息")
     private BasePaperVO basePaperVO;
+
+    @Schema(description = "创建人ID")
+    private Integer creatorId;
+
+    @Schema(description = "创建人姓名")
+    private String creatorName;
 }

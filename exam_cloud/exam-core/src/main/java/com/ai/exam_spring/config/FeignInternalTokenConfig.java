@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
  * 与 auth-user 侧 {@code InternalApiAuthFilter} 配套，使 core 能正常调用
  * {@code /inner/user/briefs}、{@code /inner/class/briefs} 等内部接口。
  * <p>
- * 拦截器放在 exam-spring（而非 exam_api）下，确保被 core 容器扫描到——
+ * 拦截器放在 exam-core（而非 exam_api）下，确保被 core 容器扫描到——
  * core 的包扫描根不覆盖 {@code com.ai.exam_api}。
  */
 @Configuration

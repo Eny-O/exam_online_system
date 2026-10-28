@@ -29,4 +29,10 @@ public class ExamVO {
 
     @Schema(description = "关联班级 id")
     private Integer classId;
+
+    @Schema(description = "创建人ID（分库后用于跨服务补齐创建人姓名）")
+    private Integer creatorId;
+
+    @Schema(description = "创建人姓名")
+    private String creatorName;
 }

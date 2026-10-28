@@ -93,8 +93,28 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
                 .apply("exam.creator_id = {0}",currentUserId);
         LocalDateTime now = LocalDateTime.now();
         Page<ExamVO> pageResult = examManagementMapper.pageExam(page, wrapper,  examQueryDTO.getStatus(),now);
-
-        return PageResult.of(pageResult.getTotal(), pageResult.getRecords(), examQueryDTO.getPageNum(), examQueryDTO.getPageSize());
+        List<ExamVO> records = pageResult.getRecords();
+        // 分库后 sys_user 已迁至 auth-user 库，创建人姓名无法靠 SQL JOIN 获取，改为 Feign 批量补齐
+        if (records != null && !records.isEmpty()) {
+            List<Integer> creatorIds = records.stream()
+                    .map(ExamVO::getCreatorId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+            if (!creatorIds.isEmpty()) {
+                List<UserBriefDTO> creators = userFeignClient.listUserBriefs(creatorIds);
+                if (creators != null && !creators.isEmpty()) {
+                    Map<Integer, String> idToName = creators.stream()
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toMap(
+                                    UserBriefDTO::getId,
+                                    UserBriefDTO::getRealName,
+                                    (a, b) -> b));
+                    records.forEach(vo -> vo.setCreatorName(idToName.get(vo.getCreatorId())));
+                }
+            }
+        }
+        return PageResult.of(pageResult.getTotal(), records, examQueryDTO.getPageNum(), examQueryDTO.getPageSize());
     }
 
     /**
@@ -305,6 +325,15 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         if (exam == null) {
             throw new BusinessException(ErrorCodeEnum.EXAM_NOT_FOUND);
         }
+        // 分库后 sys_user 在 auth-user 库，创建人姓名通过 Feign 补齐
+        Integer creatorId = exam.getCreatorId();
+        String creatorName = null;
+        if (creatorId != null) {
+            List<UserBriefDTO> creator = userFeignClient.listUserBriefs(List.of(creatorId));
+            if (creator != null && !creator.isEmpty()) {
+                creatorName = creator.get(0).getRealName();
+            }
+        }
         List<ExamClass> examClasses = examClassService.list(new LambdaQueryWrapper<ExamClass>()
                 .eq(ExamClass::getExamId, id));
         List<ExamStudent> examStudents = examStudentService.list(new LambdaQueryWrapper<ExamStudent>()
@@ -320,6 +349,8 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         if (examStudents.isEmpty()) {
             ExamDetailVO examDetailVO = new ExamDetailVO();
             BeanUtil.copyProperties(exam, examDetailVO);
+            examDetailVO.setCreatorId(creatorId);
+            examDetailVO.setCreatorName(creatorName);
             examDetailVO.setBasePaperVO(basePaperVO);
             return examDetailVO;
         }
@@ -356,6 +387,8 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         // 封装最后的返回结果
         ExamDetailVO examDetailVO = new ExamDetailVO();
         BeanUtil.copyProperties(exam, examDetailVO);
+        examDetailVO.setCreatorId(creatorId);
+        examDetailVO.setCreatorName(creatorName);
         examDetailVO.setClassIds(examClasses.stream().map(ExamClass::getClassId).distinct().toList());
         examDetailVO.setStudentVOS(studentVOs);
         examDetailVO.setBasePaperVO(basePaperVO);
