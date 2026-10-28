@@ -1,10 +1,11 @@
 package com.ai.exam_spring.modules.paper.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.common.pojo.result.PageResult;
-import com.ai.exam_spring.common.status.PaperStatus;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.pojo.result.PageResult;
+import com.ai.exam_common.common.security.SecurityUtil;
+import com.ai.exam_common.common.status.PaperStatus;
 import com.ai.exam_spring.modules.paper.pojo.dto.BasePaperDTO;
 import com.ai.exam_spring.modules.paper.pojo.dto.PaperQueryDTO;
 import com.ai.exam_spring.modules.paper.pojo.dto.PaperQuestionDTO;
@@ -20,7 +21,6 @@ import com.ai.exam_spring.modules.paper.mapper.PaperManagementMapper;
 import com.ai.exam_spring.modules.paper.mapper.PaperQuestionMapper;
 import com.ai.exam_spring.modules.validation.impl.DeleteValidationServiceImpl;
 import com.ai.exam_spring.modules.question.service.QuestionManagementService;
-import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;

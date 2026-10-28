@@ -1,7 +1,7 @@
 package com.ai.exam_spring.modules.paper.service;
 
-import com.ai.exam_spring.common.pojo.result.PageResult;
-import com.ai.exam_spring.common.status.PaperStatus;
+import com.ai.exam_common.common.pojo.result.PageResult;
+import com.ai.exam_common.common.status.PaperStatus;
 import com.ai.exam_spring.modules.paper.pojo.dto.BasePaperDTO;
 import com.ai.exam_spring.modules.paper.pojo.dto.PaperQueryDTO;
 import com.ai.exam_spring.modules.paper.pojo.dto.PaperStatusUpdateDTO;

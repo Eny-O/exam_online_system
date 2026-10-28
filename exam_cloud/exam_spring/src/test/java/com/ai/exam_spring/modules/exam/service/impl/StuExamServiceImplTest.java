@@ -1,7 +1,8 @@
 package com.ai.exam_spring.modules.exam.service.impl;
 
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.security.SecurityUtil;
 import com.ai.exam_spring.modules.grade.pojo.dto.GradeMessageDTO;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
@@ -17,7 +18,6 @@ import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
 import com.ai.exam_spring.modules.grade.mapper.StudentAnswerMapper;
 import com.ai.exam_spring.utils.RedisUtil;
-import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
@@ -25,7 +25,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;

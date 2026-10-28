@@ -1,7 +1,7 @@
 package com.ai.exam_spring.modules.file.controller;
 
-import com.ai.exam_spring.common.pojo.result.BatchInsertResult;
-import com.ai.exam_spring.common.pojo.result.ResponseResult;
+import com.ai.exam_common.common.pojo.result.BatchInsertResult;
+import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_spring.modules.file.service.FileManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

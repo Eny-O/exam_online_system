@@ -1,8 +1,8 @@
 package com.ai.exam_spring.modules.user.service.permission.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_spring.modules.user.pojo.dto.PermissionAddDTO;
 import com.ai.exam_spring.modules.user.pojo.dto.PermissionUpdateDTO;
 import com.ai.exam_spring.modules.user.pojo.dos.Permission;

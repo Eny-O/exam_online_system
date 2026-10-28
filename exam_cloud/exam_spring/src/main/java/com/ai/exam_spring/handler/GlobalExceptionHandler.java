@@ -1,8 +1,8 @@
 package com.ai.exam_spring.handler;
 
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.common.pojo.result.ResponseResult;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.pojo.result.ResponseResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.BindException;

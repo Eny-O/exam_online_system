@@ -1,6 +1,6 @@
 package com.ai.exam_spring.modules.exam.pojo.dto;
 
-import com.ai.exam_spring.common.pojo.dto.PageQuery;
+import com.ai.exam_common.common.pojo.dto.PageQuery;
 import com.ai.exam_spring.modules.exam.pojo.enums.ExamEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

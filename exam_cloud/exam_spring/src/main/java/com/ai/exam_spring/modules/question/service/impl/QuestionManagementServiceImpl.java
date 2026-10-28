@@ -1,11 +1,11 @@
 package com.ai.exam_spring.modules.question.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BatchValidationException;
-import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.common.pojo.result.BatchInsertResult;
-import com.ai.exam_spring.common.pojo.result.PageResult;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BatchValidationException;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.pojo.result.BatchInsertResult;
+import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_spring.modules.question.pojo.dos.Question;
 import com.ai.exam_spring.modules.question.pojo.dos.QuestionOption;
 import com.ai.exam_spring.modules.question.pojo.dto.*;

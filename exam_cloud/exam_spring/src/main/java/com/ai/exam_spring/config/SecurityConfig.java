@@ -1,6 +1,6 @@
 package com.ai.exam_spring.config;
 
-import com.ai.exam_spring.filter.JwtAuthenticationTokenFilter;
+import com.ai.exam_common.common.security.JwtAuthenticationTokenFilter;
 import com.ai.exam_spring.handler.AccessDeniedHandlerImpl;
 import com.ai.exam_spring.handler.AuthenticationEntryPointImpl;
 import org.springframework.beans.factory.annotation.Autowired;

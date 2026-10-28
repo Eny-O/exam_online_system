@@ -1,4 +1,4 @@
-package com.ai.exam_spring.common.status;
+package com.ai.exam_common.common.status;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;

@@ -1,6 +1,6 @@
-package com.ai.exam_spring.common.exception;
+package com.ai.exam_common.common.exception;
 
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import lombok.Getter;
 
 /**

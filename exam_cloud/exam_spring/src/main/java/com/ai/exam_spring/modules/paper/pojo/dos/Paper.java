@@ -1,6 +1,6 @@
 package com.ai.exam_spring.modules.paper.pojo.dos;
 
-import com.ai.exam_spring.common.status.PaperStatus;
+import com.ai.exam_common.common.status.PaperStatus;
 import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;

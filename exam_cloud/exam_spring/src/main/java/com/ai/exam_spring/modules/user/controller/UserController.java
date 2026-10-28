@@ -1,7 +1,7 @@
 package com.ai.exam_spring.modules.user.controller;
 
-import com.ai.exam_spring.common.pojo.result.PageResult;
-import com.ai.exam_spring.common.pojo.result.ResponseResult;
+import com.ai.exam_common.common.pojo.result.PageResult;
+import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_spring.modules.user.pojo.dto.StudentQueryDTO;
 import com.ai.exam_spring.modules.user.pojo.dto.UserLoginDTO;
 import com.ai.exam_spring.modules.user.pojo.vo.UserInfoVO;

@@ -1,8 +1,8 @@
 package com.ai.exam_spring.modules.grade.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_spring.modules.grade.mapper.GradePaperMapper;
 import com.ai.exam_spring.modules.grade.mapper.StudentAnswerMapper;
 import com.ai.exam_spring.modules.grade.service.GradePaperService;

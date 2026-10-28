@@ -1,4 +1,4 @@
-package com.ai.exam_spring.common.pojo.dto;
+package com.ai.exam_common.common.pojo.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

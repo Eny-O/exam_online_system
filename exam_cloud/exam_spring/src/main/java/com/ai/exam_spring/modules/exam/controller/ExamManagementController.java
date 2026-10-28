@@ -1,7 +1,7 @@
 package com.ai.exam_spring.modules.exam.controller;
 
-import com.ai.exam_spring.common.pojo.result.PageResult;
-import com.ai.exam_spring.common.pojo.result.ResponseResult;
+import com.ai.exam_common.common.pojo.result.PageResult;
+import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_spring.modules.exam.pojo.dto.ExamDetailAddDTO;
 import com.ai.exam_spring.modules.exam.pojo.dto.ExamDetailUpdateDTO;
 import com.ai.exam_spring.modules.exam.pojo.dto.ExamQueryDTO;
@@ -14,7 +14,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;

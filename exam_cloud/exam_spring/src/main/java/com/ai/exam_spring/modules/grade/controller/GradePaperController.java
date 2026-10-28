@@ -1,6 +1,6 @@
 package com.ai.exam_spring.modules.grade.controller;
 
-import com.ai.exam_spring.common.pojo.result.ResponseResult;
+import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.StudentAnswerUpdateDTO;
 import com.ai.exam_spring.modules.grade.pojo.vo.GradePaperContentVO;
 import com.ai.exam_spring.modules.grade.pojo.vo.GradeStudentVO;

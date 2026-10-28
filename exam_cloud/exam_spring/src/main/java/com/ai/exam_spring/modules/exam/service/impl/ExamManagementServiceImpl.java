@@ -1,11 +1,11 @@
 package com.ai.exam_spring.modules.exam.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.ai.exam_spring.common.constant.RedisConstant;
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.common.pojo.result.PageResult;
-import com.ai.exam_spring.common.status.PaperStatus;
+import com.ai.exam_common.common.constant.RedisConstant;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.pojo.result.PageResult;
+import com.ai.exam_common.common.status.PaperStatus;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamClass;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
@@ -29,7 +29,6 @@ import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
 import com.ai.exam_spring.modules.user.service.user.ISysClassService;
 import com.ai.exam_spring.modules.user.service.user.UserService;
 import com.ai.exam_spring.utils.RedisUtil;
-import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
@@ -39,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import com.ai.exam_common.common.security.SecurityUtil;
 
 import java.time.LocalDateTime;
 import java.util.*;

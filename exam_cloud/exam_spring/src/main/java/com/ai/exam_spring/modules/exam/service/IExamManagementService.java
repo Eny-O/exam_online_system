@@ -1,6 +1,6 @@
 package com.ai.exam_spring.modules.exam.service;
 
-import com.ai.exam_spring.common.pojo.result.PageResult;
+import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dto.*;
 import com.ai.exam_spring.modules.exam.pojo.vo.ExamDetailVO;

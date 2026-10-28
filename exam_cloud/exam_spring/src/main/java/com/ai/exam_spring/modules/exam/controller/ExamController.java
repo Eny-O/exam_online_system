@@ -1,7 +1,7 @@
 package com.ai.exam_spring.modules.exam.controller;
 
-import com.ai.exam_spring.common.pojo.result.PageResult;
-import com.ai.exam_spring.common.pojo.result.ResponseResult;
+import com.ai.exam_common.common.pojo.result.PageResult;
+import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_spring.modules.exam.pojo.dto.StuExamQueryDTO;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.StudentUpdateAnswerDTO;
 import com.ai.exam_spring.modules.exam.pojo.vo.ExamResultVO;

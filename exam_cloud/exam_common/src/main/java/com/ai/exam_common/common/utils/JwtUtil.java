@@ -1,6 +1,6 @@
-package com.ai.exam_spring.utils;
+package com.ai.exam_common.common.utils;
 
-import com.ai.exam_spring.common.constant.JwtConstant;
+import com.ai.exam_common.common.constant.JwtConstant;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -8,7 +8,6 @@ import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
@@ -81,8 +80,14 @@ public class JwtUtil {
      * @return 主题字符串，解析失败返回 null
      */
     public static String getSubject(String token) {
-        return parseToken(token).getSubject();
+        try {
+            return parseToken(token).getSubject();
+        } catch (JwtException | IllegalArgumentException e) {
+            log.warn("Token 解析失败：{}", e.getMessage());
+            return null;
+        }
     }
+
 
     /**
      * 从 Token 中获取指定的自定义声明值

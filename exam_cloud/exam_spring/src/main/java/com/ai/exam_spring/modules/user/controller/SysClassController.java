@@ -2,7 +2,7 @@ package com.ai.exam_spring.modules.user.controller;
 
 
 import cn.hutool.core.bean.BeanUtil;
-import com.ai.exam_spring.common.pojo.result.ResponseResult;
+import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_spring.modules.user.pojo.dos.SysClass;
 import com.ai.exam_spring.modules.user.pojo.vo.SysClassVO;
 import com.ai.exam_spring.modules.user.service.user.ISysClassService;

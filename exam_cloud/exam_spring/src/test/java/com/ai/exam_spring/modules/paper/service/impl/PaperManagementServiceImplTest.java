@@ -1,8 +1,8 @@
 package com.ai.exam_spring.modules.paper.service.impl;
 
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.common.status.PaperStatus;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.status.PaperStatus;
 import com.ai.exam_spring.modules.paper.mapper.PaperManagementMapper;
 import com.ai.exam_spring.modules.paper.pojo.dos.Paper;
 import com.ai.exam_spring.modules.paper.pojo.dto.PaperStatusUpdateDTO;

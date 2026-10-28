@@ -1,8 +1,8 @@
 package com.ai.exam_spring.modules.paper.controller;
 
-import com.ai.exam_spring.common.pojo.result.PageResult;
-import com.ai.exam_spring.common.pojo.result.ResponseResult;
-import com.ai.exam_spring.common.status.PaperStatus;
+import com.ai.exam_common.common.pojo.result.PageResult;
+import com.ai.exam_common.common.pojo.result.ResponseResult;
+import com.ai.exam_common.common.status.PaperStatus;
 import com.ai.exam_spring.modules.paper.pojo.dto.PaperAddDTO;
 import com.ai.exam_spring.modules.paper.pojo.dto.PaperUpdateDTO;
 import com.ai.exam_spring.modules.paper.pojo.dto.PaperQueryDTO;

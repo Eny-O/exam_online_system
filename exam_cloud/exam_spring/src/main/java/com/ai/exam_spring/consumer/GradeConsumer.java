@@ -1,6 +1,6 @@
 package com.ai.exam_spring.consumer;
 
-import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_spring.modules.grade.pojo.dto.GradeMessageDTO;
 import com.ai.exam_spring.modules.grade.service.GradePaperService;
 import com.fasterxml.jackson.databind.ObjectMapper;

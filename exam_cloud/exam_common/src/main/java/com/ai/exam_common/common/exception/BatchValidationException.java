@@ -1,4 +1,4 @@
-package com.ai.exam_spring.common.exception;
+package com.ai.exam_common.common.exception;
 
 import java.util.List;
 

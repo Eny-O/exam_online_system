@@ -1,8 +1,9 @@
 package com.ai.exam_spring.modules.grade.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.security.SecurityUtil;
 import com.ai.exam_spring.modules.grade.mapper.StudentAnswerMapper;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.StudentAnswerUpdateDTO;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
@@ -13,7 +14,6 @@ import com.ai.exam_spring.modules.question.pojo.enums.QuestionTypeEnum;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
-import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.NonNull;

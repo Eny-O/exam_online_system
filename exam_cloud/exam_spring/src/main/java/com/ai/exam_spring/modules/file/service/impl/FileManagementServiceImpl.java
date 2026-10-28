@@ -1,8 +1,8 @@
 package com.ai.exam_spring.modules.file.service.impl;
 
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.common.pojo.result.BatchInsertResult;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.pojo.result.BatchInsertResult;
 import com.ai.exam_spring.modules.file.service.FileManagementService;
 import com.ai.exam_spring.modules.question.pojo.dto.QuestionAddDTO;
 import com.ai.exam_spring.modules.question.pojo.dto.QuestionOptionAddDTO;

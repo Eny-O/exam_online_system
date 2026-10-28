@@ -1,9 +1,10 @@
 package com.ai.exam_spring.modules.exam.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.ai.exam_spring.common.constant.RedisConstant;
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_common.common.constant.RedisConstant;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.security.SecurityUtil;
 import com.ai.exam_spring.modules.exam.mapper.StuExamMapper;
 import com.ai.exam_spring.modules.grade.mapper.StudentAnswerMapper;
 import com.ai.exam_spring.modules.grade.pojo.dto.GradeMessageDTO;
@@ -28,7 +29,6 @@ import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.exam.service.StuExamService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
 import com.ai.exam_spring.utils.RedisUtil;
-import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.NonNull;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;

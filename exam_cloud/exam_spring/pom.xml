@@ -222,6 +222,13 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.ai</groupId>
+            <artifactId>exam_common</artifactId>
+            <version>${project.version}</version>  <!-- 继承父工程的 0.0.1-SNAPSHOT -->
+        </dependency>
+
     </dependencies>
 
 

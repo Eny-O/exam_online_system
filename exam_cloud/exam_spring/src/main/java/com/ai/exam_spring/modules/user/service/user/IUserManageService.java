@@ -1,6 +1,6 @@
 package com.ai.exam_spring.modules.user.service.user;
 
-import com.ai.exam_spring.common.pojo.result.PageResult;
+import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_spring.modules.user.pojo.dto.UserAddDTO;
 import com.ai.exam_spring.modules.user.pojo.dto.UserQueryDTO;
 import com.ai.exam_spring.modules.user.pojo.dto.UserUpdateDTO;

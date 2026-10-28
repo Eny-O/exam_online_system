@@ -1,6 +1,6 @@
 package com.ai.exam_spring.handler;
 
-import com.ai.exam_spring.utils.SecurityUtil;
+import com.ai.exam_common.common.security.SecurityUtil;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;

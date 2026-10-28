@@ -1,6 +1,6 @@
 package com.ai.exam_spring.modules.user.controller;
 
-import com.ai.exam_spring.common.pojo.result.ResponseResult;
+import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_spring.modules.user.pojo.dto.PermissionAddDTO;
 import com.ai.exam_spring.modules.user.pojo.dto.PermissionUpdateDTO;
 import com.ai.exam_spring.modules.user.pojo.vo.PermissionTreeVO;

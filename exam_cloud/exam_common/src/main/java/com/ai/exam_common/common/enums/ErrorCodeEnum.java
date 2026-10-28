@@ -1,4 +1,4 @@
-package com.ai.exam_spring.common.enums;
+package com.ai.exam_common.common.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

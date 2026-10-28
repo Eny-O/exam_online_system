@@ -1,6 +1,6 @@
 package com.ai.exam_spring.modules.paper.pojo.vo;
 
-import com.ai.exam_spring.common.status.PaperStatus;
+import com.ai.exam_common.common.status.PaperStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

@@ -1,7 +1,7 @@
 package com.ai.exam_spring.modules.exam.service.impl;
 
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
 import com.ai.exam_spring.modules.exam.pojo.dto.ExamStatusUpdateDTO;
@@ -11,7 +11,7 @@ import com.ai.exam_spring.modules.exam.mapper.ExamManagementMapper;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
 import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
-import com.ai.exam_spring.common.constant.RedisConstant;
+import com.ai.exam_common.common.constant.RedisConstant;
 import com.ai.exam_spring.utils.RedisUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

@@ -1,4 +1,4 @@
-package com.ai.exam_spring.common.constant;
+package com.ai.exam_common.common.constant;
 
 /**
  * JWT 相关常量

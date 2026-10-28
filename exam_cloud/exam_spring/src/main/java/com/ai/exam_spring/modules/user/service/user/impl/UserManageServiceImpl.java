@@ -1,9 +1,9 @@
 package com.ai.exam_spring.modules.user.service.user.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.common.pojo.result.PageResult;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_spring.modules.user.pojo.dto.UserAddDTO;
 import com.ai.exam_spring.modules.user.pojo.dto.UserQueryDTO;
 import com.ai.exam_spring.modules.user.pojo.dto.UserUpdateDTO;

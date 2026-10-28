@@ -1,11 +1,12 @@
 package com.ai.exam_spring.modules.user.service.user.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.ai.exam_spring.common.constant.JwtConstant;
-import com.ai.exam_spring.common.constant.RedisConstant;
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
-import com.ai.exam_spring.common.exception.BusinessException;
-import com.ai.exam_spring.common.pojo.result.PageResult;
+import com.ai.exam_common.common.constant.JwtConstant;
+import com.ai.exam_common.common.constant.RedisConstant;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.pojo.result.PageResult;
+import com.ai.exam_common.common.security.SecurityUtil;
 import com.ai.exam_spring.modules.user.pojo.dto.StudentQueryDTO;
 import com.ai.exam_spring.modules.user.pojo.dos.SysClass;
 import com.ai.exam_spring.modules.user.pojo.dos.User;
@@ -18,9 +19,8 @@ import com.ai.exam_spring.modules.user.pojo.dto.UserLoginDTO;
 import com.ai.exam_spring.modules.user.pojo.vo.UserInfoVO;
 import com.ai.exam_spring.modules.user.service.user.ISysClassService;
 import com.ai.exam_spring.modules.user.service.user.UserService;
-import com.ai.exam_spring.utils.JwtUtil;
+import com.ai.exam_common.common.utils.JwtUtil;
 import com.ai.exam_spring.utils.RedisUtil;
-import com.ai.exam_spring.utils.SecurityUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
@@ -100,6 +100,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * 从securityContextHolder中获取loginUser中的user和permission,并映射成userInfoVO
      * @return 用户信息
      */
+    /**
+     * 获取用户信息
+     * 从securityContextHolder中获取loginUser中的user和permission,并映射成userInfoVO
+     *
+     * <p>【B2 技术债】此处强转 LoginUser，依赖当前 LoginUserReader 恰好返回 exam_spring 自身的
+     * LoginUser 实例。拆出 auth-user 后，reader 将改为远程实现，principal 不再是 LoginUser，
+     * 此处会抛 ClassCastException。届时需改为：先取 LoginUserPrincipal 拿基础字段，
+     * 权限明细（permName/icon/path 等）改由 auth-user 的 Feign 接口返回。</p>
+     *
+     * @return 用户信息
+     */
+
     @Override
     public UserInfoVO getInfo() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

@@ -1,4 +1,4 @@
-package com.ai.exam_spring.common.constant;
+package com.ai.exam_common.common.constant;
 
 /**
  * Redis 常量

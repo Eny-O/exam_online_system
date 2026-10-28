@@ -1,5 +1,6 @@
 package com.ai.exam_spring.security;
 
+import com.ai.exam_common.common.security.LoginUserPrincipal;
 import com.ai.exam_spring.modules.user.pojo.dos.Permission;
 import com.ai.exam_spring.modules.user.pojo.dos.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -8,7 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
+
 
 import java.util.Collection;
 import java.util.List;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class LoginUser implements UserDetails {
+public class LoginUser implements LoginUserPrincipal {
 
     private User user;
     private List<Permission> permissions;
@@ -43,6 +44,40 @@ public class LoginUser implements UserDetails {
         authorities = permissions.stream().map(permission -> new SimpleGrantedAuthority(permission.getPermCode())).collect(Collectors.toList());
         return authorities;
     }
+
+    @Override
+    @JsonIgnore
+    public Integer getId() {
+        return user.getId();
+    }
+
+    @Override
+    @JsonIgnore
+    public String getRealName() {
+        return user.getRealName();
+    }
+
+    @Override
+    @JsonIgnore
+    public Integer getClassId() {
+        return user.getClassId();
+    }
+
+    @Override
+    @JsonIgnore
+    public Integer getStatus() {
+        return user.getStatus();
+    }
+
+    @Override
+    @JsonIgnore
+    public List<String> getPermissionCodes() {
+        if (permissions == null || permissions.isEmpty()) {
+            return List.of();
+        }
+        return permissions.stream().map(Permission::getPermCode).toList();
+    }
+
 
     @Override
     public String getPassword() {

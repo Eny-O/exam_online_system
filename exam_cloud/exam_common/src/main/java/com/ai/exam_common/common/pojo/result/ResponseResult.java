@@ -1,6 +1,6 @@
-package com.ai.exam_spring.common.pojo.result;
+package com.ai.exam_common.common.pojo.result;
 
-import com.ai.exam_spring.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
