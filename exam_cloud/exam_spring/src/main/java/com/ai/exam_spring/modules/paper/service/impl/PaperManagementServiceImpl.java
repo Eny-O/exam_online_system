@@ -20,6 +20,8 @@ import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
 import com.ai.exam_spring.modules.paper.mapper.PaperManagementMapper;
 import com.ai.exam_spring.modules.paper.mapper.PaperQuestionMapper;
 import com.ai.exam_spring.modules.validation.impl.DeleteValidationServiceImpl;
+import com.ai.exam_api.feign.UserFeignClient;
+import com.ai.exam_api.pojo.dto.UserBriefDTO;
 import com.ai.exam_spring.modules.question.service.QuestionManagementService;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -63,6 +65,9 @@ public class PaperManagementServiceImpl extends ServiceImpl<PaperManagementMappe
     @Autowired
     private SecurityUtil securityUtil;
 
+    @Autowired
+    private UserFeignClient userFeignClient;
+
     @Override
     public PageResult<PaperVO> pagePaper(PaperQueryDTO paperQueryDTO) {
         Page<PaperVO> page = new Page<>(paperQueryDTO.getPageNum(), paperQueryDTO.getPageSize());
@@ -70,7 +75,28 @@ public class PaperManagementServiceImpl extends ServiceImpl<PaperManagementMappe
                 .like(StringUtils.isNotBlank(paperQueryDTO.getName()), Paper::getName, paperQueryDTO.getName())
                 .apply(paperQueryDTO.getPaperStatus() != null, "p.status = {0}", paperQueryDTO.getPaperStatus());
         Page<PaperVO> paperVOPage = baseMapper.pagePaper(page, wrapper);
-        return PageResult.of(paperVOPage.getTotal(), paperVOPage.getRecords(), paperQueryDTO.getPageNum(), paperQueryDTO.getPageSize());
+        List<PaperVO> records = paperVOPage.getRecords();
+        // 分库后 sys_user 已迁至 auth-user 库，创建人姓名无法靠 SQL JOIN 获取，改为 Feign 批量补齐
+        if (records != null && !records.isEmpty()) {
+            List<Integer> creatorIds = records.stream()
+                    .map(PaperVO::getCreatorId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+            if (!creatorIds.isEmpty()) {
+                List<UserBriefDTO> users = userFeignClient.listUserBriefs(creatorIds);
+                if (users != null && !users.isEmpty()) {
+                    Map<Integer, String> idToName = users.stream()
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toMap(
+                                    UserBriefDTO::getId,
+                                    UserBriefDTO::getRealName,
+                                    (a, b) -> b));
+                    records.forEach(vo -> vo.setTeacherName(idToName.get(vo.getCreatorId())));
+                }
+            }
+        }
+        return PageResult.of(paperVOPage.getTotal(), records, paperQueryDTO.getPageNum(), paperQueryDTO.getPageSize());
     }
 
     /**

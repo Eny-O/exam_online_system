@@ -1,0 +1,4 @@
+# ================== 配置文件（含敏感信息） ==================
+# 与 exam_spring 保持一致：本地配置文件不入库，避免数据库密码 / 内部调用密钥泄露到 Git 历史
+src/main/resources/application.yml
+src/main/resources/application-*.yml

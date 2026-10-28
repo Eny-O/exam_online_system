@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 @Schema(description = "试卷信息展示对象")
 public class PaperVO extends BasePaperVO{
 
+    @Schema(description = "创建者ID（分库后用于跨服务补齐创建人姓名）")
+    private Integer creatorId;
+
     @Schema(description = "创建教师姓名")
     private String teacherName;
 

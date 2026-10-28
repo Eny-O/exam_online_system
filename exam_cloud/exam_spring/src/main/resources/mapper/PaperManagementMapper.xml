@@ -8,12 +8,11 @@
             p.name,
             p.total_score AS totalScore,
             p.description,
-            s.real_name AS teacherName,
+            p.creator_id AS creatorId,
             p.status,
             p.create_time AS createTime,
             p.update_time AS updateTime
         FROM paper p
-                 LEFT JOIN sys_user s ON p.creator_id = s.id
             ${ew.customSqlSegment}
     </select>
 
