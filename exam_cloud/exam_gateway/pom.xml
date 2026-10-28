@@ -62,6 +62,15 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
+        <!-- ================== 接口文档聚合（Knife4j 网关聚合） ================== -->
+        <!-- 专门适配 Spring Cloud Gateway(WebFlux)，不会引入 servlet-web，与网关共存；
+             版本与后端 knife4j-openapi3(4.4.0) 对齐，否则聚合文档协议不兼容 -->
+        <dependency>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-gateway-spring-boot-starter</artifactId>
+            <version>4.4.0</version>
+        </dependency>
     </dependencies>
 
     <build>

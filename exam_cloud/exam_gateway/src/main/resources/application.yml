@@ -16,13 +16,32 @@ spring:
         - id: exam-auth-user
           uri: lb://exam-auth-user
           predicates:
-            - Path=/api/user/**,/api/permission/**,/api/role/**
+            # 注意：本条必须覆盖 exam-auth-user 暴露的所有 Controller 前缀，否则请求会落入下方
+            # /api/** 兜底规则而被错误转发到 exam-spring → 404。
+            # 当前 auth-user 的 Controller 前缀：/user(含 /user/manage)、/permission(含 /permission/manage)、
+            # /role(含 /role/auth)、/sysClass、/inner。前三个已被父级前缀覆盖，这里补 sysClass 与 inner。
+            - Path=/api/user/**,/api/permission/**,/api/role/**,/api/sysClass/**,/api/inner/**
           filters:
             - StripPrefix=1
         - id: exam-spring
           uri: lb://exam-spring
           predicates:
             - Path=/api/**
+          filters:
+            - StripPrefix=1
+        # ---- Knife4j 聚合文档转发：把带前缀的路径转发到对应后端（StripPrefix=1 去掉前缀）----
+        # 聚合文档的 url 用 /auth-user/...、/exam-spring/... 这种网关侧可达路径，
+        # 由下面两条路由转发到各自后端，避免两个服务都暴露 /v3/api-docs 互相冲突。
+        - id: exam-auth-user-doc
+          uri: lb://exam-auth-user
+          predicates:
+            - Path=/auth-user/**
+          filters:
+            - StripPrefix=1
+        - id: exam-spring-doc
+          uri: lb://exam-spring
+          predicates:
+            - Path=/exam-spring/**
           filters:
             - StripPrefix=1
 
@@ -52,3 +71,32 @@ management:
 logging:
   level:
     org.springframework.cloud.gateway: INFO
+
+# ================== Knife4j 网关聚合文档 ==================
+# 启用后访问 http://localhost:8080/doc.html，在「文档管理 -> 聚合文档」下拉切换两个微服务。
+# 聚合文档由「网关路由 + 前缀路径」转发到后端：前端请求 /auth-user/v3/api-docs、/exam-spring/v3/api-docs，
+# 网关 StripPrefix=1 后转发为对应后端 /v3/api-docs（与 Controller 路径无冲突）。
+# 后端需鉴权的接口，请在页面「全局参数设置」加 Authorization: Bearer <token>。
+knife4j:
+  gateway:
+    enabled: true
+    routes:
+      # 这里的 url 必须是「网关侧可达、且能区分两个服务」的路径，
+      # 不是后端内部路径。OpenAPIEndpoint 只提供 /v3/api-docs/swagger-config，
+      # 真正的文档 JSON 由网关把下面这个 url 转发到对应后端拉取（配合上方两条 *-doc 路由）。
+      # 前端拿到 url 后请求 http://网关/auth-user/v3/api-docs ，
+      # 网关路由 StripPrefix=1 转发为 lb://exam-auth-user/v3/api-docs。
+      # serviceName 在 4.4.0 的 routes 模式不参与路由（OpenAPI2Resource 不读取它），仅为语义标注。
+      - name: 用户与权限服务
+        serviceName: exam-auth-user
+        url: /auth-user/v3/api-docs
+        # contextPath: 调试请求时拼到接口 path 前的上下文路径。
+        # 后端 Controller 是裸路径(/user/login)，网关靠 /api 前缀路由并 StripPrefix=1 去掉，
+        # 所以这里填 /api，调试请求变为 http://网关/api/user/login 才能命中网关路由。
+        contextPath: /api
+        order: 1
+      - name: 考试核心服务
+        serviceName: exam-spring
+        url: /exam-spring/v3/api-docs
+        contextPath: /api
+        order: 2
