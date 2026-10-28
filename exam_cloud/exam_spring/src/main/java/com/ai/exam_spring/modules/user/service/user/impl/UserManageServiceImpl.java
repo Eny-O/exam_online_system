@@ -49,6 +49,7 @@ public class UserManageServiceImpl extends ServiceImpl<UserMapper, User> impleme
         user.setUsername(dto.getUsername());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setRealName(dto.getRealName());
+        user.setPhone(dto.getPhone());
         user.setUserType(dto.getUserType());
         user.setStudentNo(dto.getStudentNo());
         user.setStaffNo(dto.getStaffNo());

@@ -170,6 +170,9 @@
         <el-form-item label="姓名" prop="realName">
           <el-input v-model="formData.realName" placeholder="请输入真实姓名" />
         </el-form-item>
+        <el-form-item v-if="!isEdit" label="手机号" prop="phone">
+          <el-input v-model="formData.phone" placeholder="请输入手机号" />
+        </el-form-item>
         <el-form-item label="用户类型" prop="userType">
           <el-select
             v-model="formData.userType"
@@ -278,6 +281,7 @@ const formData = reactive({
   username: "",
   password: "",
   realName: "",
+  phone: "",
   userType: null,
   studentNo: "",
   staffNo: "",
@@ -290,6 +294,7 @@ const formRules = {
   username: [{ required: true, message: "请输入用户名", trigger: "blur" }],
   password: [{ required: true, message: "请输入密码", trigger: "blur" }],
   realName: [{ required: true, message: "请输入姓名", trigger: "blur" }],
+  phone: [{ required: true, message: "请输入手机号", trigger: "blur" }],
   userType: [{ required: true, message: "请选择用户类型", trigger: "change" }],
 };
 
@@ -369,6 +374,7 @@ const resetForm = () => {
   formData.username = "";
   formData.password = "";
   formData.realName = "";
+  formData.phone = "";
   formData.userType = null;
   formData.studentNo = "";
   formData.staffNo = "";
@@ -424,6 +430,7 @@ const handleSubmit = async () => {
         username: formData.username,
         password: formData.password,
         realName: formData.realName,
+        phone: formData.phone,
         userType: formData.userType,
         studentNo: formData.userType === 1 ? formData.studentNo : null,
         staffNo: formData.userType === 2 ? formData.staffNo : null,

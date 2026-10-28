@@ -21,6 +21,10 @@ public class UserAddDTO {
     @Schema(description = "真实姓名")
     private String realName;
 
+    @NotBlank(message = "手机号不能为空")
+    @Schema(description = "手机号")
+    private String phone;
+
     @NotNull(message = "用户类型不能为空")
     @Schema(description = "用户类型：1-学生，2-教师，3-管理员")
     private Integer userType;
