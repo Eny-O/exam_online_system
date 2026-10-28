@@ -11,15 +11,21 @@ spring:
         locator:
           enabled: false
       routes:
+        # 顺序关键：Spring Cloud Gateway 按顺序匹配，第一个命中即生效
+        # /api/** 必须放在 /api/user/** 之后，否则会把 user 请求也吃掉
+        - id: exam-auth-user
+          uri: lb://exam-auth-user
+          predicates:
+            - Path=/api/user/**,/api/permission/**,/api/role/**
+          filters:
+            - StripPrefix=1
         - id: exam-spring
-          # lb:// 表示走 Spring Cloud LoadBalancer，从 Nacos 拿实例列表做负载均衡
           uri: lb://exam-spring
           predicates:
-            # 对外统一暴露 /api 前缀
             - Path=/api/**
           filters:
-            # 转发给后端时剥掉 /api，与后端 Controller 实际路径（/user/login 等）对齐
             - StripPrefix=1
+
       # 网关级 CORS（后端 CorsConfig 是 MVC 的，两套机制，互不冲突）
       globalcors:
         cors-configurations:

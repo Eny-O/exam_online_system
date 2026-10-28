@@ -1,9 +1,9 @@
 package com.ai.exam_spring.modules.exam.pojo.vo;
 
 import com.ai.exam_spring.modules.paper.pojo.vo.BasePaperVO;
-import com.ai.exam_spring.modules.user.pojo.vo.UStudentVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import com.ai.exam_api.pojo.vo.UStudentVO;
 
 import java.time.LocalDateTime;
 import java.util.List;

@@ -11,8 +11,6 @@ import com.ai.exam_spring.modules.exam.pojo.dos.ExamClass;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
 import com.ai.exam_spring.modules.exam.pojo.dto.*;
 import com.ai.exam_spring.modules.paper.pojo.dos.Paper;
-import com.ai.exam_spring.modules.user.pojo.dos.SysClass;
-import com.ai.exam_spring.modules.user.pojo.dos.User;
 import com.ai.exam_spring.modules.exam.pojo.enums.ExamEnum;
 import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
 import com.ai.exam_spring.modules.exam.pojo.vo.ExamDetailVO;
@@ -21,13 +19,15 @@ import com.ai.exam_spring.modules.exam.mapper.ExamManagementMapper;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.BasePaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
-import com.ai.exam_spring.modules.user.pojo.vo.UStudentVO;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.exam.service.IExamClassService;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
-import com.ai.exam_spring.modules.user.service.user.ISysClassService;
-import com.ai.exam_spring.modules.user.service.user.UserService;
+import com.ai.exam_api.feign.ClassFeignClient;
+import com.ai.exam_api.feign.UserFeignClient;
+import com.ai.exam_api.pojo.dto.ClassBriefDTO;
+import com.ai.exam_api.pojo.dto.UserBriefDTO;
+import com.ai.exam_api.pojo.vo.UStudentVO;
 import com.ai.exam_spring.utils.RedisUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -43,6 +43,7 @@ import com.ai.exam_common.common.security.SecurityUtil;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.function.Function;
 
 
 @Service
@@ -61,10 +62,11 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
     private IExamStudentService examStudentService;
 
     @Autowired
-    private UserService userService;
+    private UserFeignClient userFeignClient;
 
     @Autowired
-    private ISysClassService sysClassService;
+    private ClassFeignClient classFeignClient;
+
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -322,24 +324,35 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
             return examDetailVO;
         }
         List<Integer> studentIds = examStudents.stream().map(ExamStudent::getStudentId).toList();
-        // 根据studentIds获取学生信息（in查询前需判空，否则生成IN ()会导致SQL语法错误）
-        List<User> students = studentIds.isEmpty()
+        // 跨服务查询用户摘要（auth-user 提供，只读）
+        List<UserBriefDTO> students = studentIds.isEmpty()
                 ? List.of()
-                : userService.list(new LambdaQueryWrapper<User>()
-                        .in(User::getId, studentIds));
-        List<Integer> classIds = students.stream().map(User::getClassId).distinct().toList();
-        // 通过一次批量查询获取班级信息,并通过map映射(id->class), 最后封装到UStudentVO中
-        Map<Integer, SysClass> sysClassMap = sysClassService
-                .listByIds(classIds)
-                .stream()
-                .collect(Collectors.toMap(SysClass::getId, sysClass -> sysClass));
+                : userFeignClient.listUserBriefs(studentIds);
+        List<Integer> classIds = students.stream()
+                .map(UserBriefDTO::getClassId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        // 跨服务查询班级摘要（auth-user 提供，只读）
+        Map<Integer, ClassBriefDTO> sysClassMap = classIds.isEmpty()
+                ? Map.of()
+                : classFeignClient.listClassBriefs(classIds).stream()
+                .collect(Collectors.toMap(ClassBriefDTO::getId, Function.identity()));
         List<UStudentVO> studentVOs = students.stream().map(student -> {
             UStudentVO studentVO = new UStudentVO();
-            BeanUtil.copyProperties(student, studentVO);
-            studentVO.setClassName(sysClassMap.get(student.getClassId()).getClassName());
-            studentVO.setGrade(sysClassMap.get(student.getClassId()).getGrade());
+            studentVO.setId(student.getId());
+            studentVO.setStudentNo(student.getStudentNo());
+            studentVO.setRealName(student.getRealName());
+            studentVO.setMajor(student.getMajor());
+            // 班级信息可能查不到（管理员无班级 / 班级已删除），此处做空值保护
+            ClassBriefDTO sysClass = sysClassMap.get(student.getClassId());
+            if (sysClass != null) {
+                studentVO.setClassName(sysClass.getClassName());
+                studentVO.setGrade(sysClass.getGrade());
+            }
             return studentVO;
         }).toList();
+
         // 封装最后的返回结果
         ExamDetailVO examDetailVO = new ExamDetailVO();
         BeanUtil.copyProperties(exam, examDetailVO);

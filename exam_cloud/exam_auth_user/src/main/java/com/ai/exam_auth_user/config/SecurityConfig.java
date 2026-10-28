@@ -63,7 +63,11 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/swagger-resources/**",
                                 "/v3/api-docs/**",
-                                "/swagger-ui/**").permitAll()
+                                "/swagger-ui/**",
+                                // 内部只读查询接口：供 exam-core 通过 Feign 调用。
+                                // 【待收敛】当前白名单放行，未做调用方鉴权；
+                                // 后续可改为 Feign RequestInterceptor 透传 JWT + 调用方白名单校验。
+                                "/inner/**").permitAll()
                         .anyRequest().authenticated());
         http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
         http.cors(Customizer.withDefaults());

@@ -1,7 +1,7 @@
 package com.ai.exam_auth_user.mapper;
 
 import com.ai.exam_auth_user.pojo.dos.User;
-import com.ai.exam_auth_user.pojo.vo.UStudentVO;
+import com.ai.exam_api.pojo.vo.UStudentVO;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

@@ -15,7 +15,7 @@ import com.ai.exam_auth_user.pojo.dos.SysClass;
 import com.ai.exam_auth_user.pojo.dos.User;
 import com.ai.exam_auth_user.pojo.enums.UserStatusEnum;
 import com.ai.exam_auth_user.pojo.vo.PermissionVO;
-import com.ai.exam_auth_user.pojo.vo.UStudentVO;
+import com.ai.exam_api.pojo.vo.UStudentVO;
 import com.ai.exam_auth_user.mapper.UserMapper;
 import com.ai.exam_auth_user.security.LoginUser;
 import com.ai.exam_auth_user.pojo.dto.UserLoginDTO;

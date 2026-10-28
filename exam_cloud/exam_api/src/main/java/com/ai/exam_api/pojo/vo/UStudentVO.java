@@ -1,4 +1,4 @@
-package com.ai.exam_auth_user.pojo.vo;
+package com.ai.exam_api.pojo.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

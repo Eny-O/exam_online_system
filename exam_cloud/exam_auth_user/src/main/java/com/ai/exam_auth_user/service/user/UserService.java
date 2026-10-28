@@ -5,7 +5,7 @@ import com.ai.exam_auth_user.pojo.dto.StudentQueryDTO;
 import com.ai.exam_auth_user.pojo.dto.UserLoginDTO;
 import com.ai.exam_auth_user.pojo.dos.User;
 import com.ai.exam_auth_user.pojo.vo.UserInfoVO;
-import com.ai.exam_auth_user.pojo.vo.UStudentVO;
+import com.ai.exam_api.pojo.vo.UStudentVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;
 

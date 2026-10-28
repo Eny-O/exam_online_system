@@ -1,13 +1,13 @@
-# Spring Cloud Bootstrap ???Nacos ???? / ??????
-# ? exam_spring ??????
+# Spring Cloud Bootstrap 配置：Nacos 注册中心 / 配置中心接入
+# 与 exam_spring 保持同一风格
 spring:
   application:
-    # ???????????????? Gateway ? lb:// URI host ??? null
+    # 服务名必须用连字符：下划线会让 Gateway 的 lb:// URI host 解析为 null
     name: exam-auth-user
   cloud:
     nacos:
-      # Docker ? Nacos ????? 18848 -> ?? 8848
-      # ??? gRPC ?? = HTTP ?? + 1000 = 19848???? 9848???????????
+      # Docker 中 Nacos 映射：宿主 18848 -> 容器 8848
+      # 客户端 gRPC 端口 = HTTP 端口 + 1000 = 19848（容器内 9848），已由客户端自动推导
       server-addr: 127.0.0.1:18848
       username: nacos
       password: nacos
@@ -20,11 +20,13 @@ spring:
         file-extension: yaml
         refresh-enabled: true
 
-    # Sentinel ???????
+    # Sentinel 流控熔断客户端
     sentinel:
       transport:
-        # ?????? Dashboard ??????18858??? 18858 -> ?? 8858?
+        # 客户端必须连 Dashboard 的【主端口】18858（宿主 18858 -> 容器 8858）
         dashboard: 127.0.0.1:18858
-        # ??????????8719 ?? Windows ?????(8798-9197)?
-        port: 8719
+        # 客户端自身监听端口；本服务用 8720（exam_spring 占用 8719），
+        # 同机启动两个服务时端口不能冲突。8719/8720 均不在 Windows 保留端口段(8798-9197)内
+        port: 8720
+      # 启动即初始化 Sentinel，不等首个请求触发
       eager: true

@@ -11,7 +11,6 @@ import com.ai.exam_spring.modules.paper.pojo.vo.PaperQuestionVO;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.BatchGradeDTO;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
-import com.ai.exam_spring.modules.user.pojo.dos.User;
 import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
 import com.ai.exam_spring.modules.question.pojo.enums.QuestionTypeEnum;
 import com.ai.exam_spring.modules.grade.pojo.vo.GradePaperContentVO;
@@ -22,7 +21,8 @@ import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.ExamAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
-import com.ai.exam_spring.modules.user.service.user.UserService;
+import com.ai.exam_api.feign.UserFeignClient;
+import com.ai.exam_api.pojo.dto.UserBriefDTO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +45,7 @@ public class GradePaperServiceImpl implements GradePaperService {
     private IExamStudentService examStudentService;
 
     @Autowired
-    private UserService userService;
+    private UserFeignClient userFeignClient;
 
     @Autowired
     private GradePaperMapper gradePaperMapper;
@@ -126,7 +126,7 @@ public class GradePaperServiceImpl implements GradePaperService {
         if (studentIds.isEmpty()) {
             return List.of();
         }
-        List<User> users = userService.listByIds(studentIds);
+        List<UserBriefDTO> users = userFeignClient.listUserBriefs(studentIds);
         if (users.isEmpty()) {
             return List.of();
         }

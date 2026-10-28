@@ -21,6 +21,14 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- 跨服务契约层：Feign 客户端与跨服务 DTO -->
+        <dependency>
+            <groupId>com.ai</groupId>
+            <artifactId>exam_api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+
         <!-- Web 基础 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

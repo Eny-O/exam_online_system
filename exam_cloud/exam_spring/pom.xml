@@ -229,6 +229,22 @@
             <version>${project.version}</version>  <!-- 继承父工程的 0.0.1-SNAPSHOT -->
         </dependency>
 
+        <!-- 跨服务契约层：Feign 客户端与跨服务 DTO -->
+        <dependency>
+            <groupId>com.ai</groupId>
+            <artifactId>exam_api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- 负载均衡：Feign 的 lb://exam-auth-user 依赖它，
+             nacos-discovery 不会传递引入，缺失会报
+             "No Feign Client for loadBalancing defined" -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+
+
     </dependencies>
 
 

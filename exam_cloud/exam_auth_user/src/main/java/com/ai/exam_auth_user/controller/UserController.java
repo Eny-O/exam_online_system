@@ -5,7 +5,7 @@ import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_auth_user.pojo.dto.StudentQueryDTO;
 import com.ai.exam_auth_user.pojo.dto.UserLoginDTO;
 import com.ai.exam_auth_user.pojo.vo.UserInfoVO;
-import com.ai.exam_auth_user.pojo.vo.UStudentVO;
+import com.ai.exam_api.pojo.vo.UStudentVO;
 import com.ai.exam_auth_user.service.user.UserService;
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.alibaba.csp.sentinel.slots.block.BlockException;

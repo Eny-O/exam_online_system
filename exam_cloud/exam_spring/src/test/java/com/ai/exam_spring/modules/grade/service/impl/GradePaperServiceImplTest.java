@@ -21,8 +21,8 @@ import com.ai.exam_spring.modules.question.pojo.enums.OptionLabelEnum;
 import com.ai.exam_spring.modules.question.pojo.enums.QuestionTypeEnum;
 import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
 import com.ai.exam_spring.modules.question.pojo.vo.QuestionOptionVO;
-import com.ai.exam_spring.modules.user.pojo.dos.User;
-import com.ai.exam_spring.modules.user.service.user.UserService;
+import com.ai.exam_api.feign.UserFeignClient;
+import com.ai.exam_api.pojo.dto.UserBriefDTO;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.DisplayName;
@@ -59,7 +59,7 @@ public class GradePaperServiceImplTest {
     @Mock
     private IExamStudentService examStudentService;
     @Mock
-    private UserService userService;
+    private UserFeignClient userFeignClient;
     @Mock
     private SqlSessionFactory sqlSessionFactory;
 
@@ -299,7 +299,7 @@ public class GradePaperServiceImplTest {
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(userService, never()).listByIds(any());
+        verify(userFeignClient, never()).listUserBriefs(any());
     }
 
     @Test
@@ -315,15 +315,16 @@ public class GradePaperServiceImplTest {
         es2.setStatus(StudentExamEnum.GRADED);
         when(examStudentService.list(any(Wrapper.class))).thenReturn(List.of(es1, es2));
 
-        User u1 = new User();
+        UserBriefDTO u1 = new UserBriefDTO();
         u1.setId(20);
         u1.setRealName("张三");
         u1.setStudentNo("1001");
-        User u2 = new User();
+        UserBriefDTO u2 = new UserBriefDTO();
         u2.setId(21);
         u2.setRealName("李四");
         u2.setStudentNo("1002");
-        when(userService.listByIds(any())).thenReturn(List.of(u1, u2));
+        when(userFeignClient.listUserBriefs(any())).thenReturn(List.of(u1, u2));
+
 
         List<GradeStudentVO> result = gradePaperService.getGradeStudentList(EXAM_ID);
 
@@ -345,7 +346,7 @@ public class GradePaperServiceImplTest {
         es.setStudentId(20);
         es.setStatus(StudentExamEnum.SUBMITTED);
         when(examStudentService.list(any(Wrapper.class))).thenReturn(List.of(es));
-        when(userService.listByIds(any())).thenReturn(List.of());
+        when(userFeignClient.listUserBriefs(any())).thenReturn(List.of());
 
         List<GradeStudentVO> result = gradePaperService.getGradeStudentList(EXAM_ID);
 
