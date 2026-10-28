@@ -6,7 +6,10 @@ import com.ai.exam_common.common.constant.RedisConstant;
 import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_common.common.pojo.result.PageResult;
+import com.ai.exam_common.common.security.LoginUserPrincipal;
+import com.ai.exam_common.common.security.LoginUserSnapshot;
 import com.ai.exam_common.common.security.SecurityUtil;
+import com.ai.exam_spring.modules.user.mapper.PermissionMapper;
 import com.ai.exam_spring.modules.user.pojo.dto.StudentQueryDTO;
 import com.ai.exam_spring.modules.user.pojo.dos.SysClass;
 import com.ai.exam_spring.modules.user.pojo.dos.User;
@@ -56,6 +59,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Autowired
     private SecurityUtil securityUtil;
 
+    @Autowired
+    private PermissionMapper permissionMapper;
+
+
     /**
      * 用户登录
      * <p>
@@ -80,8 +87,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         String userId = loginUser.getUser().getId().toString();
         String token = JwtUtil.generateToken(userId, null);
-        // 将 LoginUser 缓存到 Redis，JWT 过滤器通过此缓存还原用户身份
-        redisUtil.set(RedisConstant.LOGIN_USER_PREFIX_KEY + userId, loginUser);
+        // 将登录态快照缓存到 Redis，JWT 过滤器通过此缓存还原用户身份。
+        // 写入的是中立快照（common 的 LoginUserSnapshot）而非含 DO 的 LoginUser，
+        // 这样业务服务读取时不需要依赖 auth-user 的实体类。
+        LoginUserSnapshot snapshot = new LoginUserSnapshot();
+        snapshot.setId(loginUser.getUser().getId());
+        snapshot.setUsername(loginUser.getUser().getUsername());
+        snapshot.setRealName(loginUser.getUser().getRealName());
+        snapshot.setStudentNo(loginUser.getUser().getStudentNo());
+        snapshot.setClassId(loginUser.getUser().getClassId());
+        snapshot.setStatus(loginUser.getUser().getStatus());
+        snapshot.setPermissions(loginUser.getPermissionCodes());
+
+        redisUtil.set(RedisConstant.LOGIN_USER_PREFIX_KEY + userId, snapshot);
+
         HashMap<String, String> result = new HashMap<>();
         result.put(JwtConstant.TOKEN_HEADER, token);
        return result;
@@ -95,41 +114,41 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         redisUtil.delete(RedisConstant.LOGIN_USER_PREFIX_KEY+ securityUtil.getCurrentUserId());
     }
 
-    /**
-     * 获取用户信息
-     * 从securityContextHolder中获取loginUser中的user和permission,并映射成userInfoVO
-     * @return 用户信息
-     */
-    /**
-     * 获取用户信息
-     * 从securityContextHolder中获取loginUser中的user和permission,并映射成userInfoVO
-     *
-     * <p>【B2 技术债】此处强转 LoginUser，依赖当前 LoginUserReader 恰好返回 exam_spring 自身的
-     * LoginUser 实例。拆出 auth-user 后，reader 将改为远程实现，principal 不再是 LoginUser，
-     * 此处会抛 ClassCastException。届时需改为：先取 LoginUserPrincipal 拿基础字段，
-     * 权限明细（permName/icon/path 等）改由 auth-user 的 Feign 接口返回。</p>
-     *
-     * @return 用户信息
-     */
 
+    /**
+     * 获取用户信息
+     * <p>
+     * 登录态快照只承载身份与权限（id/用户名/姓名/学号/班级/状态/权限编码），
+     * 用户档案（手机号/专业/用户类型等）与权限明细（permName/icon/path 等菜单信息）
+     * 均按当前用户ID回查数据库，保证资料变更后立即生效。
+     */
     @Override
     public UserInfoVO getInfo() {
+        // 当前用户ID取自登录态（SecurityContext 中的 LoginUserPrincipal）
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        LoginUser loginUser = (LoginUser) authentication.getPrincipal();
+        LoginUserPrincipal principal = (LoginUserPrincipal) authentication.getPrincipal();
+        Integer userId = principal.getId();
+
+        // 档案信息查库：User 的字段与 UserInfoVO 同名，copyProperties 自动忽略 password
+        // （UserInfoVO 无 password 字段），不会泄露密码
+        User user = userMapper.selectById(userId);
+
+        // 权限明细查库：快照只带权限编码，不带 permName/icon/path/component 等菜单信息
+        List<PermissionVO> permissionVOList = permissionMapper.getPermissionsByUserId(userId)
+                .stream()
+                .map(permission -> {
+                    PermissionVO permissionVO = new PermissionVO();
+                    BeanUtil.copyProperties(permission, permissionVO);
+                    return permissionVO;
+                })
+                .toList();
+
         UserInfoVO userInfoVO = new UserInfoVO();
-        userInfoVO.setId(loginUser.getUser().getId());
-        userInfoVO.setUsername(loginUser.getUser().getUsername());
-        userInfoVO.setRealName(loginUser.getUser().getRealName());
-        userInfoVO.setClassId(loginUser.getUser().getClassId());
-        userInfoVO.setStatus(loginUser.getUser().getStatus());
-        List<PermissionVO> permissionVOList = loginUser.getPermissions().stream().map(permission -> {
-            PermissionVO permissionVO = new PermissionVO();
-            BeanUtil.copyProperties(permission, permissionVO);
-            return permissionVO;
-        }).toList();
+        BeanUtil.copyProperties(user, userInfoVO);
         userInfoVO.setPermissions(permissionVOList);
         return userInfoVO;
     }
+
 
     /**
      * 获取班级成员

@@ -64,7 +64,6 @@ public class LoginUser implements LoginUserPrincipal {
     }
 
     @Override
-    @JsonIgnore
     public Integer getStatus() {
         return user.getStatus();
     }

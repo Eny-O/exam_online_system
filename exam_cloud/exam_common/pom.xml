@@ -83,6 +83,20 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
+        <!-- PaperStatus 的 @EnumValue 注解：仅需注解包，MyBatis-Plus 运行时由各服务自行引入 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-annotation</artifactId>
+            <version>3.5.16</version>
+        </dependency>
+
+        <!-- PaperStatus 的 @JsonValue 注解：Jackson 序列化枚举为 code -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <!-- 版本由 spring-boot-starter-parent(Boot 3.2.5) 托管，不写 -->
+        </dependency>
+
 
     </dependencies>
 
