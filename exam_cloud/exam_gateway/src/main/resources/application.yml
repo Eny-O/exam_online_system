@@ -16,11 +16,7 @@ spring:
         - id: exam-auth-user
           uri: lb://exam-auth-user
           predicates:
-            # 注意：本条必须覆盖 exam-auth-user 暴露的所有 Controller 前缀，否则请求会落入下方
-            # /api/** 兜底规则而被错误转发到 exam-spring → 404。
-            # 当前 auth-user 的 Controller 前缀：/user(含 /user/manage)、/permission(含 /permission/manage)、
-            # /role(含 /role/auth)、/sysClass、/inner。前三个已被父级前缀覆盖，这里补 sysClass 与 inner。
-            - Path=/api/user/**,/api/permission/**,/api/role/**,/api/sysClass/**,/api/inner/**
+            - Path=/api/user/**,/api/permission/**,/api/role/**,/api/sysClass/**
           filters:
             - StripPrefix=1
         - id: exam-spring

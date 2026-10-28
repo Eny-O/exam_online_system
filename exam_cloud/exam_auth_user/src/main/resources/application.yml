@@ -53,6 +53,11 @@ knife4j:
     enable-swagger-models: true
     swagger-model-name: 实体类列表
 
+# ================== 内部接口调用方鉴权（开发阶段密钥写死，部署前请替换为强密钥） ==================
+# 与 exam-spring 侧 exam.internal-api-key 必须保持一致；core 调 /inner/** 时通过 Feign 拦截器自动携带。
+exam:
+  internal-api-key: dev-inner-token-2026
+
 management:
   endpoints:
     web:
