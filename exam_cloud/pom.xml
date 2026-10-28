@@ -29,6 +29,7 @@
         <module>exam_gateway</module>
         <module>exam_common</module>
         <module>exam_auth_user</module>
+        <module>exam_api</module>
     </modules>
 
     <!-- 统一版本：所有子模块继承，禁止在子模块里手动写 Cloud/Alibaba 版本 -->
