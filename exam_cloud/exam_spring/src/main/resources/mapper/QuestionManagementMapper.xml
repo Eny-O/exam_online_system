@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.ai.exam_spring.modules.user.mapper.PermissionMapper">
-    <select id="getPermissionsByUserId" resultType="com.ai.exam_spring.modules.user.pojo.dos.Permission">
+<mapper namespace="com.ai.exam_auth_user.mapper.PermissionMapper">
+    <select id="getPermissionsByUserId" resultType="com.ai.exam_auth_user.pojo.dos.Permission">
         /* 管理员：直接返回全部权限 */
         SELECT DISTINCT p.id, p.parent_id, p.perm_code, p.perm_name, p.type, p.path, p.icon, p.component
         FROM sys_permission p

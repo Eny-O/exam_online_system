@@ -15,7 +15,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @EnableDiscoveryClient
 @SpringBootApplication
-@MapperScan("com.ai.exam_auth_user.modules.*.mapper")
+@MapperScan("com.ai.exam_auth_user.mapper")
 public class ExamAuthUserApplication {
 
     public static void main(String[] args) {
