@@ -1,0 +1,20 @@
+server:
+  port: 8083
+
+# LangChain4j（SiliconFlow + DeepSeek）配置模板
+# 复制本文件为 application.yml 并填入真实值；application.yml 已被 .gitignore 忽略，不入库
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://api.siliconflow.cn/v1
+      # 请替换为你的 SiliconFlow / DeepSeek 密钥
+      api-key: ${AI_API_KEY}
+      model-name: deepseek-ai/DeepSeek-V4.1-Flash
+      temperature: 0.7
+
+feign:
+  sentinel:
+    enabled: true
+
+exam:
+  internal-api-key: ${INTERNAL_API_KEY}
