@@ -1,6 +1,7 @@
 package com.ai.exam_spring.config;
 
 import com.ai.exam_common.common.security.JwtAuthenticationTokenFilter;
+import com.ai.exam_spring.filter.InternalApiAuthFilter;
 import com.ai.exam_spring.handler.AccessDeniedHandlerImpl;
 import com.ai.exam_spring.handler.AuthenticationEntryPointImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +22,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 /**
  * Spring Security 安全配置
- * <p>
- * 采用 JWT 无状态认证方案：关闭 CSRF 和 Session，通过 JwtAuthenticationTokenFilter 验证 Token，
- * 未认证和权限不足分别由 AuthenticationEntryPoint 和 AccessDeniedHandler 处理。
  */
 @Configuration
 @EnableWebSecurity
@@ -38,6 +36,9 @@ public class SecurityConfig {
 
     @Autowired
     private AccessDeniedHandlerImpl accessDeniedHandler;
+
+    @Autowired
+    private InternalApiAuthFilter internalApiAuthFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -63,9 +64,11 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/swagger-resources/**",
                                 "/v3/api-docs/**",
-                                "/swagger-ui/**").permitAll()
+                                "/swagger-ui/**",
+                                "/inner/**").permitAll()
                         .anyRequest().authenticated());
         http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(internalApiAuthFilter, UsernamePasswordAuthenticationFilter.class);
         http.cors(Customizer.withDefaults());
         return http.build();
     }

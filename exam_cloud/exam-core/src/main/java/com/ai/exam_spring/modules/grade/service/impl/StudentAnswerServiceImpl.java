@@ -70,6 +70,13 @@ public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, S
         }).toList();
     }
 
+    @Override
+    public List<StudentAnswer> listByExamAndStudent(Integer examId, Integer studentId) {
+        return this.list(new LambdaQueryWrapper<StudentAnswer>()
+                .eq(StudentAnswer::getExamId, examId)
+                .eq(StudentAnswer::getStudentId, studentId));
+    }
+
     /**
      * 更新学生得分并且保存分数
      *

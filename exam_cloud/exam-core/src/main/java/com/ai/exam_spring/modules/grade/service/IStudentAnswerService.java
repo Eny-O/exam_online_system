@@ -26,4 +26,9 @@ public interface IStudentAnswerService extends IService<StudentAnswer> {
      * @param studentAnswerUpdateDTOS
      */
     void updateScoreAndGrade(List<StudentAnswerUpdateDTO> studentAnswerUpdateDTOS);
+
+    /**
+     * 按考试与学生查询作答记录
+     */
+    List<StudentAnswer> listByExamAndStudent(Integer examId, Integer studentId);
 }
