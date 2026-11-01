@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * auth-user 班级查询（只读）
  */
-@FeignClient(name = "exam-auth-user", contextId = "classFeignClient", fallbackFactory = ClassFeignClientFallbackFactory.class)
+@FeignClient(name = "exam-auth-user", contextId = "classFeignClient")
 public interface ClassFeignClient {
 
     /**

@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * 学生作答查询 Feign 客户端（exam-core）
  */
-@FeignClient(name = "exam-core", contextId = "studentAnswerFeignClient", fallbackFactory = StudentAnswerFeignClientFallbackFactory.class)
+@FeignClient(name = "exam-core", contextId = "studentAnswerFeignClient")
 public interface StudentAnswerFeignClient {
 
     @GetMapping("/inner/student-answer")

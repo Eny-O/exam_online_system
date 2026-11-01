@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * 题目查询 Feign 客户端（exam-core）
  */
-@FeignClient(name = "exam-core", contextId = "questionFeignClient", fallbackFactory = QuestionFeignClientFallbackFactory.class)
+@FeignClient(name = "exam-core", contextId = "questionFeignClient")
 public interface QuestionFeignClient {
 
     @GetMapping("/inner/question/batch")
