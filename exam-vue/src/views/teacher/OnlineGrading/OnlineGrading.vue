@@ -205,6 +205,40 @@
               />
               <span class="score-max">/ {{ q.fullScore }} 分</span>
             </div>
+
+            <!-- AI 智能评分（仅主观题） -->
+            <div class="ai-grade-section" v-if="isEssay(q.type)">
+              <el-button
+                size="small"
+                type="primary"
+                plain
+                :loading="aiLoadingIndex === index"
+                @click="handleAiGrade(index)"
+              >
+                AI 评分
+              </el-button>
+              <el-alert
+                v-if="aiResults[q.questionId] && aiResults[q.questionId].status !== 'UNGRADABLE'"
+                class="ai-result"
+                :type="aiResults[q.questionId].status === 'NEED_HUMAN_REVIEW' ? 'warning' : 'success'"
+                :closable="false"
+                show-icon
+              >
+                <template #title>
+                  <span>
+                    AI 初评 {{ aiResults[q.questionId].preliminaryScore }} /
+                    再评 {{ aiResults[q.questionId].finalScore }} 分，分歧
+                    {{ Math.round((aiResults[q.questionId].divergence || 0) * 100) }}%
+                  </span>
+                </template>
+                <div
+                  v-if="aiResults[q.questionId].reviewResult && aiResults[q.questionId].reviewResult.reviewComment"
+                  class="ai-comment"
+                >
+                  {{ aiResults[q.questionId].reviewResult.reviewComment }}
+                </div>
+              </el-alert>
+            </div>
           </el-card>
         </div>
       </el-scrollbar>
@@ -248,6 +282,7 @@ import {
   updateExamStatus,
   autoGradeObjectiveQuestions,
 } from "@/api/examTask";
+import { aiSubjectiveGrade } from "@/api/aiGrading";
 
 const route = useRoute();
 const router = useRouter();
@@ -269,6 +304,12 @@ const currentStudentId = ref(null);
 const studentAnswers = ref([]);
 const currentQuestionIndex = ref(0);
 const questionRefs = reactive({});
+
+// ========== AI 智能批阅 ==========
+// 正在请求 AI 的题目索引（用于按钮 loading 态）
+const aiLoadingIndex = ref(null);
+// 各题 AI 批阅结果缓存（按 questionId），用于展示初评/再评/分歧/复核意见
+const aiResults = reactive({});
 
 // ========== 已批改记录 { [studentId]: true } ==========
 const gradedStudents = reactive({});
@@ -586,6 +627,46 @@ const handleAutoGradeObjective = async () => {
     await loadStudentAnswers(currentStudentId.value);
   } catch (e) {
     console.error("自动批阅客观题失败:", e);
+  }
+};
+
+// AI 智能双评主观题（人机协同：回填建议分 + 展示双评意见，教师确认/微调后保存）
+const handleAiGrade = async (index) => {
+  const q = displayQuestions.value[index];
+  if (!currentStudentId.value) {
+    ElMessage.warning("请先选择一位学生");
+    return;
+  }
+  if (!q.questionId) {
+    ElMessage.warning("题目信息缺失，无法调用 AI 批阅");
+    return;
+  }
+  aiLoadingIndex.value = index;
+  try {
+    const res = await aiSubjectiveGrade({
+      examId,
+      studentId: currentStudentId.value,
+      questionId: q.questionId,
+    });
+    const outcome = res.data;
+    aiResults[q.questionId] = outcome;
+    if (outcome.status === "UNGRADABLE") {
+      ElMessage.warning("AI 暂无法评判该题（题目或作答信息不足）");
+      return;
+    }
+    // 回填 AI 最终分（限制在题目满分内，防止越界）
+    const finalScore = Math.min(outcome.finalScore ?? 0, q.fullScore);
+    q.score = finalScore;
+    onScoreChange(index); // 复用同步逻辑：写回 studentAnswers 并设置 isCorrect
+    if (outcome.status === "NEED_HUMAN_REVIEW") {
+      ElMessage.warning("AI 两评分歧较大，已填入建议分，请人工复核后再保存");
+    } else {
+      ElMessage.success("AI 评分完成，请确认或微调后点「保存当前学生」");
+    }
+  } catch (e) {
+    console.error("AI 评分失败:", e);
+  } finally {
+    aiLoadingIndex.value = null;
   }
 };
 
@@ -1002,4 +1083,20 @@ const handleGradingComplete = () => {
 :deep(.el-scrollbar__wrap) {
   overflow-x: hidden;
 }
+.ai-grade-section {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ai-result {
+  margin-top: 4px;
+}
+.ai-comment {
+  margin-top: 4px;
+  line-height: 1.5;
+  color: #606266;
+  white-space: pre-wrap;
+}
+
 </style>
