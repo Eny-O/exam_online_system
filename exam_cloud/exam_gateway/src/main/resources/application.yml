@@ -21,7 +21,7 @@ spring:
             - StripPrefix=1
         # AI 批阅服务：必须放在 /api/** (exam-core) 之前，否则 /api/ai/** 会被 exam-core 路由吞掉
         - id: exam-ai
-          uri: lb://exam_ai
+          uri: lb://exam-ai
           predicates:
             - Path=/api/ai/**
           filters:

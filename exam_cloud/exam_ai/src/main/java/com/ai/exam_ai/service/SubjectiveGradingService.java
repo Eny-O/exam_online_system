@@ -41,7 +41,17 @@ public class SubjectiveGradingService {
      */
     public SubjectiveGradeOutcome grade(Integer examId, Integer studentId, Integer questionId, Double fullScore) {
         try {
-            ReviewGradeResult review = gradingWorkflow.grade(examId, studentId, questionId);
+            ReviewGradeResult review;
+            try {
+                review = gradingWorkflow.grade(examId, studentId, questionId);
+            } catch (Throwable t) {
+                // 兜底：LLM/agentic 调用可能抛出 Error 级异常（如 NoSuchMethodError，常见于依赖版本/链路问题）
+                // 或连接失败。catch Throwable 防止其绕过 @RestControllerAdvice 直接以 500 透出，
+                // 转为 BusinessException 后由全局异常处理器统一返回真实错误信息。
+                log.error("智能批阅执行失败 examId={} studentId={} questionId={}", examId, studentId, questionId, t);
+                throw new BusinessException(ErrorCodeEnum.INTERNAL_ERROR,
+                        "智能批阅执行失败: " + t.getClass().getSimpleName() + " - " + t.getMessage());
+            }
             InitialGradeResult initial = gradingContext.getInitialGrade();
             if (initial == null || GradeStatus.UNGRADABLE.name().equals(initial.getStatus())) {
                 return SubjectiveGradeOutcome.ungradable(initial);
