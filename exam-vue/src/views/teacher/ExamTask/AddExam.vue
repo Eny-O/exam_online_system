@@ -511,9 +511,12 @@ const handleSubmit = async () => {
   }
 };
 
-// 返回
+// 返回考试管理列表（与「新建考试」入口一致）。
+// 用显式 push 而非 router.back()：AddExam 是顶层独立路由（不在主布局内），
+// 路由守卫首屏用 next({...to, replace:true}) 改写过历史栈，
+// 此时 router.back() 会命中无效历史记录导致白屏；显式跳转到已注册的列表路径最稳妥。
 const handleBack = () => {
-  router.back();
+  router.push("/teacher/examTask/myexam");
 };
 
 // ========== 编辑模式：加载考试数据 ==========

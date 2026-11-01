@@ -45,11 +45,13 @@ import { RouterView } from "vue-router";
 </style>
 
 <style>
-/* 全局重置，消除浏览器默认边距，确保全屏布局 */
+/* 全局重置，消除浏览器默认边距，确保全屏布局。
+   注意：不能给 html/body 设 overflow:hidden，否则「添加考试 / 考试内容 / 考试作答」
+   等顶层独立路由页面（不挂在主布局内）内容超过一屏时无法滚动。
+   布局页自身的滚动由 .common-layout(.el-main overflow-y:auto) 约束即可。 */
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow: hidden;
 }
 </style>

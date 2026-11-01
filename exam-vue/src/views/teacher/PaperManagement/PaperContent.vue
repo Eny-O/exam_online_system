@@ -604,12 +604,14 @@ const handleComplete = async () => {
     ElMessage.error(error.message || "保存失败，请重试");
     return; // 失败时不跳转，留在当前页
   }
-  router.push("/teacher/exampaper");
+  router.push("/teacher/paper");
 };
 
 // ===== 返回 =====
+// 返回「试卷管理」列表页。该页路由由后端权限 perm 600 动态生成，path 为 /teacher/paper
+// （对应侧边栏「试卷管理」菜单），原先写死的 /teacher/exampaper 未注册任何组件，会导致白屏。
 const handleBack = () => {
-  router.push("/teacher/exampaper");
+  router.push("/teacher/paper");
 };
 
 // ===== 获取类型标签样式 =====
