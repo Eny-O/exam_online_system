@@ -28,7 +28,7 @@ public class GradingTool {
      */
     @Tool("获取指定题目的题干、参考答案、解析、知识点与题型")
     public QuestionBriefDTO getQuestion(@P("题目ID") Integer questionId) {
-        List<QuestionBriefDTO> questions = questionFeignClient.listByIds(List.of(questionId));
+        List<QuestionBriefDTO> questions = questionFeignClient.listByIds(List.of(questionId)).getData();
         return questions.isEmpty() ? null : questions.get(0);
     }
 
@@ -41,6 +41,6 @@ public class GradingTool {
     @Tool("获取某次考试中某位学生的全部作答记录，包含题目ID、作答内容与该题满分")
     public List<StudentAnswerDTO> getStudentAnswers(@P("考试ID") Integer examId,
                                                     @P("学生ID") Integer studentId) {
-        return studentAnswerFeignClient.listByExamAndStudent(examId, studentId);
+        return studentAnswerFeignClient.listByExamAndStudent(examId, studentId).getData();
     }
 }

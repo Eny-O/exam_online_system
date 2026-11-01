@@ -1,6 +1,7 @@
 package com.ai.exam_api.feign;
 
 import com.ai.exam_api.pojo.dto.QuestionBriefDTO;
+import com.ai.exam_common.common.pojo.result.ResponseResult;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,5 +15,5 @@ import java.util.List;
 public interface QuestionFeignClient {
 
     @GetMapping("/inner/question/batch")
-    List<QuestionBriefDTO> listByIds(@RequestParam("ids") List<Integer> ids);
+    ResponseResult<List<QuestionBriefDTO>> listByIds(@RequestParam("ids") List<Integer> ids);
 }

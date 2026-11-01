@@ -78,7 +78,7 @@ public class SubjectiveGradingService {
      * @param questionId 题目ID
      */
     public SubjectiveGradeOutcome gradeByIds(Integer examId, Integer studentId, Integer questionId) {
-        List<StudentAnswerDTO> answers = studentAnswerFeignClient.listByExamAndStudent(examId, studentId);
+        List<StudentAnswerDTO> answers = studentAnswerFeignClient.listByExamAndStudent(examId, studentId).getData();
         StudentAnswerDTO target = answers.stream()
                 .filter(a -> questionId.equals(a.getQuestionId()))
                 .findFirst()
