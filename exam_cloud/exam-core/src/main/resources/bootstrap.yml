@@ -14,6 +14,10 @@ spring:
       discovery:
         namespace: public
         group: DEFAULT_GROUP
+        # 显式注册 IP：本项目微服务均为宿主 jar 同机部署，钉死 127.0.0.1 避免 InetUtils 误选
+        # Docker/WSL 虚拟网卡（如 10.195.149.52），否则网关经 Nacos 拿到不可达 IP 会 NoRouteToHost。
+        # 注意：若将来微服务进 Docker 容器，需改为 host.docker.internal 或宿主 LAN IP。
+        ip: 127.0.0.1
         # 单机模式未开鉴权，auth 已在 compose 中关闭
       config:
         namespace: public
