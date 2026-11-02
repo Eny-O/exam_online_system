@@ -43,7 +43,7 @@ public class SubjectiveGradingService {
         try {
             ReviewGradeResult review;
             try {
-                review = gradingWorkflow.grade(examId, studentId, questionId);
+            review = gradingWorkflow.grade(examId, studentId, questionId);
             } catch (Throwable t) {
                 // 兜底：LLM/agentic 调用可能抛出 Error 级异常（如 NoSuchMethodError，常见于依赖版本/链路问题）
                 // 或连接失败。catch Throwable 防止其绕过 @RestControllerAdvice 直接以 500 透出，

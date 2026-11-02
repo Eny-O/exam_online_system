@@ -5,18 +5,16 @@ import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.V;
 
 /**
- * 主观题批阅顺序工作流
+ * 主观题双评批阅编排：
+ * 由 GradingAgentConfig 装配为顺序工作流（初评 Agent -> 复核 Agent），
+ * 初评结果经 AgenticScope 的 initialGrade 变量由框架自动注入复核 Agent（@V）。
+ *
+ * 输入经 @V 变量注入各子 Agent 的消息模板，不再额外发送顶层消息。
  */
 public interface SubjectiveGradingWorkflow {
 
-    /**
-     * 执行初评与再评，返回最终批阅结果
-     *
-     * @param examId     考试ID
-     * @param studentId  学生ID
-     * @param questionId 题目ID
-     */
-    @Agent(value = "主观题双评批阅", description = "依次执行初评与再评，输出最终批阅结果")
+    @Agent(value = "主观题双评批阅",
+            description = "先完成初评，再按偏差清单复核初评判定，给出最终分数与裁决理由")
     ReviewGradeResult grade(@V("examId") Integer examId,
                             @V("studentId") Integer studentId,
                             @V("questionId") Integer questionId);

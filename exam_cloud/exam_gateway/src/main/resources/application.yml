@@ -26,6 +26,8 @@ spring:
             - Path=/api/ai/**
           filters:
             - StripPrefix=1
+          metadata:
+            response-timeout: 300s
         - id: exam-core
           uri: lb://exam-core
           predicates:
@@ -48,7 +50,7 @@ spring:
           filters:
             - StripPrefix=1
         - id: exam-ai-doc
-          uri: lb://exam_ai
+          uri: lb://exam-ai
           predicates:
             - Path=/exam-ai/**
           filters:
@@ -65,7 +67,9 @@ spring:
             maxAge: 3600
       httpclient:
         # 后端慢接口的响应超时（默认 0 = 不超时，实践上建议显式设）
-        response-timeout: 30s
+        # 诊断期临时放大到 300s：AI 批阅链路需先靠日志定位真实耗时，避免被提前掐断。
+        # 定位后回收至 30s（或保持 per-route 300s、全局回 30s）。
+        response-timeout: 300s
 
 management:
   endpoints:

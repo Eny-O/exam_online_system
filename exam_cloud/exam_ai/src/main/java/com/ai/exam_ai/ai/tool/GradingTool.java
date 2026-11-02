@@ -7,6 +7,7 @@ import com.ai.exam_api.feign.StudentAnswerFeignClient;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.List;
 /**
  * 批阅取数工具：向 exam-core 获取题目与学生作答
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class GradingTool {
@@ -29,7 +31,11 @@ public class GradingTool {
     @Tool("获取指定题目的题干、参考答案、解析、知识点与题型")
     public QuestionBriefDTO getQuestion(@P("题目ID") Integer questionId) {
         List<QuestionBriefDTO> questions = questionFeignClient.listByIds(List.of(questionId)).getData();
-        return questions.isEmpty() ? null : questions.get(0);
+        QuestionBriefDTO question = questions.isEmpty() ? null : questions.get(0);
+        if (question == null) {
+            log.warn("[取数] 题目 questionId={} 在 exam-core 未查到", questionId);
+        }
+        return question;
     }
 
     /**

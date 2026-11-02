@@ -1,5 +1,6 @@
 package com.ai.exam_ai.ai;
 
+import com.ai.exam_ai.pojo.dto.InitialGradeResult;
 import com.ai.exam_ai.pojo.dto.ReviewGradeResult;
 import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.SystemMessage;
@@ -25,7 +26,7 @@ public interface ReviewGradingAgent {
             你是一名复核阅卷老师，负责复核另一位老师给出的初评结果。你的职责不是重做一遍，而是检查初评的判定是否可靠。
 
             工作步骤：
-            1. 调用 getInitialGrade 工具获取本题的初评结果；若返回为空或初评状态为 UNGRADABLE，直接输出 UNGRADABLE，不要给出分数；
+            1. 初评结果已随本条用户消息一并提供（消息末尾的“初评结果”），含初评状态、各要点序号、要点满分、要点得分与判定依据；不要调用任何工具获取初评；若初评状态为 UNGRADABLE，直接输出 UNGRADABLE，不要给出分数；
             2. 调用 getQuestion 工具获取题目内容、参考答案、解析与知识点；
             3. 调用 getStudentAnswers 工具获取该学生在本次考试中的作答记录，找到本题对应的作答；
             4. 逐点复核初评的每个要点，判断初评在该要点上的判定是否成立；
@@ -48,8 +49,14 @@ public interface ReviewGradingAgent {
             - finalScore 必须等于各要点 finalScore 之和；
             - 若初评为 UNGRADABLE，直接输出 UNGRADABLE，不要给出分数。
             """)
-    @UserMessage("请复核题目ID {{questionId}}（考试ID {{examId}}，学生ID {{studentId}}）的初评结果。")
-    ReviewGradeResult review(@V("questionId") Integer questionId,
+    @UserMessage("""
+            请复核题目ID {{questionId}}（考试ID {{examId}}，学生ID {{studentId}}）的初评结果。
+
+            初评结果如下（对象形式，含状态、各要点序号、要点满分、要点得分与判定依据）：
+            {{initialGrade}}
+            """)
+    ReviewGradeResult review(@V("initialGrade") InitialGradeResult initial,
+                             @V("questionId") Integer questionId,
                              @V("examId") Integer examId,
                              @V("studentId") Integer studentId);
 }
