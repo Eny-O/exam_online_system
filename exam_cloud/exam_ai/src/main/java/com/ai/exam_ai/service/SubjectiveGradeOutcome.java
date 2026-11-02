@@ -78,4 +78,15 @@ public class SubjectiveGradeOutcome {
         outcome.setEscalationReason(reason);
         return outcome;
     }
+
+    /**
+     * 构造需人工介入结论（复核发现需要人工处理的情况，例如参考答案要点被遗漏）
+     */
+    public static SubjectiveGradeOutcome escalated(InitialGradeResult initial, ReviewGradeResult review,
+                                                   double divergence, String reason) {
+        SubjectiveGradeOutcome outcome = reviewed(initial, review, divergence);
+        outcome.setStatus(GradeStatus.NEED_HUMAN_REVIEW);
+        outcome.setEscalationReason(reason);
+        return outcome;
+    }
 }

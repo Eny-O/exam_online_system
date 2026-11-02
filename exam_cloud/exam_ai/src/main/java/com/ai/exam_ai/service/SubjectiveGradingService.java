@@ -78,6 +78,11 @@ public class SubjectiveGradingService {
             if (divergence > divergenceThreshold) {
                 return SubjectiveGradeOutcome.needHumanReview(initial, review, divergence);
             }
+            // 复核明确报告了需要人工处理的情况（如参考答案采分点被初评漏拆），不得直接给出确定分数
+            if (review.getEscalations() != null && !review.getEscalations().isEmpty()) {
+                return SubjectiveGradeOutcome.escalated(initial, review, divergence,
+                        "复核发现需人工处理的情况：" + String.join("；", review.getEscalations()));
+            }
             return SubjectiveGradeOutcome.reviewed(initial, review, divergence);
         } finally {
             gradingContext.clear();

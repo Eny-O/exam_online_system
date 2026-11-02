@@ -23,6 +23,12 @@ public class InitialGradeResult {
     @Schema(description = "评分要点列表")
     private List<RubricPoint> rubricPoints;
 
+    @Description("参考答案采分点覆盖清单：先逐条列出参考答案中的每一条采分点，再标明它由哪些评分要点覆盖。"
+            + "要求回答的每个部分（如“核心设计原则”“GET 与 POST 的区别”）都必须至少有一条采分点，"
+            + "不得让某一部分完全没有采分点；参考答案中标注为可选的条目 optional 置为 true")
+    @Schema(description = "参考答案采分点覆盖清单")
+    private List<ReferencePointCoverage> referencePointCoverage;
+
     @Description("初评总分，等于各要点得分之和")
     @Schema(description = "初评总分")
     private Double preliminaryScore;

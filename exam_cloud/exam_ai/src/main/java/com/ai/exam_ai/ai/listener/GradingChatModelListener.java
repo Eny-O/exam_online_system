@@ -83,6 +83,10 @@ public class GradingChatModelListener implements ChatModelListener {
         Integer seq = currentSeq.get();
         log.info("[LLM-{}] 响应 model={} finishReason={} tokenUsage={}", seq, response.modelName(),
                 response.finishReason(), response.tokenUsage());
+        String thinking = response.aiMessage().thinking();
+        if (thinking != null && !thinking.isBlank()) {
+            log.info("[LLM-{}]   思考 {}", seq, truncate(thinking));
+        }
         for (ToolExecutionRequest toolRequest : response.aiMessage().toolExecutionRequests()) {
             log.info("[LLM-{}]   工具调用 {} args={}", seq, toolRequest.name(), toolRequest.arguments());
         }
