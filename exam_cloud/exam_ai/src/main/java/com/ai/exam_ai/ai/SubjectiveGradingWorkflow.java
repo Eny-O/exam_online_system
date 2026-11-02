@@ -17,5 +17,6 @@ public interface SubjectiveGradingWorkflow {
             description = "先完成初评，再按偏差清单复核初评判定，给出最终分数与裁决理由")
     ReviewGradeResult grade(@V("examId") Integer examId,
                             @V("studentId") Integer studentId,
-                            @V("questionId") Integer questionId);
+                            @V("questionId") Integer questionId,
+                            @V("fullScore") Double fullScore);
 }

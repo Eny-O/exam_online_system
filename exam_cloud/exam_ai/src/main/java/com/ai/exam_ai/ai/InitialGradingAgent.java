@@ -17,6 +17,7 @@ public interface InitialGradingAgent {
      * @param questionId 题目ID
      * @param examId     考试ID
      * @param studentId  学生ID
+     * @param fullScore  题目满分
      */
     @Agent(value = "对主观题按评分要点逐点初评",
             description = "拆解参考答案为评分要点，逐点判定学生作答命中情况并给出得分",
@@ -39,8 +40,9 @@ public interface InitialGradingAgent {
             - 不因作答篇幅长、分点清晰、语句通顺而额外加分；
             - 空白作答、与题目无关的内容、明显照抄参考答案的，给 0 分并在 concerns 中说明。
             """)
-    @UserMessage("请对题目ID {{questionId}}（考试ID {{examId}}，学生ID {{studentId}}）做初评。")
+    @UserMessage("请对题目ID {{questionId}}（考试ID {{examId}}，学生ID {{studentId}}，本题满分 {{fullScore}} 分）做初评。")
     InitialGradeResult grade(@V("questionId") Integer questionId,
                              @V("examId") Integer examId,
-                             @V("studentId") Integer studentId);
+                             @V("studentId") Integer studentId,
+                             @V("fullScore") Double fullScore);
 }

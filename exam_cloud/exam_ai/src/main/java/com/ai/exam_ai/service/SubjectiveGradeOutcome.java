@@ -68,4 +68,14 @@ public class SubjectiveGradeOutcome {
         outcome.setEscalationReason("两评分差占满分 " + Math.round(divergence * 100) + "%，超过阈值，需人工复核");
         return outcome;
     }
+
+    /**
+     * 构造需人工介入结论（模型批阅结果未通过校验）
+     */
+    public static SubjectiveGradeOutcome manualReview(String reason) {
+        SubjectiveGradeOutcome outcome = new SubjectiveGradeOutcome();
+        outcome.setStatus(GradeStatus.NEED_HUMAN_REVIEW);
+        outcome.setEscalationReason(reason);
+        return outcome;
+    }
 }

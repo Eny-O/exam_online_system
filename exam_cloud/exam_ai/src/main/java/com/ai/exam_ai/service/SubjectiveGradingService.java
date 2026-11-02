@@ -9,6 +9,7 @@ import com.ai.exam_api.feign.StudentAnswerFeignClient;
 import com.ai.exam_api.pojo.dto.StudentAnswerDTO;
 import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import com.ai.exam_common.common.exception.BusinessException;
+import dev.langchain4j.guardrail.OutputGuardrailException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.util.List;
@@ -43,8 +44,21 @@ public class SubjectiveGradingService {
         try {
             ReviewGradeResult review;
             try {
-            review = gradingWorkflow.grade(examId, studentId, questionId);
+            review = gradingWorkflow.grade(examId, studentId, questionId, fullScore);
             } catch (Throwable t) {
+                // 护栏校验未通过且重试耗尽：批阅结论不可靠，降级为需人工介入，不让整题直接失败
+                boolean guardrailFailed = false;
+                for (Throwable cause = t; cause != null; cause = cause.getCause()) {
+                    if (cause instanceof OutputGuardrailException) {
+                        guardrailFailed = true;
+                        break;
+                    }
+                }
+                if (guardrailFailed) {
+                    log.error("智能批阅护栏校验未通过，降级为人工复核 examId={} studentId={} questionId={}",
+                            examId, studentId, questionId, t);
+                    return SubjectiveGradeOutcome.manualReview("智能批阅结果未通过校验，需人工复核");
+                }
                 // 兜底：LLM/agentic 调用可能抛出 Error 级异常（如 NoSuchMethodError，常见于依赖版本/链路问题）
                 // 或连接失败。catch Throwable 防止其绕过 @RestControllerAdvice 直接以 500 透出，
                 // 转为 BusinessException 后由全局异常处理器统一返回真实错误信息。
