@@ -18,8 +18,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 初评结果输出护栏：校验初评结果的自洽性与分数守恒，
- * 不通过时以 reprompt 方式让模型按纠正提示重新输出。
+ * 初评结果输出护栏：
+ * - 分数守恒、分数越界等可确定性修正的问题，由代码核算后改写输出直接返回，不让模型重跑；
+ * - 状态非法、要点缺失、满分不一致等无法自动修正的问题，以 reprompt 方式让模型带纠正提示重新输出。
  */
 @Slf4j
 @Component
@@ -44,21 +45,7 @@ public class InitialGradeGuardrail implements OutputGuardrail {
                     "请只输出约定的 JSON 结构，不要使用 markdown 代码块包裹，也不要输出任何额外说明文字。");
         }
 
-        List<String> problems = collectProblems(initial, request);
-        if (problems.isEmpty()) {
-            log.info("[护栏] 初评结果校验通过：status={} preliminaryScore={} 要点数={}",
-                    initial.getStatus(), initial.getPreliminaryScore(),
-                    initial.getRubricPoints() == null ? 0 : initial.getRubricPoints().size());
-            return success();
-        }
-        log.warn("[护栏] 初评结果未通过校验：{}", String.join("；", problems));
-        return reprompt(String.join("；", problems), buildRepromptPrompt(problems));
-    }
-
-    /**
-     * 逐条校验初评结果
-     */
-    private List<String> collectProblems(InitialGradeResult initial, OutputGuardrailRequest request) {
+        // 状态与要点缺失无法自动修正，直接让模型重来
         List<String> problems = new ArrayList<>();
         String status = initial.getStatus();
         if (!GradeStatus.GRADED.name().equals(status) && !GradeStatus.UNGRADABLE.name().equals(status)) {
@@ -68,17 +55,18 @@ public class InitialGradeGuardrail implements OutputGuardrail {
             if (initial.getPreliminaryScore() != null) {
                 problems.add("status=UNGRADABLE 时不应给出 preliminaryScore");
             }
-            return problems;
+            return reprompt(String.join("；", problems), buildRepromptPrompt(problems, List.of()));
         }
-
         List<RubricPoint> points = initial.getRubricPoints();
         if (points == null || points.isEmpty()) {
             problems.add("status=GRADED 时 rubricPoints 不能为空");
-            return problems;
+            return reprompt(String.join("；", problems), buildRepromptPrompt(problems, List.of()));
         }
 
+        // 可确定性修正：分数越界与总分不守恒
+        List<String> fixed = new ArrayList<>();
+        double awardedSum = 0;
         double maxScoreSum = 0;
-        double awardedScoreSum = 0;
         Set<Integer> pointNos = new HashSet<>();
         int expectedPointNo = 1;
         for (RubricPoint point : points) {
@@ -101,27 +89,43 @@ public class InitialGradeGuardrail implements OutputGuardrail {
             if (point.getAwardedScore() == null) {
                 problems.add("pointNo=" + point.getPointNo() + " 缺少 awardedScore");
             } else {
-                if (point.getMaxScore() != null
-                        && point.getAwardedScore() > point.getMaxScore() + SCORE_TOLERANCE) {
-                    problems.add("pointNo=" + point.getPointNo() + " 的 awardedScore=" + point.getAwardedScore()
-                            + " 超过 maxScore=" + point.getMaxScore());
+                if (point.getMaxScore() != null && point.getAwardedScore() > point.getMaxScore() + SCORE_TOLERANCE) {
+                    fixed.add("pointNo=" + point.getPointNo() + " 的 awardedScore 由 " + point.getAwardedScore()
+                            + " 截断到 maxScore=" + point.getMaxScore());
+                    point.setAwardedScore(point.getMaxScore());
                 }
-                awardedScoreSum += point.getAwardedScore();
+                awardedSum += point.getAwardedScore();
             }
         }
-
         if (initial.getPreliminaryScore() == null) {
-            problems.add("缺少 preliminaryScore");
-        } else if (Math.abs(awardedScoreSum - initial.getPreliminaryScore()) > SCORE_TOLERANCE) {
-            problems.add("preliminaryScore=" + initial.getPreliminaryScore()
-                    + " 与各要点得分之和 " + awardedScoreSum + " 不一致");
+            fixed.add("preliminaryScore 已按各要点得分之和自动补齐为 " + awardedSum);
+            initial.setPreliminaryScore(awardedSum);
+        } else if (Math.abs(awardedSum - initial.getPreliminaryScore()) > SCORE_TOLERANCE) {
+            fixed.add("preliminaryScore 由 " + initial.getPreliminaryScore() + " 修正为各要点得分之和 " + awardedSum);
+            initial.setPreliminaryScore(awardedSum);
         }
 
         Double fullScore = fullScoreOf(request);
         if (fullScore != null && Math.abs(maxScoreSum - fullScore) > SCORE_TOLERANCE) {
             problems.add("各要点满分之和 " + maxScoreSum + " 与题目满分 " + fullScore + " 不一致");
         }
-        return problems;
+
+        if (problems.isEmpty()) {
+            if (!fixed.isEmpty()) {
+                String corrected = GuardrailJsonSupport.toJson(objectMapper, initial);
+                if (corrected != null) {
+                    log.info("[护栏] 初评结果已自动修正：{}", String.join("；", fixed));
+                    return successWith(corrected);
+                }
+                problems.add("系统已按要点明细自动核算分数，但改写结果序列化失败，请重新输出完整 JSON");
+            } else {
+                log.info("[护栏] 初评结果校验通过：status={} preliminaryScore={} 要点数={}",
+                        initial.getStatus(), initial.getPreliminaryScore(), points.size());
+                return success();
+            }
+        }
+        log.warn("[护栏] 初评结果未通过校验：{}", String.join("；", problems));
+        return reprompt(String.join("；", problems), buildRepromptPrompt(problems, fixed));
     }
 
     /**
@@ -143,10 +147,14 @@ public class InitialGradeGuardrail implements OutputGuardrail {
     /**
      * 构造纠正提示，要求模型按规则重新输出
      */
-    private String buildRepromptPrompt(List<String> problems) {
+    private String buildRepromptPrompt(List<String> problems, List<String> fixed) {
         StringBuilder builder = new StringBuilder("本次初评结果未通过校验，请修正后重新输出完整 JSON：\n");
         for (String problem : problems) {
             builder.append("- ").append(problem).append('\n');
+        }
+        if (!fixed.isEmpty()) {
+            builder.append("（系统已按要点明细自动核算并修正：").append(String.join("；", fixed))
+                    .append("，请保持一致）\n");
         }
         return builder.append("要求：各要点满分之和必须等于题目满分，preliminaryScore 必须等于各要点得分之和，")
                 .append("awardedScore 必须在 0 到 maxScore 之间，pointNo 从 1 开始连续。")

@@ -19,8 +19,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 复核结果输出护栏：校验复核结果的自洽性与业务规则，
- * 不通过时以 reprompt 方式让模型按纠正提示重新输出，而不是直接判为不可批阅。
+ * 复核结果输出护栏：
+ * - 总分不守恒、偏差标记含非法值等可确定性修正的问题，由代码核算后改写输出直接返回，不让模型重跑；
+ * - 动作非法、要点缺失、与初评要点不一致等无法自动修正的问题，以 reprompt 方式让模型带纠正提示重新输出。
  */
 @Slf4j
 @Component
@@ -47,42 +48,32 @@ public class ReviewGradeGuardrail implements OutputGuardrail {
                 text == null ? 0 : text.length(), templateVariableKeys(request));
         ReviewGradeResult review;
         try {
-            review = objectMapper.readValue(extractJson(text), ReviewGradeResult.class);
+            review = objectMapper.readValue(GuardrailJsonSupport.extractJson(text), ReviewGradeResult.class);
         } catch (Exception e) {
             return reprompt("复核输出不是合法 JSON：" + e.getMessage(),
                     "请只输出约定的 JSON 结构，不要使用 markdown 代码块包裹，也不要输出任何额外说明文字。");
         }
 
-        List<String> problems = collectProblems(review, request);
-        if (problems.isEmpty()) {
-            return success();
-        }
-        log.warn("[护栏] 复核结果未通过校验：{}", String.join("；", problems));
-        return reprompt(String.join("；", problems), buildRepromptPrompt(problems));
-    }
-
-    /**
-     * 逐条校验复核结果
-     */
-    private List<String> collectProblems(ReviewGradeResult review, OutputGuardrailRequest request) {
+        // 状态与裁决缺失无法自动修正，直接让模型重来
         List<String> problems = new ArrayList<>();
         String status = review.getStatus();
         if (!GradeStatus.GRADED.name().equals(status) && !GradeStatus.UNGRADABLE.name().equals(status)) {
             problems.add("status 非法：" + status);
         }
-        if (GradeStatus.UNGRADABLE.name().equals(status) && review.getFinalScore() != null) {
-            problems.add("status=UNGRADABLE 时不应给出 finalScore");
+        if (GradeStatus.UNGRADABLE.name().equals(status)) {
+            if (review.getFinalScore() != null) {
+                problems.add("status=UNGRADABLE 时不应给出 finalScore");
+            }
+            return reprompt(String.join("；", problems), buildRepromptPrompt(problems, List.of()));
         }
-        if (!GradeStatus.GRADED.name().equals(status)) {
-            return problems;
-        }
-
         List<PointDecision> decisions = review.getDecisions();
         if (decisions == null || decisions.isEmpty()) {
             problems.add("status=GRADED 时 decisions 不能为空");
-            return problems;
+            return reprompt(String.join("；", problems), buildRepromptPrompt(problems, List.of()));
         }
 
+        // 可确定性修正：总分不守恒、偏差标记含非法值
+        List<String> fixed = new ArrayList<>();
         double scoreSum = 0;
         Set<Integer> actualPointNos = new LinkedHashSet<>();
         for (PointDecision decision : decisions) {
@@ -100,30 +91,57 @@ public class ReviewGradeGuardrail implements OutputGuardrail {
                 scoreSum += decision.getFinalScore();
             }
             if (decision.getBiasFlags() != null) {
-                for (String flag : decision.getBiasFlags()) {
-                    if (!ALLOWED_BIAS_FLAGS.contains(flag)) {
-                        problems.add("biasFlags 含非法值：" + flag);
-                    }
+                List<String> legalFlags = decision.getBiasFlags().stream()
+                        .filter(ALLOWED_BIAS_FLAGS::contains).toList();
+                if (legalFlags.size() != decision.getBiasFlags().size()) {
+                    fixed.add("pointNo=" + decision.getPointNo() + " 的 biasFlags 已剔除非法值");
+                    decision.setBiasFlags(legalFlags);
                 }
             }
         }
-
         if (review.getFinalScore() == null) {
-            problems.add("缺少 finalScore");
+            fixed.add("finalScore 已按各要点得分之和自动补齐为 " + scoreSum);
+            review.setFinalScore(scoreSum);
         } else if (Math.abs(scoreSum - review.getFinalScore()) > SCORE_TOLERANCE) {
-            problems.add("finalScore=" + review.getFinalScore() + " 与各要点得分之和 " + scoreSum + " 不一致");
+            fixed.add("finalScore 由 " + review.getFinalScore() + " 修正为各要点得分之和 " + scoreSum);
+            review.setFinalScore(scoreSum);
+        }
+        if (review.getBiasFlags() != null) {
+            List<String> legalFlags = review.getBiasFlags().stream()
+                    .filter(ALLOWED_BIAS_FLAGS::contains).toList();
+            if (legalFlags.size() != review.getBiasFlags().size()) {
+                fixed.add("biasFlags 已剔除非法值");
+                review.setBiasFlags(legalFlags);
+            }
         }
 
+        // 与初评要点一一对应
         InitialGradeResult initial = initialGradeOf(request);
         if (initial != null && initial.getRubricPoints() != null) {
             Set<Integer> expectedPointNos = new LinkedHashSet<>();
             initial.getRubricPoints().forEach(point -> expectedPointNos.add(point.getPointNo()));
             if (!expectedPointNos.equals(actualPointNos)) {
-                problems.add("decisions 的要点集合 " + actualPointNos
-                        + " 与初评要点集合 " + expectedPointNos + " 不一致（不得新增或删除要点）");
+                problems.add("decisions 的要点集合 " + actualPointNos + " 与初评要点集合 " + expectedPointNos
+                        + " 不一致（不得新增或删除要点）");
             }
         }
-        return problems;
+
+        if (problems.isEmpty()) {
+            if (!fixed.isEmpty()) {
+                String corrected = GuardrailJsonSupport.toJson(objectMapper, review);
+                if (corrected != null) {
+                    log.info("[护栏] 复核结果已自动修正：{}", String.join("；", fixed));
+                    return successWith(corrected);
+                }
+                problems.add("系统已按裁决明细自动核算分数，但改写结果序列化失败，请重新输出完整 JSON");
+            } else {
+                log.info("[护栏] 复核结果校验通过：status={} finalScore={} 裁决要点数={}",
+                        review.getStatus(), review.getFinalScore(), decisions.size());
+                return success();
+            }
+        }
+        log.warn("[护栏] 复核结果未通过校验：{}", String.join("；", problems));
+        return reprompt(String.join("；", problems), buildRepromptPrompt(problems, fixed));
     }
 
     /**
@@ -135,9 +153,6 @@ public class ReviewGradeGuardrail implements OutputGuardrail {
         return value instanceof InitialGradeResult initial ? initial : null;
     }
 
-    /**
-     * 取模板变量名，用于确认初评结果是否随模板变量传入
-     */
     private Set<String> templateVariableKeys(OutputGuardrailRequest request) {
         if (request.requestParams() == null || request.requestParams().variables() == null) {
             return Set.of();
@@ -148,20 +163,17 @@ public class ReviewGradeGuardrail implements OutputGuardrail {
     /**
      * 构造纠正提示，要求模型按规则重新输出
      */
-    private String buildRepromptPrompt(List<String> problems) {
+    private String buildRepromptPrompt(List<String> problems, List<String> fixed) {
         StringBuilder builder = new StringBuilder("本次复核结果未通过校验，请修正后重新输出完整 JSON：\n");
         for (String problem : problems) {
             builder.append("- ").append(problem).append('\n');
         }
+        if (!fixed.isEmpty()) {
+            builder.append("（系统已按裁决明细自动核算并修正：").append(String.join("；", fixed))
+                    .append("，请保持一致）\n");
+        }
         return builder.append("要求：decisions 必须与初评要点一一对应（不得新增或删除要点），")
                 .append("action 只能取 KEEP/UP/DOWN，finalScore 必须等于各要点 finalScore 之和。")
                 .toString();
-    }
-
-    /**
-     * 从模型输出中提取 JSON 片段：兼容 markdown 代码块围栏与前后说明文字
-     */
-    private String extractJson(String text) {
-        return GuardrailJsonSupport.extractJson(text);
     }
 }
