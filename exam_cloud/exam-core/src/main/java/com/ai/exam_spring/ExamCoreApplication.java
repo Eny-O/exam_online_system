@@ -15,10 +15,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableFeignClients(basePackages = "com.ai.exam_api.feign")
 @SpringBootApplication
 @MapperScan("com.ai.exam_spring.modules.*.mapper")
-public class ExamSpringApplication {
+public class ExamCoreApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ExamSpringApplication.class, args);
+        SpringApplication.run(ExamCoreApplication.class, args);
     }
 
 }

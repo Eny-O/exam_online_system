@@ -20,4 +20,12 @@ public interface StudentAnswerMapper extends BaseMapper<StudentAnswer> {
      * @param list 学生答案列表
      */
     void batchInsert(@Param("list") List<StudentAnswer> list);
+
+    /**
+     * 删除某考生在某场考试下的全部答案
+     * 用于落库前清理旧记录，保证定时交卷重复执行时不会产生重复行
+     * @param examId    考试ID
+     * @param studentId 学生ID
+     */
+    void deleteByExamAndStudent(@Param("examId") Integer examId, @Param("studentId") Integer studentId);
 }

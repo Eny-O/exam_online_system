@@ -6,6 +6,7 @@ import com.ai.exam_common.common.security.SecurityUtil;
 import com.ai.exam_spring.modules.grade.pojo.dto.GradeMessageDTO;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
+import com.ai.exam_spring.modules.exam.pojo.dos.stu_answer.StudentAnswer;
 import com.ai.exam_spring.modules.exam.pojo.enums.ExamEnum;
 import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
 import com.ai.exam_spring.modules.exam.mapper.StuExamMapper;
@@ -16,7 +17,6 @@ import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
-import com.ai.exam_spring.modules.grade.mapper.StudentAnswerMapper;
 import com.ai.exam_spring.utils.RedisUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -32,12 +32,10 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -48,7 +46,7 @@ class StuExamServiceImplTest {
     @Mock private IStudentAnswerService studentAnswerService;
     @Mock private IExamStudentService examStudentService;
     @Mock private StuExamMapper stuExamMapper;
-    @Mock private StudentAnswerMapper studentAnswerMapper;
+    @Mock private ExamAnswerPersistenceService examAnswerPersistenceService;
     @Mock private RocketMQTemplate rocketMQTemplate;
     @Mock private RedisUtil redisUtil;
     @Mock private TransactionTemplate transactionTemplate;
@@ -69,10 +67,10 @@ class StuExamServiceImplTest {
     }
 
     @Test
-    @DisplayName("submitPaper 正常提交：状态流转SUBMITTED + 批量插入答案 + 发MQ")
+    @DisplayName("submitPaper 正常提交：状态流转SUBMITTED + 落库答案 + 发MQ")
     void submitPaper_normal() {
-        Map<String, String> raw = Map.of("1", "{\"studentAnswer\":\"A\",\"fullScore\":2.0}");
-        when(redisUtil.hGetAllRaw(anyString())).thenReturn(raw);
+        List<StudentAnswer> answers = List.of(new StudentAnswer());
+        when(examAnswerPersistenceService.loadAnswersFromRedis(EXAM_ID, STUDENT_ID)).thenReturn(answers);
 
         BaseMapper<ExamStudent> baseMapper = mock(BaseMapper.class);
         when(examStudentService.getBaseMapper()).thenReturn(baseMapper);
@@ -80,15 +78,15 @@ class StuExamServiceImplTest {
 
         stuExamService.submitPaper(EXAM_ID);
 
-        verify(studentAnswerMapper).batchInsert(anyList());
+        verify(examAnswerPersistenceService).saveAnswers(answers);
         verify(rocketMQTemplate).convertAndSend(eq("exam-grade-topic"), any(GradeMessageDTO.class));
     }
 
     @Test
     @DisplayName("submitPaper 重复提交：update影响0行抛异常，不写答案")
     void submitPaper_duplicate() {
-        Map<String, String> raw = Map.of("1", "{\"studentAnswer\":\"A\",\"fullScore\":2.0}");
-        when(redisUtil.hGetAllRaw(anyString())).thenReturn(raw);
+        List<StudentAnswer> answers = List.of(new StudentAnswer());
+        when(examAnswerPersistenceService.loadAnswersFromRedis(EXAM_ID, STUDENT_ID)).thenReturn(answers);
 
         BaseMapper<ExamStudent> baseMapper = mock(BaseMapper.class);
         when(examStudentService.getBaseMapper()).thenReturn(baseMapper);
@@ -96,13 +94,13 @@ class StuExamServiceImplTest {
 
         BusinessException ex = assertThrows(BusinessException.class, () -> stuExamService.submitPaper(EXAM_ID));
         assertEquals(ErrorCodeEnum.EXAM_STATUS_NOT_PENDING_NOT_SUBMIT.getCode(), ex.getErrorCode());
-        verify(studentAnswerMapper, never()).batchInsert(anyList());
+        verify(examAnswerPersistenceService, never()).saveAnswers(anyList());
     }
 
     @Test
     @DisplayName("submitPaper 空答案：抛 NOT_SUBMIT_EMPTY_PAPER，不进事务")
     void submitPaper_empty() {
-        when(redisUtil.hGetAllRaw(anyString())).thenReturn(Map.of());
+        when(examAnswerPersistenceService.loadAnswersFromRedis(EXAM_ID, STUDENT_ID)).thenReturn(List.of());
 
         BusinessException ex = assertThrows(BusinessException.class, () -> stuExamService.submitPaper(EXAM_ID));
         assertEquals(ErrorCodeEnum.NOT_SUBMIT_EMPTY_PAPER.getCode(), ex.getErrorCode());

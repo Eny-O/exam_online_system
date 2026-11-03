@@ -30,4 +30,10 @@
         </foreach>
     </insert>
 
+    <!-- 删除某考生在某场考试下的全部答案：落库前清理旧记录，保证重复执行不产生重复行 -->
+    <delete id="deleteByExamAndStudent">
+        DELETE FROM student_answer
+        WHERE exam_id = #{examId} AND student_id = #{studentId}
+    </delete>
+
 </mapper>
