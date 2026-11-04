@@ -9,6 +9,7 @@ import com.ai.exam_common.common.status.PaperStatus;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamClass;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
+import com.ai.exam_spring.modules.exam.pojo.dos.stu_answer.StudentAnswer;
 import com.ai.exam_spring.modules.exam.pojo.dto.*;
 import com.ai.exam_spring.modules.paper.pojo.dos.Paper;
 import com.ai.exam_spring.modules.exam.pojo.enums.ExamEnum;
@@ -21,6 +22,7 @@ import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.BasePaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
+import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
 import com.ai.exam_spring.modules.exam.service.IExamClassService;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
@@ -71,6 +73,9 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
     private IExamStudentService examStudentService;
 
     @Autowired
+    private IStudentAnswerService studentAnswerService;
+
+    @Autowired
     private UserFeignClient userFeignClient;
 
     @Autowired
@@ -99,6 +104,7 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         Wrapper<Exam> wrapper = new LambdaQueryWrapper<Exam>()
                 .like(examQueryDTO.getExamName() != null && !examQueryDTO.getExamName().isEmpty(),
                       Exam::getExamName, examQueryDTO.getExamName())
+                .eq(Exam::getDeleted, 0)
                 .apply("exam.creator_id = {0}",currentUserId);
         LocalDateTime now = LocalDateTime.now();
         Page<ExamVO> pageResult = examManagementMapper.pageExam(page, wrapper,  examQueryDTO.getStatus(),now);
@@ -211,7 +217,8 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         Page<Exam> examPage = Page.of(stuExamQueryDTO.getPageNum(), stuExamQueryDTO.getPageSize());
         // 设置条件
         Wrapper<Exam> wrapper = new LambdaQueryWrapper<Exam>()
-                .like(StringUtils.isNotBlank(stuExamQueryDTO.getExamName()), Exam::getExamName, stuExamQueryDTO.getExamName());
+                .like(StringUtils.isNotBlank(stuExamQueryDTO.getExamName()), Exam::getExamName, stuExamQueryDTO.getExamName())
+                .eq(Exam::getDeleted, 0);
         LocalDateTime now = LocalDateTime.now();
         Page<StuExamVO> page = examManagementMapper.pageStuExam(examPage, wrapper, stuId, stuExamQueryDTO.getStatus(), now);
         return PageResult.of(page.getTotal(),page.getRecords(),stuExamQueryDTO.getPageNum(),stuExamQueryDTO.getPageSize());
@@ -433,6 +440,37 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
     @Override
     public void clearExamCache(Integer id) {
         redisUtil.delete(RedisConstant.EXAM_PUBLISH_PREFIX + id);
+    }
+
+    /**
+     * 删除考试
+     * 未发布(0)物理删除并级联清理作答与关联;批阅完成(5)逻辑删除;其他状态不允许
+     * @param id 考试ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void deleteExam(Integer id) {
+        if (id == null) throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        Exam dbExam = examManagementMapper.selectById(id);
+        if (dbExam == null) throw new BusinessException(ErrorCodeEnum.EXAM_NOT_FOUND);
+        ExamEnum status = dbExam.getStatus();
+        if (status == ExamEnum.NOT_POST) {
+            studentAnswerService.remove(new LambdaQueryWrapper<StudentAnswer>()
+                    .eq(StudentAnswer::getExamId, id));
+            examStudentService.remove(new LambdaQueryWrapper<ExamStudent>()
+                    .eq(ExamStudent::getExamId, id));
+            examManagementMapper.deleteById(id);
+        } else if (status == ExamEnum.REVIEW_FINISHED) {
+            Exam update = new Exam();
+            update.setId(id);
+            update.setDeleted(1);
+            update.setVersion(dbExam.getVersion());
+            int rows = examManagementMapper.updateById(update);
+            if (rows <= 0) throw new BusinessException(ErrorCodeEnum.DATA_ALREADY_MODIFIED_PLEASE_FLUSH_AFTER_RETRY);
+        } else {
+            throw new BusinessException(ErrorCodeEnum.EXAM_DELETE_NOT_ALLOWED);
+        }
+        clearExamCache(id);
     }
 
     /**

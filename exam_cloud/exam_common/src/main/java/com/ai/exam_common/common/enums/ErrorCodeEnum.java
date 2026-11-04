@@ -49,6 +49,7 @@ public enum ErrorCodeEnum {
     EXAM_STATUS_NOT_GRADED("3007", "考试状态不是已阅卷不能查看试卷结果"),
     EXAM_REFERENCE_PAPER_NOT_FOUND("3008", "考试关联的试卷不存在"),
     EXAM_QUESTION_NOT_IN_PAPER("3009", "题目不属于该场考试的试卷"),
+    EXAM_DELETE_NOT_ALLOWED("3010","当前状态不允许删除考试"),
 
     // 文件与导入错误码
     FILE_FORMAT_ERROR("4001", "仅支持 .xlsx 格式文件"),

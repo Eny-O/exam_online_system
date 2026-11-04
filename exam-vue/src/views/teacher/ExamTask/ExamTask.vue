@@ -199,6 +199,7 @@ import {
   updateExamStatus,
   publishExam,
   clearExamCache,
+  deleteExam,
 } from "@/api/examTask";
 
 const router = useRouter();
@@ -443,13 +444,18 @@ const handleDelete = (row) => {
     cancelButtonText: "取消",
     type: "warning",
   })
-    .then(() => {
-      // TODO: 调用删除API
+    .then(async () => {
+      await deleteExam(row.id);
       ElMessage.success("删除成功");
       fetchExamList();
     })
-    .catch(() => {
-      ElMessage.info("已取消删除");
+    .catch((error) => {
+      if (error === "cancel" || error === "close") {
+        ElMessage.info("已取消删除");
+      } else {
+        console.error("删除考试失败:", error);
+        ElMessage.error("删除失败，请稍后重试");
+      }
     });
 };
 

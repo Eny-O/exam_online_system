@@ -101,4 +101,13 @@ public class ExamManagementController {
         return ResponseResult.success();
     }
 
+    @Operation(summary = "删除考试")
+    @PreAuthorize("hasAuthority('tch:exam:delete')")
+    @DeleteMapping("/deleteExam")
+    public ResponseResult<Void> deleteExam(@Validated @RequestParam Integer id) {
+        log.info("删除考试 {}", id);
+        examManagementService.deleteExam(id);
+        return ResponseResult.success();
+    }
+
 }

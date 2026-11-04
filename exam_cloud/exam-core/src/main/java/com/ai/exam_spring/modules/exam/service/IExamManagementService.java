@@ -60,4 +60,10 @@ public interface IExamManagementService extends IService<Exam> {
      * @param id 考试ID
      */
     void clearExamCache(Integer id);
+
+    /**
+     * 删除考试（未发布物理删除，批阅完成逻辑删除）
+     * @param id 考试ID
+     */
+    void deleteExam(Integer id);
 }

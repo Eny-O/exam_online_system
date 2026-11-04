@@ -32,6 +32,8 @@ public class Exam {
     @Schema(description = "状态: 0-未发布,1-已发布,2-未开始,3-进行中,4-待批阅,5-批阅完成,其中2,3,4前端维护")
     private ExamEnum status = ExamEnum.NOT_POST;
 
+    @Schema(description = "逻辑删除标记: 0-未删除,1-已删除")
+    private Integer deleted = 0;
 
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人ID")

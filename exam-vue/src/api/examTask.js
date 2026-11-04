@@ -63,6 +63,13 @@ export function clearExamCache(id) {
   });
 }
 
+// 删除考试
+export function deleteExam(id) {
+  return request.delete("/exam-task-management/deleteExam", {
+    params: { id },
+  });
+}
+
 // 学生考试分页查询
 export function getStuExamPage(params) {
   return request.get("/stu/exam/page", { params });
