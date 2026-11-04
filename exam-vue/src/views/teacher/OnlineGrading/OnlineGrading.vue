@@ -206,25 +206,26 @@
               <span class="score-max">/ {{ q.fullScore }} 分</span>
             </div>
 
-            <!-- AI 智能评分（仅主观题） -->
+            <!-- AI 智能评分（仅主观题，单题试验功能） -->
             <div class="ai-grade-section" v-if="isEssay(q.type)">
               <el-button
                 size="small"
                 type="primary"
                 plain
-                :loading="aiLoadingIndex === index"
+                :loading="aiLoadingKey === aiKey(q.questionId)"
                 @click="handleAiGrade(index)"
               >
                 AI 评分
               </el-button>
               <el-alert
                 v-if="
-                  aiResults[q.questionId] &&
-                  aiResults[q.questionId].status !== 'UNGRADABLE'
+                  aiResults[aiKey(q.questionId)] &&
+                  aiResults[aiKey(q.questionId)].status !== 'UNGRADABLE' &&
+                  aiResults[aiKey(q.questionId)].status !== 'ERROR'
                 "
                 class="ai-result"
                 :type="
-                  aiResults[q.questionId].status === 'NEED_HUMAN_REVIEW'
+                  aiResults[aiKey(q.questionId)].status === 'NEED_HUMAN_REVIEW'
                     ? 'warning'
                     : 'success'
                 "
@@ -233,25 +234,33 @@
               >
                 <template #title>
                   <span>
-                    AI 初评 {{ aiResults[q.questionId].preliminaryScore }} /
-                    再评 {{ aiResults[q.questionId].finalScore }} 分，分歧
+                    AI 初评 {{ aiResults[aiKey(q.questionId)].preliminaryScore }} /
+                    再评 {{ aiResults[aiKey(q.questionId)].finalScore }} 分，分歧
                     {{
                       Math.round(
-                        (aiResults[q.questionId].divergence || 0) * 100
+                        (aiResults[aiKey(q.questionId)].divergence || 0) * 100
                       )
                     }}%
                   </span>
                 </template>
                 <div
                   v-if="
-                    aiResults[q.questionId].reviewResult &&
-                    aiResults[q.questionId].reviewResult.reviewComment
+                    aiResults[aiKey(q.questionId)].reviewResult &&
+                    aiResults[aiKey(q.questionId)].reviewResult.reviewComment
                   "
                   class="ai-comment"
                 >
-                  {{ aiResults[q.questionId].reviewResult.reviewComment }}
+                  {{ aiResults[aiKey(q.questionId)].reviewResult.reviewComment }}
                 </div>
               </el-alert>
+              <el-alert
+                v-if="aiResults[aiKey(q.questionId)]?.status === 'ERROR'"
+                class="ai-result"
+                type="error"
+                :closable="false"
+                show-icon
+                :title="aiResults[aiKey(q.questionId)]?.errorMessage || 'AI 服务调用失败'"
+              />
             </div>
           </el-card>
         </div>
@@ -320,10 +329,14 @@ const currentQuestionIndex = ref(0);
 const questionRefs = reactive({});
 
 // ========== AI 智能批阅 ==========
-// 正在请求 AI 的题目索引（用于按钮 loading 态）
-const aiLoadingIndex = ref(null);
-// 各题 AI 批阅结果缓存（按 questionId），用于展示初评/再评/分歧/复核意见
+// 正在 AI 评分的题目 key（「学生:题目」），用于单题按钮 loading 态
+const aiLoadingKey = ref(null);
+// 各题 AI 批阅结果缓存（按「学生:题目」隔离），用于展示初评/再评/分歧/复核意见
 const aiResults = reactive({});
+// AI 批阅结果按「学生:题目」隔离，避免切换学生后结果串到其他学生/题目
+const aiKey = (questionId) => `${currentStudentId.value}:${questionId}`;
+// 按学生缓存未保存的答题编辑，避免切换学生时 AI 填分等未保存改动丢失
+const studentAnswersCache = reactive({});
 
 // ========== 已批改记录 { [studentId]: true } ==========
 const gradedStudents = reactive({});
@@ -457,10 +470,17 @@ const loadStudentList = async () => {
 };
 
 const loadStudentAnswers = async (studentId) => {
+  // 优先使用已缓存的未保存编辑（含 AI 填分），避免切换学生时丢失
+  if (studentAnswersCache[studentId]) {
+    studentAnswers.value = studentAnswersCache[studentId];
+    return;
+  }
   loadingAnswers.value = true;
   try {
     const res = await getStudentAnswer(studentId, examId);
-    studentAnswers.value = res.data || [];
+    const data = res.data || [];
+    studentAnswers.value = data;
+    studentAnswersCache[studentId] = data;
   } catch (e) {
     console.error("加载学生答题失败:", e);
     studentAnswers.value = [];
@@ -472,6 +492,10 @@ const loadStudentAnswers = async (studentId) => {
 // ========== 交互方法 ==========
 const handleSelectStudent = async (student) => {
   if (currentStudentId.value === student.studentId) return;
+  // 暂存当前学生的未保存编辑（含 AI 填分），切回时可恢复
+  if (currentStudentId.value && studentAnswers.value.length) {
+    studentAnswersCache[currentStudentId.value] = studentAnswers.value;
+  }
   currentStudentId.value = student.studentId;
   currentQuestionIndex.value = 0;
   await loadStudentAnswers(student.studentId);
@@ -588,6 +612,8 @@ const saveGrading = async () => {
   try {
     await updateGradeStudentScore(payload);
     markCurrentStudentGraded();
+    // 保存成功后同步缓存，确保切回时仍是已保存状态
+    studentAnswersCache[currentStudentId.value] = studentAnswers.value;
     return true;
   } catch (e) {
     console.error("保存批阅失败:", e);
@@ -644,7 +670,8 @@ const handleAutoGradeObjective = async () => {
   }
 };
 
-// AI 智能双评主观题（人机协同：回填建议分 + 展示双评意见，教师确认/微调后保存）
+// AI 智能双评单题（人机协同：回填建议分 + 展示双评意见，教师确认/微调后保存）
+// 结果按「学生:题目」隔离（aiKey），保证回显到正确位置，不串到其他学生
 const handleAiGrade = async (index) => {
   const q = displayQuestions.value[index];
   if (!currentStudentId.value) {
@@ -655,7 +682,21 @@ const handleAiGrade = async (index) => {
     ElMessage.warning("题目信息缺失，无法调用 AI 批阅");
     return;
   }
-  aiLoadingIndex.value = index;
+  try {
+    await ElMessageBox.confirm(
+      "该功能为试验功能，AI 评分结果可能不稳定，仅作参考，请人工复核后再保存。是否继续？",
+      "试验功能提示",
+      {
+        confirmButtonText: "仍要使用",
+        cancelButtonText: "取消",
+        type: "warning",
+      }
+    );
+  } catch {
+    return;
+  }
+  const key = aiKey(q.questionId);
+  aiLoadingKey.value = key;
   try {
     const res = await aiSubjectiveGrade({
       examId,
@@ -663,7 +704,7 @@ const handleAiGrade = async (index) => {
       questionId: q.questionId,
     });
     const outcome = res.data;
-    aiResults[q.questionId] = outcome;
+    aiResults[key] = outcome;
     if (outcome.status === "UNGRADABLE") {
       ElMessage.warning("AI 暂无法评判该题（题目或作答信息不足）");
       return;
@@ -679,8 +720,10 @@ const handleAiGrade = async (index) => {
     }
   } catch (e) {
     console.error("AI 评分失败:", e);
+    const errMsg = e?.response?.data?.message || e?.message || "AI 服务调用失败";
+    aiResults[key] = { status: "ERROR", errorMessage: errMsg };
   } finally {
-    aiLoadingIndex.value = null;
+    aiLoadingKey.value = null;
   }
 };
 
