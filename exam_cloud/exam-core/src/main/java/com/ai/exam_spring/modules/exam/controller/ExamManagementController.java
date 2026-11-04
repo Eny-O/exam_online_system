@@ -74,12 +74,21 @@ public class ExamManagementController {
         return ResponseResult.success(codes);
     }
 
-    @Operation(summary = "发布考试")
-    //@PreAuthorize("hasAuthority('tch:exam:publish')")
+    @Operation(summary = "加载考试信息与试卷内容到缓存")
+    @PreAuthorize("hasAuthority('tch:exam:status')")
     @PutMapping("/publishExam")
     public ResponseResult<Void> publishExam(@Validated @RequestParam Integer id) {
-        log.info("发布考试 {}", id);
+        log.info("加载考试试卷到缓存 {}", id);
         examManagementService.publishExam(id);
+        return ResponseResult.success();
+    }
+
+    @Operation(summary = "清除考试缓存")
+    @PreAuthorize("hasAuthority('tch:exam:status')")
+    @DeleteMapping("/clearExamCache")
+    public ResponseResult<Void> clearExamCache(@Validated @RequestParam Integer id) {
+        log.info("清除考试缓存 {}", id);
+        examManagementService.clearExamCache(id);
         return ResponseResult.success();
     }
 

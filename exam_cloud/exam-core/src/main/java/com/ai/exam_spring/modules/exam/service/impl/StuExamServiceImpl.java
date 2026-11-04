@@ -16,6 +16,7 @@ import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
 import com.ai.exam_spring.modules.exam.pojo.vo.ExamDetailVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.ExamResultVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.BasePaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperQuestionVO;
@@ -27,6 +28,8 @@ import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.exam.service.StuExamService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
+import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
+import com.ai.exam_spring.modules.paper.service.PaperContentConverter;
 import com.ai.exam_spring.utils.RedisUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.NonNull;
@@ -51,6 +54,12 @@ public class StuExamServiceImpl implements StuExamService {
 
     @Autowired
     private IExamStudentService examStudentService;
+
+    @Autowired
+    private IPaperManagementService paperManagementService;
+
+    @Autowired
+    private PaperContentConverter paperContentConverter;
 
     @Autowired
     private StuExamMapper stuExamMapper;
@@ -83,29 +92,34 @@ public class StuExamServiceImpl implements StuExamService {
     }
 
     /**
-     * 根据id获取试卷信息
+     * 获取某场考试的考试信息与试卷内容
+     * 数据来自教师发布考试时写入的redis缓存
      *
-     * @param id
+     * @param examId 考试ID
+     * @return 考试信息与试卷内容
+     */
+    @Override
+    public StuExamPaperVO getExamPaperWithExam(Integer examId) {
+        StuExamPaperVO examPaperVO = redisUtil.get(RedisConstant.EXAM_PUBLISH_PREFIX + examId, StuExamPaperVO.class);
+        if (examPaperVO == null || examPaperVO.getPaper() == null) {
+            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
+        }
+        return examPaperVO;
+    }
+
+    /**
+     * 根据试卷ID获取试卷内容
+     *
+     * @param paperId 试卷ID
      * @return StuPaperVO
      */
     @Override
-    public StuPaperVO getPaperById(Integer id) {
-        PaperContentVO paperContentVO = redisUtil.get(RedisConstant.EXAM_PUBLISH_PREFIX + id, PaperContentVO.class);
+    public StuPaperVO getPaperById(Integer paperId) {
+        PaperContentVO paperContentVO = paperManagementService.getPaperById(paperId);
         if (paperContentVO == null) {
             throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
         }
-        StuPaperVO stuPaperVO = new StuPaperVO();
-        BeanUtil.copyProperties(paperContentVO, stuPaperVO);
-        List<StuPaperQuestionVO> stuPaperQuestionVOS = paperContentVO.getPaperQuestionVOS().stream().map(paperQuestionVO -> {
-            StuPaperQuestionVO stuPaperQuestionVO = new StuPaperQuestionVO();
-            BeanUtil.copyProperties(paperQuestionVO, stuPaperQuestionVO);
-            StuQuestionCompleteVO stuQuestionCompleteVO = new StuQuestionCompleteVO();
-            BeanUtil.copyProperties(paperQuestionVO.getQuestionCompleteVO(), stuQuestionCompleteVO);
-            stuPaperQuestionVO.setStuQuestionCompleteVO(stuQuestionCompleteVO);
-            return stuPaperQuestionVO;
-        }).toList();
-        stuPaperVO.setStuPaperQuestionVOS(stuPaperQuestionVOS);
-        return stuPaperVO;
+        return paperContentConverter.toStudentPaper(paperContentVO);
     }
 
     /**

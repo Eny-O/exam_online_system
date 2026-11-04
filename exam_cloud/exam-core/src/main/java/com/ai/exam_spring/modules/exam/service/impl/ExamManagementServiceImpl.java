@@ -17,12 +17,14 @@ import com.ai.exam_spring.modules.exam.pojo.vo.ExamDetailVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.ExamVO;
 import com.ai.exam_spring.modules.exam.mapper.ExamManagementMapper;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.BasePaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.exam.service.IExamClassService;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
+import com.ai.exam_spring.modules.paper.service.PaperContentConverter;
 import com.ai.exam_api.feign.ClassFeignClient;
 import com.ai.exam_api.feign.UserFeignClient;
 import com.ai.exam_api.pojo.dto.ClassBriefDTO;
@@ -40,6 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import com.ai.exam_common.common.security.SecurityUtil;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -49,6 +52,9 @@ import java.util.function.Function;
 @Service
 public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper, Exam> implements IExamManagementService {
 
+    /** 已发布考试缓存的额外保留时长(秒)：考试结束后再保留一天 */
+    private static final long CACHE_EXPIRE_AFTER_EXAM_END_SECONDS = 24 * 60 * 60L;
+
     @Autowired
     private ExamManagementMapper examManagementMapper;
 
@@ -57,6 +63,9 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
 
     @Autowired
     private IPaperManagementService paperManagementService;
+
+    @Autowired
+    private PaperContentConverter paperContentConverter;
 
     @Autowired
     private IExamStudentService examStudentService;
@@ -396,8 +405,8 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
     }
 
     /**
-     * 发布考试,将试卷内容保存到redis,并更新考试状态
-     * @param id
+     * 将考试信息与试卷内容加载到redis缓存
+     * @param id 考试ID
      */
     @Override
     public void publishExam(Integer id) {
@@ -409,7 +418,35 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         if (paperContentVO == null) {
             throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
         }
-        redisUtil.set(RedisConstant.EXAM_PUBLISH_PREFIX + id, paperContentVO);
-        updateExamStatus(new ExamStatusUpdateDTO(id, ExamEnum.ALREADY_POST));
+        StuExamVO examVO = new StuExamVO();
+        BeanUtil.copyProperties(exam, examVO);
+        StuExamPaperVO examPaperVO = new StuExamPaperVO();
+        examPaperVO.setExam(examVO);
+        examPaperVO.setPaper(paperContentConverter.toStudentPaper(paperContentVO));
+        redisUtil.set(RedisConstant.EXAM_PUBLISH_PREFIX + id, examPaperVO, cacheExpireSeconds(exam));
+    }
+
+    /**
+     * 清除考试在redis中的缓存
+     * @param id 考试ID
+     */
+    @Override
+    public void clearExamCache(Integer id) {
+        redisUtil.delete(RedisConstant.EXAM_PUBLISH_PREFIX + id);
+    }
+
+    /**
+     * 计算已发布考试缓存的过期秒数：以考试结束时间为准,考试结束后再保留一天
+     * @param exam 考试
+     * @return 过期秒数
+     */
+    private long cacheExpireSeconds(Exam exam) {
+        long expireSeconds = CACHE_EXPIRE_AFTER_EXAM_END_SECONDS;
+        if (exam.getStartTime() != null && exam.getDuration() != null) {
+            LocalDateTime examEndTime = exam.getStartTime().plusMinutes(exam.getDuration());
+            long secondsUntilExamEnd = Duration.between(LocalDateTime.now(), examEndTime).getSeconds();
+            expireSeconds += Math.max(secondsUntilExamEnd, 0);
+        }
+        return expireSeconds;
     }
 }

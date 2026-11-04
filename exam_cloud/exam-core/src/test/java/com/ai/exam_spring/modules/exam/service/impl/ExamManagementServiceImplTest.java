@@ -10,7 +10,9 @@ import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
 import com.ai.exam_spring.modules.exam.mapper.ExamManagementMapper;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
+import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperVO;
 import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
+import com.ai.exam_spring.modules.paper.service.PaperContentConverter;
 import com.ai.exam_common.common.constant.RedisConstant;
 import com.ai.exam_spring.utils.RedisUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +39,8 @@ class ExamManagementServiceImplTest {
     private IExamStudentService examStudentService;
     @Mock
     private IPaperManagementService paperManagementService;
+    @Mock
+    private PaperContentConverter paperContentConverter;
     @Mock
     private RedisUtil redisUtil;
 
@@ -246,15 +250,16 @@ class ExamManagementServiceImplTest {
     // ========== publishExam ==========
 
     @Test
-    @DisplayName("publishExam 正常：试卷存Redis + 状态流转ALREADY_POST")
+    @DisplayName("publishExam 正常：考试信息与试卷内容存Redis")
     void publish_normal() {
         when(examManagementMapper.selectById(EXAM_ID)).thenReturn(examOf(ExamEnum.NOT_POST));
         when(paperManagementService.getPaperById(PAPER_ID)).thenReturn(new PaperContentVO());
+        when(paperContentConverter.toStudentPaper(any(PaperContentVO.class))).thenReturn(new StuPaperVO());
 
         examManagementService.publishExam(EXAM_ID);
 
-        verify(redisUtil).set(eq(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID), any(Object.class));
-        verify(examManagementMapper).updateById(any(Exam.class));
+        verify(redisUtil).set(eq(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID), any(Object.class), anyLong());
+        verify(examManagementMapper, never()).updateById(any(Exam.class));
     }
 
     @Test
@@ -266,7 +271,7 @@ class ExamManagementServiceImplTest {
                 () -> examManagementService.publishExam(EXAM_ID));
         assertEquals(ErrorCodeEnum.EXAM_NOT_FOUND.getCode(), ex.getErrorCode());
         verify(paperManagementService, never()).getPaperById(any());
-        verify(redisUtil, never()).set(any(), any(Object.class));
+        verify(redisUtil, never()).set(any(), any(Object.class), anyLong());
     }
 
     @Test
@@ -278,6 +283,16 @@ class ExamManagementServiceImplTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> examManagementService.publishExam(EXAM_ID));
         assertEquals(ErrorCodeEnum.PAPER_NOT_EXIST.getCode(), ex.getErrorCode());
-        verify(redisUtil, never()).set(any(), any(Object.class));
+        verify(redisUtil, never()).set(any(), any(Object.class), anyLong());
+    }
+
+    // ========== clearExamCache ==========
+
+    @Test
+    @DisplayName("clearExamCache 正常：删除Redis缓存")
+    void clearCache_normal() {
+        examManagementService.clearExamCache(EXAM_ID);
+
+        verify(redisUtil).delete(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID);
     }
 }

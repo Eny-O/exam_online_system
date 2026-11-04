@@ -50,8 +50,14 @@ public interface IExamManagementService extends IService<Exam> {
     ExamDetailVO getExamDetailById(Integer id);
 
     /**
-     * 发布考试
-     * @param id
+     * 将考试信息与试卷内容加载到redis缓存
+     * @param id 考试ID
      */
     void publishExam(Integer id);
+
+    /**
+     * 清除考试在redis中的缓存
+     * @param id 考试ID
+     */
+    void clearExamCache(Integer id);
 }

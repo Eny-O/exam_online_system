@@ -197,6 +197,8 @@ import {
   getExamPage,
   getAllExamStatus,
   updateExamStatus,
+  publishExam,
+  clearExamCache,
 } from "@/api/examTask";
 
 const router = useRouter();
@@ -373,6 +375,7 @@ const handlePublish = async (row) => {
         type: "warning",
       }
     );
+    await publishExam(row.id);
     await updateExamStatus(row.id, 1);
     ElMessage.success("发布成功");
     fetchExamList();
@@ -417,6 +420,7 @@ const handleCancelPublish = async (row) => {
         type: "warning",
       }
     );
+    await clearExamCache(row.id);
     await updateExamStatus(row.id, 0);
     ElMessage.success("已取消发布");
     fetchExamList();

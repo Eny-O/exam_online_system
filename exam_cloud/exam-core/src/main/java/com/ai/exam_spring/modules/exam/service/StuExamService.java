@@ -2,6 +2,7 @@ package com.ai.exam_spring.modules.exam.service;
 
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.StudentUpdateAnswerDTO;
 import com.ai.exam_spring.modules.exam.pojo.vo.ExamResultVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.BaseStudentAnswerVO;
@@ -17,11 +18,18 @@ public interface StuExamService {
     StuExamVO examInfoById(Integer id);
 
     /**
-     * 根据id获取试卷信息
-     * @param id
-     * @return
+     * 获取某场考试的考试信息与试卷内容
+     * @param examId 考试ID
+     * @return 考试信息与试卷内容
      */
-    StuPaperVO getPaperById(Integer id);
+    StuExamPaperVO getExamPaperWithExam(Integer examId);
+
+    /**
+     * 根据试卷ID获取试卷内容
+     * @param paperId 试卷ID
+     * @return StuPaperVO
+     */
+    StuPaperVO getPaperById(Integer paperId);
 
     /**
      * 提交试卷

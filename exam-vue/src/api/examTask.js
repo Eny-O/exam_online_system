@@ -49,6 +49,20 @@ export function updateExamStatus(id, status) {
   });
 }
 
+// 加载考试信息与试卷内容到缓存
+export function publishExam(id) {
+  return request.put("/exam-task-management/publishExam", null, {
+    params: { id },
+  });
+}
+
+// 清除考试缓存
+export function clearExamCache(id) {
+  return request.delete("/exam-task-management/clearExamCache", {
+    params: { id },
+  });
+}
+
 // 学生考试分页查询
 export function getStuExamPage(params) {
   return request.get("/stu/exam/page", { params });
@@ -58,9 +72,14 @@ export function getExamInfo(id) {
   return request.get("/stu/exam/getExamInfo", { params: { id } });
 }
 
+// 学生获取考试信息与试卷内容
+export function getExamPaperWithExam(examId) {
+  return request.get("/stu/exam/getExamPaperWithExam", { params: { examId } });
+}
+
 // 学生获取试卷内容
-export function getExamPaper(id) {
-  return request.get("/stu/exam/getExamPaper", { params: { id } });
+export function getExamPaper(paperId) {
+  return request.get("/stu/exam/getExamPaper", { params: { paperId } });
 }
 
 // 学生提交试卷（仅更新考试状态，答案已通过updateAnswer实时保存）
@@ -75,7 +94,7 @@ export function initStuExam(examId) {
 
 // 学生修改答案（实时保存到Redis，提交时批量写入数据库）
 export function updateAnswer(data) {
-  return request.put("/stu/exam/updateAnswer", [data]);
+  return request.put("/stu/exam/updateAnswer", data);
 }
 
 // 学生获取答题详情

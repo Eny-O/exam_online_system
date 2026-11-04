@@ -5,6 +5,7 @@ import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_spring.modules.exam.pojo.dto.StuExamQueryDTO;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.StudentUpdateAnswerDTO;
 import com.ai.exam_spring.modules.exam.pojo.vo.ExamResultVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.BaseStudentAnswerVO;
@@ -51,12 +52,21 @@ public class ExamController {
         return ResponseResult.success(stuExamVO);
     }
 
+    @Operation(summary = "学生获取考试信息与试卷内容")
+    @PreAuthorize("hasAuthority('stu:exam:view')")
+    @GetMapping("/getExamPaperWithExam")
+    public ResponseResult<StuExamPaperVO> getExamPaperWithExam(@RequestParam Integer examId) {
+        log.info("学生获取考试信息与试卷内容: {}", examId);
+        StuExamPaperVO examPaperVO = stuExamService.getExamPaperWithExam(examId);
+        return ResponseResult.success(examPaperVO);
+    }
+
     @Operation(summary = "学生获取试卷内容")
     @PreAuthorize("hasAuthority('stu:exam:view')")
     @GetMapping("/getExamPaper")
-    public ResponseResult<StuPaperVO> getPaperById(@RequestParam Integer id) {
-        log.info("学生获取试卷内容: {}", id);
-        StuPaperVO stuPaperVO = stuExamService.getPaperById(id);
+    public ResponseResult<StuPaperVO> getPaperById(@RequestParam Integer paperId) {
+        log.info("学生获取试卷内容: {}", paperId);
+        StuPaperVO stuPaperVO = stuExamService.getPaperById(paperId);
         return ResponseResult.success(stuPaperVO);
     }
 

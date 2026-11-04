@@ -179,8 +179,7 @@ import {
 } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
-  getExamInfo,
-  getExamPaper,
+  getExamPaperWithExam,
   submitPaper,
   initStuExam,
   updateAnswer,
@@ -226,13 +225,15 @@ const fetchData = async () => {
   loading.value = true;
   examId.value = route.params.id;
   try {
-    // 先获取考试信息，拿到 paperId
-    const infoRes = await getExamInfo(examId.value);
-    paperId.value = infoRes.data.paperId;
+    // 获取考试信息与试卷内容
+    const examPaperRes = await getExamPaperWithExam(examId.value);
+    const examInfo = examPaperRes.data.exam;
+    const paperData = examPaperRes.data.paper;
+    paperId.value = examInfo.paperId;
 
     // 根据开始时间和时长动态计算剩余时间
-    const startTime = new Date(infoRes.data.startTime).getTime();
-    const durationSeconds = infoRes.data.duration * 60;
+    const startTime = new Date(examInfo.startTime).getTime();
+    const durationSeconds = examInfo.duration * 60;
     const endTime = startTime + durationSeconds * 1000;
     const now = Date.now();
     const remaining = Math.floor((endTime - now) / 1000);
@@ -240,14 +241,11 @@ const fetchData = async () => {
     timeLeft.value =
       remaining > durationSeconds ? durationSeconds : Math.max(remaining, 0);
 
-    // 用 paperId 获取试卷内容
-    const paperRes = await getExamPaper(infoRes.data.paperId);
-
     // 保存试卷原始数据
-    paper.value = paperRes.data;
+    paper.value = paperData;
 
     // 扁平化题目数据（后端返回type为大写，统一转小写匹配前端逻辑）
-    questions.value = paperRes.data.stuPaperQuestionVOS.map((pq) => ({
+    questions.value = paperData.stuPaperQuestionVOS.map((pq) => ({
       sortOrder: pq.sortOrder,
       score: pq.score,
       id: pq.stuQuestionCompleteVO.id,
