@@ -299,7 +299,6 @@ const handleSelect = (optionLabel) => {
     examId: examId.value,
     questionId: q.id,
     studentAnswer,
-    fullScore: q.score,
   }).catch((err) => {
     console.warn("保存答案失败:", err);
   });
@@ -326,7 +325,6 @@ const handleEssayInput = () => {
       examId: examId.value,
       questionId: q.id,
       studentAnswer,
-      fullScore: q.score,
     }).catch((err) => {
       console.warn("保存主观题答案失败:", err);
     });

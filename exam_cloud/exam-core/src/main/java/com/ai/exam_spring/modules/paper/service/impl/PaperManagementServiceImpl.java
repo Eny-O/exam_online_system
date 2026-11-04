@@ -202,6 +202,30 @@ public class PaperManagementServiceImpl extends ServiceImpl<PaperManagementMappe
     }
 
     /**
+     * 获取试卷中各题目的ID与分值
+     *
+     * @param paperId 试卷ID
+     * @return 题目ID与分值的映射
+     */
+    @Override
+    public Map<Integer, Double> getQuestionScoreMap(Integer paperId) {
+        if (paperId == null) {
+            return Map.of();
+        }
+        List<PaperQuestion> paperQuestions = paperQuestionMapper.selectByPaperId(paperId);
+        if (paperQuestions == null || paperQuestions.isEmpty()) {
+            return Map.of();
+        }
+        return paperQuestions.stream()
+                .filter(paperQuestion -> paperQuestion.getQuestionId() != null)
+                .collect(Collectors.toMap(
+                        PaperQuestion::getQuestionId,
+                        PaperQuestion::getScore,
+                        (existing, replacement) -> replacement
+                ));
+    }
+
+    /**
      * 批量删除试卷
      * 先删除试卷题目关联表数据,再删除试卷基本信息
      * //TODO 后续可做逻辑删除

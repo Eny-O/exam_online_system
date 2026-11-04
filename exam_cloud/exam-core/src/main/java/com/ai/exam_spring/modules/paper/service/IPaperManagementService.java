@@ -11,6 +11,7 @@ import com.ai.exam_spring.modules.paper.pojo.vo.PaperVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -41,6 +42,14 @@ public interface IPaperManagementService extends IService<Paper> {
      * @return
      */
     PaperContentVO getPaperById(Integer id);
+
+    /**
+     * 获取试卷中各题目的ID与分值
+     *
+     * @param paperId 试卷ID
+     * @return 题目ID与分值的映射
+     */
+    Map<Integer, Double> getQuestionScoreMap(Integer paperId);
 
     /**
      * 根据ids批量删除试卷

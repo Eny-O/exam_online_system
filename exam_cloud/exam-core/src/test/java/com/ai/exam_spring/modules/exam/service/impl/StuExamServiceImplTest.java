@@ -4,6 +4,8 @@ import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_common.common.security.SecurityUtil;
 import com.ai.exam_spring.modules.grade.pojo.dto.GradeMessageDTO;
+import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.RedisAnswerDTO;
+import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.StudentUpdateAnswerDTO;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
 import com.ai.exam_spring.modules.exam.pojo.dos.stu_answer.StudentAnswer;
@@ -17,6 +19,7 @@ import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
+import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
 import com.ai.exam_spring.utils.RedisUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -25,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,6 +36,7 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,6 +50,7 @@ class StuExamServiceImplTest {
     @Mock private IExamManagementService examManagementService;
     @Mock private IStudentAnswerService studentAnswerService;
     @Mock private IExamStudentService examStudentService;
+    @Mock private IPaperManagementService paperManagementService;
     @Mock private StuExamMapper stuExamMapper;
     @Mock private ExamAnswerPersistenceService examAnswerPersistenceService;
     @Mock private RocketMQTemplate rocketMQTemplate;
@@ -206,6 +212,67 @@ class StuExamServiceImplTest {
         assertEquals("B", r2.getStudentAnswer());
         assertEquals(0, r2.getIsCorrect());
         assertEquals(0.0, r2.getScore());
+    }
+
+    // ===================== updateBatchAnswer =====================
+
+    @Test
+    @DisplayName("updateBatchAnswer 正常：题目满分以试卷为准，不采信前端传入值")
+    void updateBatchAnswer_usesPaperScore() {
+        Exam exam = new Exam();
+        exam.setId(EXAM_ID);
+        exam.setPaperId(77);
+        when(examManagementService.getById(EXAM_ID)).thenReturn(exam);
+        when(paperManagementService.getQuestionScoreMap(77)).thenReturn(Map.of(101, 3.5));
+
+        StudentUpdateAnswerDTO dto = new StudentUpdateAnswerDTO();
+        dto.setExamId(EXAM_ID);
+        dto.setQuestionId(101);
+        dto.setStudentAnswer("A");
+
+        stuExamService.updateBatchAnswer(List.of(dto));
+
+        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(redisUtil).hSetAll(eq("exam:answer:" + EXAM_ID + ":" + STUDENT_ID), captor.capture());
+        RedisAnswerDTO saved = (RedisAnswerDTO) captor.getValue().get("101");
+        assertEquals(3.5, saved.getFullScore());
+        assertEquals("A", saved.getStudentAnswer());
+    }
+
+    @Test
+    @DisplayName("updateBatchAnswer 题目不属于该场考试的试卷：抛异常且不写Redis")
+    void updateBatchAnswer_questionNotInPaper() {
+        Exam exam = new Exam();
+        exam.setId(EXAM_ID);
+        exam.setPaperId(77);
+        when(examManagementService.getById(EXAM_ID)).thenReturn(exam);
+        when(paperManagementService.getQuestionScoreMap(77)).thenReturn(Map.of(101, 3.5));
+
+        StudentUpdateAnswerDTO dto = new StudentUpdateAnswerDTO();
+        dto.setExamId(EXAM_ID);
+        dto.setQuestionId(999);
+        dto.setStudentAnswer("A");
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> stuExamService.updateBatchAnswer(List.of(dto)));
+        assertEquals(ErrorCodeEnum.EXAM_QUESTION_NOT_IN_PAPER.getCode(), ex.getErrorCode());
+        verify(redisUtil, never()).hSetAll(any(), any());
+    }
+
+    @Test
+    @DisplayName("updateBatchAnswer 考试无关联试卷：抛异常且不写Redis")
+    void updateBatchAnswer_examWithoutPaper() {
+        when(examManagementService.getById(EXAM_ID)).thenReturn(new Exam());
+
+        StudentUpdateAnswerDTO dto = new StudentUpdateAnswerDTO();
+        dto.setExamId(EXAM_ID);
+        dto.setQuestionId(101);
+        dto.setStudentAnswer("A");
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> stuExamService.updateBatchAnswer(List.of(dto)));
+        assertEquals(ErrorCodeEnum.EXAM_REFERENCE_PAPER_NOT_FOUND.getCode(), ex.getErrorCode());
+        verify(redisUtil, never()).hSetAll(any(), any());
     }
 
     // ===================== getAllExamResult =====================

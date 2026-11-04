@@ -262,15 +262,27 @@ public class StuExamServiceImpl implements StuExamService {
         Integer currentUserId = getCurrentUserId();
         LocalDateTime now = LocalDateTime.now();
 
+        Map<Integer, Map<Integer, Double>> examScoreCache = new HashMap<>();
         for (StudentUpdateAnswerDTO dto : studentUpdateAnswerDTOS) {
-            String redisKey = RedisConstant.EXAM_ANSWER_PREFIX + dto.getExamId() + ":" + currentUserId;
-            String field = String.valueOf(dto.getQuestionId());
+            Integer examId = dto.getExamId();
+            Integer questionId = dto.getQuestionId();
+            if (examId == null || questionId == null) {
+                throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+            }
+            Map<Integer, Double> scoreMap = examScoreCache.computeIfAbsent(examId, this::loadPaperQuestionScores);
+            Double fullScore = scoreMap.get(questionId);
+            if (fullScore == null) {
+                throw new BusinessException(ErrorCodeEnum.EXAM_QUESTION_NOT_IN_PAPER);
+            }
+
+            String redisKey = RedisConstant.EXAM_ANSWER_PREFIX + examId + ":" + currentUserId;
+            String field = String.valueOf(questionId);
 
             // 先读取已有的答案数据（保留createTime）
             RedisAnswerDTO existing = redisUtil.hGet(redisKey, field, RedisAnswerDTO.class);
             RedisAnswerDTO answerDTO = new RedisAnswerDTO();
             answerDTO.setStudentAnswer(dto.getStudentAnswer());
-            answerDTO.setFullScore(dto.getFullScore());
+            answerDTO.setFullScore(fullScore);
             answerDTO.setCreateTime(existing != null ? existing.getCreateTime() : now);
             answerDTO.setUpdateTime(now);
 
@@ -278,6 +290,20 @@ public class StuExamServiceImpl implements StuExamService {
             map.put(field, answerDTO);
             redisUtil.hSetAll(redisKey, map);
         }
+    }
+
+    /**
+     * 查询某场考试所绑定试卷的题目分值表
+     *
+     * @param examId 考试ID
+     * @return 题目ID与分值的映射
+     */
+    private Map<Integer, Double> loadPaperQuestionScores(Integer examId) {
+        Exam exam = examManagementService.getById(examId);
+        if (exam == null || exam.getPaperId() == null) {
+            throw new BusinessException(ErrorCodeEnum.EXAM_REFERENCE_PAPER_NOT_FOUND);
+        }
+        return paperManagementService.getQuestionScoreMap(exam.getPaperId());
     }
 
 

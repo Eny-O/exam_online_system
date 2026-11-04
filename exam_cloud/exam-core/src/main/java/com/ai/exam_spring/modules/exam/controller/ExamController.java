@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -129,7 +130,7 @@ public class ExamController {
     @Operation(summary = "学生修改答案（写入Redis暂存）")
     @PreAuthorize("hasAuthority('stu:exam:answer')")
     @PutMapping("/updateAnswer")
-    public ResponseResult<Void> updateAnswer(@RequestBody StudentUpdateAnswerDTO studentUpdateAnswerDTO) {
+    public ResponseResult<Void> updateAnswer(@Validated @RequestBody StudentUpdateAnswerDTO studentUpdateAnswerDTO) {
         log.info("学生修改答案: {}", studentUpdateAnswerDTO);
         stuExamService.updateBatchAnswer(List.of(studentUpdateAnswerDTO));
         return ResponseResult.success();

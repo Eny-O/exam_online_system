@@ -18,8 +18,4 @@ public class StudentUpdateAnswerDTO {
 
     @Schema(description = "学生作答内容", example = "A")
     private String studentAnswer;
-
-    @NotNull(message = "{validate.stu.answer.fullScore.notNull}")
-    @Schema(description = "题目满分", example = "2.0")
-    private Double fullScore;
 }
