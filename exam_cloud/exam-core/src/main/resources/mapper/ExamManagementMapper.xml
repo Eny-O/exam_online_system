@@ -14,7 +14,10 @@
         exam.create_time,
         exam.update_time
         FROM exam left join paper on exam.paper_id = paper.id
-        ${ew.customSqlSegment}
+        <where>
+            <trim prefixOverrides="WHERE">${ew.customSqlSegment}</trim>
+            AND exam.deleted = 0
+        </where>
         <choose>
             <when test="viewStatus != null and viewStatus.code == 2">
                 AND exam.status = 1 AND #{now} &lt; exam.start_time
@@ -45,8 +48,11 @@
         es.status as studentExamStatus
         from exam e
         INNER JOIN exam_student es ON es.exam_id = e.id AND es.student_id = #{stuId}
-        WHERE e.status != 0
-        ${ew.customSqlSegment}
+        <where>
+            <trim prefixOverrides="WHERE">${ew.customSqlSegment}</trim>
+            AND e.status != 0
+            AND e.deleted = 0
+        </where>
         <choose>
             <when test="viewStatus != null and viewStatus.code == 2">
                 AND e.status = 1 AND #{now} &lt; e.start_time

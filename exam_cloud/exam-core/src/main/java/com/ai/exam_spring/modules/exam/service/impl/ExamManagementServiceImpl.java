@@ -104,7 +104,6 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         Wrapper<Exam> wrapper = new LambdaQueryWrapper<Exam>()
                 .like(examQueryDTO.getExamName() != null && !examQueryDTO.getExamName().isEmpty(),
                       Exam::getExamName, examQueryDTO.getExamName())
-                .eq(Exam::getDeleted, 0)
                 .apply("exam.creator_id = {0}",currentUserId);
         LocalDateTime now = LocalDateTime.now();
         Page<ExamVO> pageResult = examManagementMapper.pageExam(page, wrapper,  examQueryDTO.getStatus(),now);
@@ -217,8 +216,7 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         Page<Exam> examPage = Page.of(stuExamQueryDTO.getPageNum(), stuExamQueryDTO.getPageSize());
         // 设置条件
         Wrapper<Exam> wrapper = new LambdaQueryWrapper<Exam>()
-                .like(StringUtils.isNotBlank(stuExamQueryDTO.getExamName()), Exam::getExamName, stuExamQueryDTO.getExamName())
-                .eq(Exam::getDeleted, 0);
+                .like(StringUtils.isNotBlank(stuExamQueryDTO.getExamName()), Exam::getExamName, stuExamQueryDTO.getExamName());
         LocalDateTime now = LocalDateTime.now();
         Page<StuExamVO> page = examManagementMapper.pageStuExam(examPage, wrapper, stuId, stuExamQueryDTO.getStatus(), now);
         return PageResult.of(page.getTotal(),page.getRecords(),stuExamQueryDTO.getPageNum(),stuExamQueryDTO.getPageSize());
