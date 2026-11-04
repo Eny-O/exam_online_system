@@ -15,4 +15,16 @@ public class GradeStudentVO {
 
     @Schema(description = "学生学号")
     private String studentNo;
+
+    @Schema(description = "客观题得分")
+    private Double objectiveScore;
+
+    @Schema(description = "主观题得分")
+    private Double subjectiveScore;
+
+    @Schema(description = "总分")
+    private Double totalScore;
+
+    @Schema(description = "批阅状态：已批阅/待批阅")
+    private String status;
 }

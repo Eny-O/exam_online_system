@@ -2,6 +2,7 @@ package com.ai.exam_spring.modules.grade.mapper;
 
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.BatchGradeDTO;
 import com.ai.exam_spring.modules.exam.pojo.dos.stu_answer.StudentAnswer;
+import com.ai.exam_spring.modules.grade.pojo.vo.StudentScoreSummaryVO;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -28,4 +29,11 @@ public interface StudentAnswerMapper extends BaseMapper<StudentAnswer> {
      * @param studentId 学生ID
      */
     void deleteByExamAndStudent(@Param("examId") Integer examId, @Param("studentId") Integer studentId);
+
+    /**
+     * 聚合某场考试下指定学生的客观分、主观分、总分
+     * @param examId     考试ID
+     * @param studentIds 学生ID列表
+     */
+    List<StudentScoreSummaryVO> selectScoreSummary(@Param("examId") Integer examId, @Param("studentIds") List<Integer> studentIds);
 }

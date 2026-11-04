@@ -34,17 +34,7 @@ NEW_FILE_CODE
               </div>
               <div class="score-item">
                 <span class="label">主观题</span>
-                <span class="value editable">
-                  {{ scores.subjective }}/50
-                  <el-button
-                    link
-                    type="primary"
-                    size="small"
-                    @click="showSubjectiveDialog = true"
-                  >
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                </span>
+                <span class="value">{{ scores.subjective }}/50</span>
               </div>
               <div class="score-item total">
                 <span class="label">总分</span>
@@ -106,18 +96,26 @@ NEW_FILE_CODE
               <h4 class="question-text">{{ q.content }}</h4>
 
               <!-- 选项展示（客观题） -->
-              <div v-if="q.type !== 'subjective'" class="options-list">
+              <div v-if="!isEssay(q.type)" class="options-list">
                 <div
                   v-for="option in q.options"
-                  :key="option.key"
+                  :key="option.label"
                   class="option-item"
                   :class="getOptionClass(q, option)"
                 >
-                  <span class="option-key">{{ option.key }}</span>
-                  <span class="option-text">{{ option.text }}</span>
-                  <el-icon v-if="isOptionMarked(q, option)" class="option-icon">
-                    <Check v-if="option.key === q.correctAnswer" />
-                    <Close v-else />
+                  <span class="option-key">{{ option.label }}</span>
+                  <span class="option-text">{{ option.content }}</span>
+                  <el-icon
+                    v-if="toAnswerArray(q.correctAnswer).includes(option.label)"
+                    class="option-icon"
+                  >
+                    <Check />
+                  </el-icon>
+                  <el-icon
+                    v-else-if="toAnswerArray(q.studentAnswer).includes(option.label)"
+                    class="option-icon"
+                  >
+                    <Close />
                   </el-icon>
                 </div>
               </div>
@@ -137,7 +135,7 @@ NEW_FILE_CODE
                     <el-icon><Document /></el-icon>
                     <span>参考答案</span>
                   </div>
-                  <div class="box-content">{{ q.referenceAnswer }}</div>
+                  <div class="box-content">{{ q.correctAnswer }}</div>
                 </div>
 
                 <!-- 教师评语 -->
@@ -168,47 +166,7 @@ NEW_FILE_CODE
           description="暂无符合条件的题目"
         />
       </div>
-
-      <!-- 底部操作栏 -->
-      <div class="footer-actions fade-in-up delay-400">
-        <el-button @click="handleBack">返回列表</el-button>
-        <el-button type="warning" @click="handleSaveDraft">保存草稿</el-button>
-        <el-button type="primary" @click="handleSubmitGrading">
-          提交批阅
-        </el-button>
-      </div>
     </div>
-
-    <!-- 主观题评分对话框 -->
-    <el-dialog v-model="showSubjectiveDialog" title="主观题评分" width="600px">
-      <div class="grading-form">
-        <el-form :model="gradingForm" label-width="100px">
-          <el-form-item label="得分">
-            <el-input-number
-              v-model="gradingForm.score"
-              :min="0"
-              :max="50"
-              :step="0.5"
-              style="width: 100%"
-            />
-          </el-form-item>
-
-          <el-form-item label="评语">
-            <el-input
-              v-model="gradingForm.comment"
-              type="textarea"
-              :rows="4"
-              placeholder="请输入评语（选填）"
-            />
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <template #footer>
-        <el-button @click="showSubjectiveDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveGrading">确定</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -218,7 +176,6 @@ import { useRouter, useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   ArrowLeft,
-  Edit,
   Check,
   Close,
   User,
@@ -226,22 +183,40 @@ import {
   ChatDotRound,
   InfoFilled,
 } from "@element-plus/icons-vue";
+import { getGradePaper, getStudentAnswer, getGradeStudentList, getExamDetailById, getClassList } from "@/api/examTask";
 
 const router = useRouter();
 const route = useRoute();
 
+// 判断题型是否为主观题（essay），兼容大小写
+const isEssay = (type) => String(type || "").toUpperCase() === "ESSAY";
+
+// 将答案规整为数组，兼容字符串与逗号分隔形式（多选题）
+const toAnswerArray = (val) => {
+  if (val == null) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    return val.includes(",") ? val.split(",").map((s) => s.trim()) : [val];
+  }
+  return [val];
+};
+
+// 当前学生与考试
+const currentStudentId = ref(route.query.studentId || "");
+const currentExamId = ref(route.query.examId || "");
+
 // 学生信息
 const studentInfo = ref({
-  name: "张三",
-  studentNo: "2021001",
-  className: "计算机2101班",
-  startTime: "2024-01-15 14:30",
+  name: "",
+  studentNo: "",
+  className: "",
+  startTime: "",
 });
 
 // 分数信息
 const scores = ref({
-  objective: 45,
-  subjective: 38,
+  objective: 0,
+  subjective: 0,
 });
 
 // 总分数计算
@@ -261,71 +236,7 @@ const gradingStatus = computed(() => {
 const filterType = ref("all");
 
 // 题目数据
-const questions = ref([
-  {
-    id: 1,
-    type: "single",
-    content: "JavaScript中const声明的变量可以重新赋值吗？",
-    options: [
-      { key: "A", text: "可以" },
-      { key: "B", text: "不可以" },
-      { key: "C", text: "视情况而定" },
-      { key: "D", text: "以上都不对" },
-    ],
-    studentAnswer: "A",
-    correctAnswer: "B",
-    isCorrect: false,
-    score: 0,
-    fullScore: 5,
-    explanation: "const声明的是常量，不能重新赋值。",
-  },
-  {
-    id: 2,
-    type: "single",
-    content: "Vue3中响应式数据的实现原理是什么？",
-    options: [
-      { key: "A", text: "Object.defineProperty" },
-      { key: "B", text: "Proxy" },
-      { key: "C", text: "Reflect" },
-      { key: "D", text: "Iterator" },
-    ],
-    studentAnswer: "B",
-    correctAnswer: "B",
-    isCorrect: true,
-    score: 5,
-    fullScore: 5,
-    explanation: "Vue3使用Proxy实现响应式。",
-  },
-  {
-    id: 3,
-    type: "multiple",
-    content: "以下哪些是Vue3的新特性？（多选）",
-    options: [
-      { key: "A", text: "Composition API" },
-      { key: "B", text: "Teleport" },
-      { key: "C", text: "Fragment" },
-      { key: "D", text: "v-model改进" },
-    ],
-    studentAnswer: ["A", "B", "D"],
-    correctAnswer: ["A", "B", "C", "D"],
-    isCorrect: false,
-    score: 2.5,
-    fullScore: 5,
-    explanation: "Vue3新增了Composition API、Teleport、Fragment等特性。",
-  },
-  {
-    id: 4,
-    type: "subjective",
-    content: "请简述Vue3相比Vue2的主要改进点。",
-    studentAnswer:
-      "Vue3使用了Proxy代替Object.defineProperty，性能更好。还引入了Composition API，使代码组织更灵活。",
-    referenceAnswer:
-      "主要改进包括：1. 使用Proxy实现响应式，性能更优；2. Composition API提供更好的代码组织方式；3. 更好的TypeScript支持；4. 新增Teleport、Suspense等特性；5. 更小的打包体积。",
-    score: 4,
-    fullScore: 5,
-    teacherComment: "回答基本正确，但可以更详细一些。",
-  },
-]);
+const questions = ref([]);
 
 // 过滤后的题目列表
 const filteredQuestions = computed(() => {
@@ -340,22 +251,15 @@ const filteredQuestions = computed(() => {
   }
 
   if (filterType.value === "subjective") {
-    return questions.value.filter((q) => q.type === "subjective");
+    return questions.value.filter((q) => isEssay(q.type));
   }
 
   return questions.value;
 });
 
-// 主观题评分对话框
-const showSubjectiveDialog = ref(false);
-const gradingForm = ref({
-  score: scores.value.subjective,
-  comment: "",
-});
-
 // 获取题目样式类
 const getQuestionClass = (q) => {
-  if (q.type === "subjective") return "subjective-question";
+  if (isEssay(q.type)) return "subjective-question";
   return q.isCorrect ? "correct-question" : "wrong-question";
 };
 
@@ -364,9 +268,10 @@ const getQuestionTypeTag = (type) => {
   const map = {
     single: "",
     multiple: "warning",
-    subjective: "danger",
+    judge: "success",
+    essay: "danger",
   };
-  return map[type] || "";
+  return map[String(type || "").toLowerCase()] || "";
 };
 
 // 获取题型名称
@@ -374,38 +279,27 @@ const getQuestionTypeName = (type) => {
   const map = {
     single: "单选题",
     multiple: "多选题",
-    subjective: "简答题",
+    judge: "判断题",
+    essay: "简答题",
   };
-  return map[type] || "未知";
+  return map[String(type || "").toLowerCase()] || "未知";
 };
 
 // 获取选项样式类
 const getOptionClass = (q, option) => {
   const classes = [];
+  const correctSet = toAnswerArray(q.correctAnswer);
+  const studentSet = toAnswerArray(q.studentAnswer);
 
-  if (
-    option.key === q.correctAnswer ||
-    (Array.isArray(q.correctAnswer) && q.correctAnswer.includes(option.key))
-  ) {
+  if (correctSet.includes(option.label)) {
     classes.push("correct-option");
   }
 
-  if (
-    option.key === q.studentAnswer ||
-    (Array.isArray(q.studentAnswer) && q.studentAnswer.includes(option.key))
-  ) {
+  if (studentSet.includes(option.label)) {
     classes.push("selected-option");
   }
 
   return classes.join(" ");
-};
-
-// 判断选项是否被标记
-const isOptionMarked = (q, option) => {
-  if (Array.isArray(q.studentAnswer)) {
-    return q.studentAnswer.includes(option.key);
-  }
-  return q.studentAnswer === option.key;
 };
 
 // 返回
@@ -413,52 +307,83 @@ const handleBack = () => {
   router.back();
 };
 
-// 保存草稿
-const handleSaveDraft = () => {
-  ElMessage.success("草稿已保存");
-};
-
-// 提交批阅
-const handleSubmitGrading = () => {
-  ElMessageBox.confirm("确认提交批阅结果？提交后将无法修改。", "提示", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  })
-    .then(() => {
-      ElMessage.success("批阅提交成功");
-      setTimeout(() => {
-        router.back();
-      }, 1500);
-    })
-    .catch(() => {
-      ElMessage.info("已取消");
-    });
-};
-
-// 保存主观题评分
-const handleSaveGrading = () => {
-  scores.value.subjective = gradingForm.value.score;
-
-  // 更新最后一道主观题的分数和评语
-  const subjectiveQ = questions.value.find((q) => q.type === "subjective");
-  if (subjectiveQ) {
-    subjectiveQ.score = gradingForm.value.score;
-    if (gradingForm.value.comment) {
-      subjectiveQ.teacherComment = gradingForm.value.comment;
-    }
+// 加载学生答卷详情
+const loadDetail = async () => {
+  const studentId = currentStudentId.value;
+  const examId = currentExamId.value;
+  if (!studentId || !examId) {
+    ElMessage.error("缺少学生或考试参数");
+    return;
   }
-
-  showSubjectiveDialog.value = false;
-  ElMessage.success("评分已保存");
+  try {
+    const [paperRes, answerRes, studentListRes] = await Promise.all([
+      getGradePaper(examId),
+      getStudentAnswer(studentId, examId),
+      getGradeStudentList(examId),
+    ]);
+    const paper = paperRes.data || {};
+    const answerMap = {};
+    (answerRes.data || []).forEach((a) => {
+      answerMap[a.questionId] = a;
+    });
+    const questionList = paper.gradePaperQuestionVOS || [];
+    let obj = 0;
+    let sub = 0;
+    questions.value = questionList.map((q) => {
+      const a = answerMap[q.id] || {};
+      const score = a.score || 0;
+      const essay = isEssay(q.type);
+      if (essay) sub += score;
+      else obj += score;
+      return {
+        id: q.id,
+        type: q.type,
+        content: q.content,
+        options: q.options,
+        studentAnswer: a.studentAnswer != null ? a.studentAnswer : "",
+        correctAnswer: q.correctAnswer,
+        isCorrect: a.isCorrect,
+        score: score,
+        fullScore: q.score,
+        explanation: q.explanation,
+        teacherComment: a.teacherComment,
+      };
+    });
+    scores.value = { objective: obj, subjective: sub };
+    const info = (studentListRes.data || []).find(
+      (s) => String(s.studentId) === String(studentId)
+    );
+    studentInfo.value = {
+      name: info ? info.studentName : `学生${studentId}`,
+      studentNo: info ? info.studentNo : "",
+      className: "",
+      startTime: "",
+    };
+  } catch (e) {
+    console.error("加载答卷详情失败", e);
+    ElMessage.error("加载答卷详情失败");
+    return;
+  }
+  // 补充考试时间与班级信息（失败不影响主流程）
+  try {
+    const examRes = await getExamDetailById(examId);
+    const exam = examRes.data || {};
+    studentInfo.value.startTime = exam.startTime || "";
+    try {
+      const classRes = await getClassList();
+      const classList = classRes.data || [];
+      const cls = classList.find((c) => c.id === exam.classId);
+      studentInfo.value.className = cls ? cls.name : "";
+    } catch (ce) {
+      console.error("加载班级信息失败", ce);
+    }
+  } catch (ee) {
+    console.error("加载考试信息失败", ee);
+  }
 };
 
 onMounted(() => {
-  // 从路由参数获取学生ID和考试ID
-  const { studentId, examId } = route.query;
-  console.log("加载学生试卷:", studentId, examId);
-
-  // TODO: 根据ID加载真实数据
+  loadDetail();
 });
 </script>
 
@@ -826,22 +751,6 @@ onMounted(() => {
   font-size: 14px;
 }
 
-/* 底部操作栏 */
-.footer-actions {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-/* 评分表单 */
-.grading-form {
-  padding: 20px 0;
-}
-
 /* 动画 */
 .fade-in-up {
   animation: fadeInUp 0.5s ease-out forwards;
@@ -898,14 +807,6 @@ onMounted(() => {
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
-  }
-
-  .footer-actions {
-    flex-direction: column;
-  }
-
-  .footer-actions .el-button {
-    width: 100%;
   }
 }
 </style>

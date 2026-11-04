@@ -30,6 +30,7 @@ public class GradePaperQuestionVO {
     @Schema(description = "题目选项列表")
     private List<QuestionOptionVO> options;
 
-
+    @Schema(description = "题目解析")
+    private String explanation;
 
 }

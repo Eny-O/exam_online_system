@@ -16,6 +16,7 @@ import com.ai.exam_spring.modules.question.pojo.enums.QuestionTypeEnum;
 import com.ai.exam_spring.modules.grade.pojo.vo.GradePaperContentVO;
 import com.ai.exam_spring.modules.grade.pojo.vo.GradePaperQuestionVO;
 import com.ai.exam_spring.modules.grade.pojo.vo.GradeStudentVO;
+import com.ai.exam_spring.modules.grade.pojo.vo.StudentScoreSummaryVO;
 import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.ExamAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
@@ -31,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class GradePaperServiceImpl implements GradePaperService {
@@ -96,6 +100,7 @@ public class GradePaperServiceImpl implements GradePaperService {
             gradePaperQuestionVO.setId(questionCompleteVO.getId());
             gradePaperQuestionVO.setCorrectAnswer(questionCompleteVO.getAnswer());
             gradePaperQuestionVO.setOptions(questionCompleteVO.getOptions());
+            gradePaperQuestionVO.setExplanation(questionCompleteVO.getAnalysis());
             gradePaperQuestionVO.setType(questionCompleteVO.getType().name());
             return gradePaperQuestionVO;
         }).toList();
@@ -126,6 +131,9 @@ public class GradePaperServiceImpl implements GradePaperService {
         if (studentIds.isEmpty()) {
             return List.of();
         }
+        Map<Integer, StudentScoreSummaryVO> scoreMap = studentAnswerMapper.selectScoreSummary(examId, studentIds)
+                .stream()
+                .collect(Collectors.toMap(StudentScoreSummaryVO::getStudentId, Function.identity()));
         List<UserBriefDTO> users = userFeignClient.listUserBriefs(studentIds);
         if (users.isEmpty()) {
             return List.of();
@@ -136,6 +144,16 @@ public class GradePaperServiceImpl implements GradePaperService {
             gradeStudentVO.setStudentId(user.getId());
             gradeStudentVO.setStudentName(user.getRealName());
             gradeStudentVO.setStudentNo(user.getStudentNo());
+            StudentScoreSummaryVO summary = scoreMap.get(user.getId());
+            gradeStudentVO.setObjectiveScore(summary == null ? 0.0 : summary.getObjectiveScore());
+            gradeStudentVO.setSubjectiveScore(summary == null ? 0.0 : summary.getSubjectiveScore());
+            gradeStudentVO.setTotalScore(summary == null ? 0.0 : summary.getTotalScore());
+            ExamStudent examStudent = examStudents.stream()
+                    .filter(e -> e.getStudentId().equals(user.getId()))
+                    .findFirst()
+                    .orElse(null);
+            gradeStudentVO.setStatus(examStudent != null && StudentExamEnum.GRADED.equals(examStudent.getStatus())
+                    ? "已批阅" : "待批阅");
             return gradeStudentVO;
         }).toList();
     }

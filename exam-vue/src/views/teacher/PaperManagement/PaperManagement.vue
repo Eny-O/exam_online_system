@@ -201,11 +201,12 @@ const handleDelete = (row) => {
     .then(async () => {
       try {
         await deletePapers([row.id]);
-        ElMessage.success("删除成功");
-      } catch {
         tableData.value = tableData.value.filter((p) => p.id !== row.id);
         pagination.total--;
         ElMessage.success("删除成功");
+      } catch (error) {
+        // 删除失败：保留本地列表，错误信息由响应拦截器统一弹出
+        console.error("删除试卷失败：", error);
       }
       fetchPaperList();
     })
@@ -255,13 +256,13 @@ const handleBatchDelete = () => {
       const ids = selectedRows.value.map((r) => r.id);
       try {
         await deletePapers(ids);
-        ElMessage.success("批量删除成功");
-        selectedRows.value = [];
-      } catch {
         tableData.value = tableData.value.filter((p) => !ids.includes(p.id));
         pagination.total -= ids.length;
         selectedRows.value = [];
         ElMessage.success("批量删除成功");
+      } catch (error) {
+        selectedRows.value = [];
+        console.error("批量删除试卷失败：", error);
       }
       fetchPaperList();
     })

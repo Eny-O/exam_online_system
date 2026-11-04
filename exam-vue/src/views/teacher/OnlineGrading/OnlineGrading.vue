@@ -218,9 +218,16 @@
                 AI 评分
               </el-button>
               <el-alert
-                v-if="aiResults[q.questionId] && aiResults[q.questionId].status !== 'UNGRADABLE'"
+                v-if="
+                  aiResults[q.questionId] &&
+                  aiResults[q.questionId].status !== 'UNGRADABLE'
+                "
                 class="ai-result"
-                :type="aiResults[q.questionId].status === 'NEED_HUMAN_REVIEW' ? 'warning' : 'success'"
+                :type="
+                  aiResults[q.questionId].status === 'NEED_HUMAN_REVIEW'
+                    ? 'warning'
+                    : 'success'
+                "
                 :closable="false"
                 show-icon
               >
@@ -228,11 +235,18 @@
                   <span>
                     AI 初评 {{ aiResults[q.questionId].preliminaryScore }} /
                     再评 {{ aiResults[q.questionId].finalScore }} 分，分歧
-                    {{ Math.round((aiResults[q.questionId].divergence || 0) * 100) }}%
+                    {{
+                      Math.round(
+                        (aiResults[q.questionId].divergence || 0) * 100
+                      )
+                    }}%
                   </span>
                 </template>
                 <div
-                  v-if="aiResults[q.questionId].reviewResult && aiResults[q.questionId].reviewResult.reviewComment"
+                  v-if="
+                    aiResults[q.questionId].reviewResult &&
+                    aiResults[q.questionId].reviewResult.reviewComment
+                  "
                   class="ai-comment"
                 >
                   {{ aiResults[q.questionId].reviewResult.reviewComment }}
@@ -1098,5 +1112,4 @@ const handleGradingComplete = () => {
   color: #606266;
   white-space: pre-wrap;
 }
-
 </style>

@@ -36,4 +36,21 @@
         WHERE exam_id = #{examId} AND student_id = #{studentId}
     </delete>
 
+    <!-- 聚合某场考试下指定学生的客观分、主观分、总分 -->
+    <select id="selectScoreSummary" resultType="com.ai.exam_spring.modules.grade.pojo.vo.StudentScoreSummaryVO">
+        SELECT
+            sa.student_id AS studentId,
+            COALESCE(SUM(CASE WHEN q.type = 'essay' THEN 0 ELSE sa.score END), 0) AS objectiveScore,
+            COALESCE(SUM(CASE WHEN q.type = 'essay' THEN sa.score ELSE 0 END), 0) AS subjectiveScore,
+            COALESCE(SUM(sa.score), 0) AS totalScore
+        FROM student_answer sa
+        LEFT JOIN question q ON sa.question_id = q.id
+        WHERE sa.exam_id = #{examId}
+          AND sa.student_id IN
+          <foreach collection="studentIds" item="sid" open="(" separator="," close=")">
+              #{sid}
+          </foreach>
+        GROUP BY sa.student_id
+    </select>
+
 </mapper>

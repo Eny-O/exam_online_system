@@ -11,4 +11,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @Schema(description = "学生作答信息")
 public class StudentAnswerVO extends BaseStudentAnswerVO {
+
+    @Schema(description = "教师批注")
+    private String teacherComment;
 }

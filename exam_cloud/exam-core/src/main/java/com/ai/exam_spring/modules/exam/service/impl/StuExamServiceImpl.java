@@ -152,7 +152,7 @@ public class StuExamServiceImpl implements StuExamService {
                     new LambdaQueryWrapper<ExamStudent>()
                             .eq(ExamStudent::getExamId, examId)
                             .eq(ExamStudent::getStudentId, currentUserId)
-                            .eq(ExamStudent::getStatus, StudentExamEnum.PENDING)  // ← 关键：WHERE 里加状态条件
+                            .eq(ExamStudent::getStatus, StudentExamEnum.PENDING)
             );
             if (rows == 0) {
                 throw new BusinessException(ErrorCodeEnum.EXAM_STATUS_NOT_PENDING_NOT_SUBMIT);

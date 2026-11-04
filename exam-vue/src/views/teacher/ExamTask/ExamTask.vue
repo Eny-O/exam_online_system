@@ -360,7 +360,7 @@ const handleReview = (row) => {
 
 // 查看成绩
 const handleViewScore = (row) => {
-  router.push(`/teacher/classExamScore/${row.id}`);
+  router.push(`/teacher/classExamScore?examId=${row.id}`);
 };
 
 // 发布考试
@@ -433,7 +433,7 @@ const handleCancelPublish = async (row) => {
 
 // 公布成绩
 const handlePublishScore = (row) => {
-  router.push(`/teacher/classExamScore/${row.id}`);
+  router.push(`/teacher/classExamScore?examId=${row.id}`);
 };
 
 // 删除

@@ -55,7 +55,7 @@ const asyncStandaloneRoutes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/teacher/classExamScore/:id",
+    path: "/teacher/classExamScore",
     name: "classExamScore",
     component: () =>
       import("@/views/teacher/ClassExamScore/ClassExamScore.vue"),

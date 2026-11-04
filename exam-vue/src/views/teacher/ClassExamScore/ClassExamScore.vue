@@ -2,10 +2,21 @@
   <div class="class-exam-score-container">
     <!-- 顶部导航栏 -->
     <div class="nav-bar-section">
-      <el-button type="primary" link @click="handleBack" class="back-btn">
-        <el-icon><ArrowLeft /></el-icon>
-        返回试卷管理
-      </el-button>
+      <el-select
+        v-model="currentExamId"
+        placeholder="选择考试"
+        :loading="examLoading"
+        clearable
+        style="width: 240px"
+        @change="handleExamChange"
+      >
+        <el-option
+          v-for="item in examOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
     </div>
     <!-- 顶部核心指标区 -->
     <el-row :gutter="20" class="top-cards-section">
@@ -98,9 +109,9 @@
       <el-col :xs="24" :lg="12">
         <el-card shadow="hover" class="chart-card">
           <template #header>
-            <div class="card-header">
-              <span>题型得分率</span>
-            </div>
+          <div class="card-header">
+            <span>主客观平均得分</span>
+          </div>
           </template>
           <div ref="questionTypeChartRef" class="chart-container"></div>
         </el-card>
@@ -138,21 +149,21 @@
         <el-table-column
           prop="studentNo"
           label="学号"
-          width="120"
+          min-width="130"
           show-overflow-tooltip
         />
 
         <el-table-column
           prop="studentName"
           label="学生姓名"
-          width="120"
+          min-width="130"
           show-overflow-tooltip
         />
 
         <el-table-column
           prop="objectiveScore"
           label="客观题得分"
-          width="120"
+          min-width="130"
           align="center"
           sortable
         />
@@ -160,7 +171,7 @@
         <el-table-column
           prop="subjectiveScore"
           label="主观题得分"
-          width="120"
+          min-width="130"
           align="center"
           sortable
         />
@@ -168,7 +179,7 @@
         <el-table-column
           prop="totalScore"
           label="总分"
-          width="100"
+          min-width="110"
           align="center"
           sortable
         >
@@ -177,7 +188,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="status" label="状态" min-width="110" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === '已阅卷' ? 'success' : 'info'">
               {{ row.status }}
@@ -228,6 +239,7 @@ import {
   Download,
 } from "@element-plus/icons-vue";
 import { useRouter, useRoute } from "vue-router";
+import { getExamPage, getGradeStudentList } from "@/api/examTask";
 
 //初始化路由
 const router = useRouter();
@@ -236,19 +248,87 @@ const route = useRoute();
 // 当前考试ID
 const currentExamId = ref(route.query.examId || "");
 
-// 统计数据
-const statistics = reactive({
-  totalStudents: 45,
-  avgScore: 78.5,
-  highestScore: 98,
-  lowestScore: 52,
-  passRate: 88,
-  excellentRate: 30,
+// 考试下拉选项
+const examOptions = ref([]);
+const examLoading = ref(false);
+
+// 加载考试列表
+const loadExamOptions = async () => {
+  examLoading.value = true;
+  try {
+    const res = await getExamPage({ current: 1, size: 100 });
+    const records = res.data?.records || [];
+    examOptions.value = records.map((e) => ({
+      value: e.id,
+      label: e.examName || `考试${e.id}`,
+    }));
+  } catch (e) {
+    console.error("加载考试列表失败", e);
+  } finally {
+    examLoading.value = false;
+  }
+};
+
+// 切换考试
+const handleExamChange = (val) => {
+  currentExamId.value = val;
+  loadTableData();
+};
+
+// 统计数据（由成绩列表计算）
+const statistics = computed(() => {
+  const list = tableData.value;
+  const total = list.length;
+  if (total === 0) {
+    return { totalStudents: 0, avgScore: 0, highestScore: 0, lowestScore: 0, passRate: 0, excellentRate: 0 };
+  }
+  const scores = list.map((s) => s.totalScore || 0);
+  const sum = scores.reduce((a, b) => a + b, 0);
+  const highest = Math.max(...scores);
+  const lowest = Math.min(...scores);
+  const pass = scores.filter((s) => s >= 60).length;
+  const excellent = scores.filter((s) => s >= 90).length;
+  return {
+    totalStudents: total,
+    avgScore: Number((sum / total).toFixed(1)),
+    highestScore: highest,
+    lowestScore: lowest,
+    passRate: Number(((pass / total) * 100).toFixed(0)),
+    excellentRate: Number(((excellent / total) * 100).toFixed(0)),
+  };
+});
+
+// 分数段分布数据
+const scoreDistribution = computed(() => {
+  const buckets = { "<60": 0, "60-70": 0, "70-80": 0, "80-90": 0, ">90": 0 };
+  tableData.value.forEach((s) => {
+    const v = s.totalScore || 0;
+    if (v < 60) buckets["<60"]++;
+    else if (v < 70) buckets["60-70"]++;
+    else if (v < 80) buckets["70-80"]++;
+    else if (v < 90) buckets["80-90"]++;
+    else buckets[">90"]++;
+  });
+  return Object.values(buckets);
+});
+
+// 主客观平均得分（雷达图）
+const abilityRadar = computed(() => {
+  const list = tableData.value;
+  if (list.length === 0) return [0, 0];
+  const objSum = list.reduce((a, s) => a + (s.objectiveScore || 0), 0);
+  const subSum = list.reduce((a, s) => a + (s.subjectiveScore || 0), 0);
+  return [
+    Number((objSum / list.length).toFixed(1)),
+    Number((subSum / list.length).toFixed(1)),
+  ];
 });
 
 // 图表引用
 const scoreDistributionChartRef = ref(null);
 const questionTypeChartRef = ref(null);
+let scoreChart = null;
+let questionChart = null;
 
 // 加载状态
 const loading = ref(false);
@@ -270,66 +350,14 @@ const paginatedData = computed(() => {
   return tableData.value.slice(start, end);
 });
 
-// 生成模拟表格数据
-const generateMockTableData = () => {
-  const students = [
-    { studentNo: "2021001", studentName: "张三" },
-    { studentNo: "2021002", studentName: "李四" },
-    { studentNo: "2021003", studentName: "王五" },
-    { studentNo: "2021004", studentName: "赵六" },
-    { studentNo: "2021005", studentName: "孙七" },
-    { studentNo: "2021006", studentName: "周八" },
-    { studentNo: "2021007", studentName: "吴九" },
-    { studentNo: "2021008", studentName: "郑十" },
-    { studentNo: "2021009", studentName: "陈十一" },
-    { studentNo: "2021010", studentName: "林十二" },
-    { studentNo: "2021011", studentName: "黄十三" },
-    { studentNo: "2021012", studentName: "刘十四" },
-    { studentNo: "2021013", studentName: "杨十五" },
-    { studentNo: "2021014", studentName: "何十六" },
-    { studentNo: "2021015", studentName: "马十七" },
-  ];
-
-  const data = students.map((student, index) => {
-    const objectiveScore = Math.floor(Math.random() * 30) + 50;
-    const subjectiveScore = Math.floor(Math.random() * 30) + 40;
-    const totalScore = objectiveScore + subjectiveScore;
-    const isAbsent = index === 3 || index === 8;
-
-    return {
-      rank: isAbsent ? "-" : index + 1,
-      studentNo: student.studentNo,
-      studentName: student.studentName,
-      objectiveScore: isAbsent ? 0 : objectiveScore,
-      subjectiveScore: isAbsent ? 0 : subjectiveScore,
-      totalScore: isAbsent ? 0 : totalScore,
-      status: isAbsent ? "缺考" : "已阅卷",
-    };
-  });
-
-  // 按总分降序排序（排除缺考）
-  data.sort((a, b) => {
-    if (a.status === "缺考") return 1;
-    if (b.status === "缺考") return -1;
-    return b.totalScore - a.totalScore;
-  });
-
-  // 重新计算排名
-  let rank = 1;
-  data.forEach((item) => {
-    if (item.status !== "缺考") {
-      item.rank = rank++;
-    }
-  });
-
-  return data;
-};
+// 表格数据由 loadTableData 从接口加载
 
 // 初始化分数段分布柱状图
 const initScoreDistributionChart = () => {
   if (!scoreDistributionChartRef.value) return;
 
-  const chart = echarts.init(scoreDistributionChartRef.value);
+  if (scoreChart) scoreChart.dispose();
+  const chart = scoreChart = echarts.init(scoreDistributionChartRef.value);
 
   const option = {
     tooltip: {
@@ -377,7 +405,7 @@ const initScoreDistributionChart = () => {
       {
         name: "人数",
         type: "bar",
-        data: [5, 8, 15, 12, 5],
+        data: scoreDistribution.value,
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: "#409eff" },
@@ -410,10 +438,8 @@ const initQuestionTypeChart = () => {
     },
     radar: {
       indicator: [
-        { name: "单选题", max: 100 },
-        { name: "多选题", max: 100 },
-        { name: "判断题", max: 100 },
-        { name: "简答题", max: 100 },
+        { name: "客观题", max: 100 },
+        { name: "主观题", max: 100 },
       ],
       shape: "polygon",
       splitNumber: 5,
@@ -439,11 +465,11 @@ const initQuestionTypeChart = () => {
     },
     series: [
       {
-        name: "题型得分率",
+        name: "主客观平均得分",
         type: "radar",
         data: [
           {
-            value: [85, 72, 90, 68],
+            value: abilityRadar.value,
             name: "得分率",
             itemStyle: {
               color: "#409eff",
@@ -470,14 +496,35 @@ const initQuestionTypeChart = () => {
 };
 
 // 加载表格数据
-const loadTableData = () => {
+const loadTableData = async () => {
+  if (!currentExamId.value) {
+    tableData.value = [];
+    pagination.total = 0;
+    return;
+  }
   loading.value = true;
-
-  setTimeout(() => {
-    tableData.value = generateMockTableData();
+  try {
+    const res = await getGradeStudentList(currentExamId.value);
+    const list = res.data || [];
+    tableData.value = list.map((s, index) => ({
+      id: s.studentId,
+      rank: index + 1,
+      studentNo: s.studentNo,
+      studentName: s.studentName,
+      objectiveScore: s.objectiveScore,
+      subjectiveScore: s.subjectiveScore,
+      totalScore: s.totalScore,
+      status: s.status,
+    }));
     pagination.total = tableData.value.length;
+    await nextTick();
+    drawCharts();
+  } catch (e) {
+    console.error("加载成绩数据失败", e);
+    ElMessage.error("加载成绩数据失败");
+  } finally {
     loading.value = false;
-  }, 500);
+  }
 };
 
 // 导出成绩单
@@ -501,11 +548,6 @@ const handleViewPaper = (row) => {
   });
 };
 
-// 返回试卷管理
-const handleBack = () => {
-  router.back();
-};
-
 // 分页大小改变
 const handleSizeChange = (val) => {
   pagination.pageSize = val;
@@ -517,10 +559,18 @@ const handleCurrentChange = (val) => {
   pagination.currentPage = val;
 };
 
-// 初始化
-onMounted(() => {
-  loadTableData();
+// 重绘两个图表
+const drawCharts = () => {
+  initScoreDistributionChart();
+  initQuestionTypeChart();
+};
 
+// 初始化
+onMounted(async () => {
+  await loadExamOptions();
+  if (currentExamId.value) {
+    await loadTableData();
+  }
   nextTick(() => {
     initScoreDistributionChart();
     initQuestionTypeChart();
@@ -538,18 +588,6 @@ onMounted(() => {
 /* 顶部导航栏 */
 .nav-bar-section {
   margin-bottom: 20px;
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #606266;
-  font-size: 16px;
-}
-
-.back-btn:hover {
-  color: #409eff;
 }
 
 /* 顶部核心指标区 */
