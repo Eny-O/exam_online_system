@@ -39,7 +39,7 @@ public enum ExamEnum {
     public List<ExamEnum> getAllowedTargets() {
         return switch (this) {
             case NOT_POST -> List.of(ALREADY_POST);
-            case ALREADY_POST -> List.of(NOT_START, PENDING_REVIEW);
+            case ALREADY_POST -> List.of(NOT_POST, NOT_START, PENDING_REVIEW);
             case NOT_START -> List.of(ALREADY_POST, PENDING_REVIEW);
             case ONGOING -> List.of(PENDING_REVIEW);
             case PENDING_REVIEW -> List.of(REVIEW_FINISHED);
