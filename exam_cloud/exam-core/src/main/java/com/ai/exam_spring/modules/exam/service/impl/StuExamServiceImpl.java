@@ -38,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +46,9 @@ import java.util.Map;
 
 @Service
 public class StuExamServiceImpl implements StuExamService {
+
+    /** 考生答案缓存的额外保留时长(秒)：考试结束后再保留一天 */
+    private static final long ANSWER_CACHE_EXPIRE_AFTER_EXAM_END_SECONDS = 24 * 60 * 60L;
 
     @Autowired
     private IExamManagementService examManagementService;
@@ -158,6 +162,8 @@ public class StuExamServiceImpl implements StuExamService {
         });
         // mq -> 自动批阅客观题
         rocketMQTemplate.convertAndSend("exam-grade-topic", new GradeMessageDTO(examId, currentUserId));
+        // 落库成功后清理 Redis 中的暂存答案
+        redisUtil.delete(RedisConstant.EXAM_ANSWER_PREFIX + examId + ":" + currentUserId);
     }
 
 
@@ -262,14 +268,19 @@ public class StuExamServiceImpl implements StuExamService {
         Integer currentUserId = getCurrentUserId();
         LocalDateTime now = LocalDateTime.now();
 
-        Map<Integer, Map<Integer, Double>> examScoreCache = new HashMap<>();
+        Map<Integer, Exam> examCache = new HashMap<>();
+        Map<Integer, Map<Integer, Double>> scoreCache = new HashMap<>();
+        Map<Integer, Long> ttlCache = new HashMap<>();
         for (StudentUpdateAnswerDTO dto : studentUpdateAnswerDTOS) {
             Integer examId = dto.getExamId();
             Integer questionId = dto.getQuestionId();
             if (examId == null || questionId == null) {
                 throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
             }
-            Map<Integer, Double> scoreMap = examScoreCache.computeIfAbsent(examId, this::loadPaperQuestionScores);
+            Map<Integer, Double> scoreMap = scoreCache.computeIfAbsent(examId, id -> {
+                Exam exam = examCache.computeIfAbsent(id, examManagementService::getById);
+                return paperManagementService.getQuestionScoreMap(requirePaperId(exam));
+            });
             Double fullScore = scoreMap.get(questionId);
             if (fullScore == null) {
                 throw new BusinessException(ErrorCodeEnum.EXAM_QUESTION_NOT_IN_PAPER);
@@ -288,24 +299,42 @@ public class StuExamServiceImpl implements StuExamService {
 
             Map<String, Object> map = new HashMap<>();
             map.put(field, answerDTO);
-            redisUtil.hSetAll(redisKey, map);
+            long ttlSeconds = ttlCache.computeIfAbsent(examId, id -> {
+                Exam exam = examCache.computeIfAbsent(id, examManagementService::getById);
+                return answerCacheExpireSeconds(exam);
+            });
+            redisUtil.hSetAll(redisKey, map, ttlSeconds);
         }
     }
 
     /**
-     * 查询某场考试所绑定试卷的题目分值表
+     * 获取考试关联的试卷ID
      *
-     * @param examId 考试ID
-     * @return 题目ID与分值的映射
+     * @param exam 考试
+     * @return 试卷ID
      */
-    private Map<Integer, Double> loadPaperQuestionScores(Integer examId) {
-        Exam exam = examManagementService.getById(examId);
+    private static Integer requirePaperId(Exam exam) {
         if (exam == null || exam.getPaperId() == null) {
             throw new BusinessException(ErrorCodeEnum.EXAM_REFERENCE_PAPER_NOT_FOUND);
         }
-        return paperManagementService.getQuestionScoreMap(exam.getPaperId());
+        return exam.getPaperId();
     }
 
+    /**
+     * 计算考生答案缓存的过期时间
+     *
+     * @param exam 考试
+     * @return 过期秒数
+     */
+    private static long answerCacheExpireSeconds(Exam exam) {
+        long expireSeconds = ANSWER_CACHE_EXPIRE_AFTER_EXAM_END_SECONDS;
+        if (exam != null && exam.getStartTime() != null && exam.getDuration() != null) {
+            LocalDateTime examEndTime = exam.getStartTime().plusMinutes(exam.getDuration());
+            long secondsUntilExamEnd = Duration.between(LocalDateTime.now(), examEndTime).getSeconds();
+            expireSeconds += Math.max(secondsUntilExamEnd, 0);
+        }
+        return expireSeconds;
+    }
 
     /**
      * 组装考试结果

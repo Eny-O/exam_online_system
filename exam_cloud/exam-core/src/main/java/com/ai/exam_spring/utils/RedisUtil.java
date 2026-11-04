@@ -202,6 +202,21 @@ public class RedisUtil {
     }
 
     /**
+     * HashSet 向一张hash表中放入数据并设置过期时间 (自动将对象值序列化为JSON)
+     * @param key 键
+     * @param map 对应多个键值 (值可以是任意对象)
+     * @param expireSeconds 过期时间(秒) 小于等于0表示不设置过期时间
+     * @return true 成功 false 失败
+     */
+    public boolean hSetAll(String key, Map<String, Object> map, long expireSeconds) {
+        hSetAll(key, map);
+        if (expireSeconds > 0) {
+            expire(key, expireSeconds);
+        }
+        return true;
+    }
+
+    /**
      * HashGetAll 获取hash表中所有字段和值 (反序列化为对象)
      * @param key 键
      * @param clazz 目标对象的 Class 类型

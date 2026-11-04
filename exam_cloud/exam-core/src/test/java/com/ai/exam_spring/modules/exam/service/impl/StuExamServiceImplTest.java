@@ -35,12 +35,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -86,6 +88,7 @@ class StuExamServiceImplTest {
 
         verify(examAnswerPersistenceService).saveAnswers(answers);
         verify(rocketMQTemplate).convertAndSend(eq("exam-grade-topic"), any(GradeMessageDTO.class));
+        verify(redisUtil).delete("exam:answer:" + EXAM_ID + ":" + STUDENT_ID);
     }
 
     @Test
@@ -233,10 +236,36 @@ class StuExamServiceImplTest {
         stuExamService.updateBatchAnswer(List.of(dto));
 
         ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
-        verify(redisUtil).hSetAll(eq("exam:answer:" + EXAM_ID + ":" + STUDENT_ID), captor.capture());
+        verify(redisUtil).hSetAll(eq("exam:answer:" + EXAM_ID + ":" + STUDENT_ID), captor.capture(), anyLong());
         RedisAnswerDTO saved = (RedisAnswerDTO) captor.getValue().get("101");
         assertEquals(3.5, saved.getFullScore());
         assertEquals("A", saved.getStudentAnswer());
+    }
+
+    @Test
+    @DisplayName("updateBatchAnswer 正常：答案缓存设置了过期时间")
+    void updateBatchAnswer_setsTtl() {
+        Exam exam = new Exam();
+        exam.setId(EXAM_ID);
+        exam.setPaperId(77);
+        exam.setStartTime(LocalDateTime.now());
+        exam.setDuration(60);
+        when(examManagementService.getById(EXAM_ID)).thenReturn(exam);
+        when(paperManagementService.getQuestionScoreMap(77)).thenReturn(Map.of(101, 3.5));
+
+        StudentUpdateAnswerDTO dto = new StudentUpdateAnswerDTO();
+        dto.setExamId(EXAM_ID);
+        dto.setQuestionId(101);
+        dto.setStudentAnswer("A");
+
+        stuExamService.updateBatchAnswer(List.of(dto));
+
+        ArgumentCaptor<Long> ttlCaptor = ArgumentCaptor.forClass(Long.class);
+        verify(redisUtil).hSetAll(eq("exam:answer:" + EXAM_ID + ":" + STUDENT_ID), any(), ttlCaptor.capture());
+        long ttl = ttlCaptor.getValue();
+        // 考试结束时间加一天的保留时长，考试进行中时剩余时间应大于一天
+        assertTrue(ttl > 24 * 60 * 60L, "过期时间应包含考试结束后的保留时长");
+        assertTrue(ttl <= 24 * 60 * 60L + 60 * 60L, "过期时间不应超出考试时长加保留时长");
     }
 
     @Test
@@ -256,7 +285,7 @@ class StuExamServiceImplTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> stuExamService.updateBatchAnswer(List.of(dto)));
         assertEquals(ErrorCodeEnum.EXAM_QUESTION_NOT_IN_PAPER.getCode(), ex.getErrorCode());
-        verify(redisUtil, never()).hSetAll(any(), any());
+        verify(redisUtil, never()).hSetAll(any(), any(), anyLong());
     }
 
     @Test
@@ -272,7 +301,7 @@ class StuExamServiceImplTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> stuExamService.updateBatchAnswer(List.of(dto)));
         assertEquals(ErrorCodeEnum.EXAM_REFERENCE_PAPER_NOT_FOUND.getCode(), ex.getErrorCode());
-        verify(redisUtil, never()).hSetAll(any(), any());
+        verify(redisUtil, never()).hSetAll(any(), any(), anyLong());
     }
 
     // ===================== getAllExamResult =====================
