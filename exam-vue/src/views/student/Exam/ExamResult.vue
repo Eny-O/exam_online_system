@@ -195,13 +195,11 @@ import {
   getExamResult,
   getExamInfo,
   getExamPaper,
-  getStudentAnswer,
+  getAnswerDetail,
 } from "@/api/examTask";
-import { useUserStore } from "@/stores/user";
 
 const route = useRoute();
 const router = useRouter();
-const userStore = useUserStore();
 
 // ========== 题型映射 ==========
 const TYPE_LABEL = {
@@ -324,7 +322,6 @@ const getOptionClass = (q, optLabel) => {
 const fetchData = async () => {
   loading.value = true;
   const examId = route.params.id;
-  const studentId = userStore.userInfo?.id;
 
   try {
     // 并行获取考试结果和考试信息
@@ -351,8 +348,8 @@ const fetchData = async () => {
       })
     );
 
-    // 获取学生答题情况
-    const answerRes = await getStudentAnswer(studentId, examId);
+    // 获取学生答题情况（学生端接口，按当前登录学生查询，无需传studentId）
+    const answerRes = await getAnswerDetail(examId);
     const answerList = answerRes.data || [];
 
     // 构建 questionId → answerData 映射

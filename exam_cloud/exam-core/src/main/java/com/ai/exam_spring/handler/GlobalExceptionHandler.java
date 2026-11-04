@@ -4,6 +4,7 @@ import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_common.common.pojo.result.ResponseResult;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -35,6 +36,19 @@ public class GlobalExceptionHandler {
     public ResponseResult<Void> handleIllegalAccessException(IllegalAccessException e) {
         log.error("非法访问: {}", e.getMessage());
         return ResponseResult.error(ErrorCodeEnum.BAD_REQUEST);
+    }
+
+    /**
+     * 权限不足异常处理
+     * <p>
+     * 方法级 {@code @PreAuthorize} 拒绝时抛出的是 AccessDeniedException，
+     * 它由 Controller 调用链抛出而非过滤器链，因此不会走 Spring Security 的
+     * AccessDeniedHandler，必须在此单独兜住，否则会被通用异常处理误判为服务器内部错误。
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseResult<Void> handleAccessDeniedException(AccessDeniedException e) {
+        log.warn("权限不足: {}", e.getMessage());
+        return ResponseResult.error(ErrorCodeEnum.FORBIDDEN);
     }
 
     /**

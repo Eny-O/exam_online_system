@@ -198,10 +198,14 @@ class StuExamServiceImplTest {
         assertEquals(1, r1.getId());
         assertEquals(101, r1.getQuestionId());
         assertEquals("A", r1.getStudentAnswer());
+        assertEquals(1, r1.getIsCorrect());
+        assertEquals(2.0, r1.getScore());
         BaseStudentAnswerVO r2 = result.get(1);
         assertEquals(2, r2.getId());
         assertEquals(102, r2.getQuestionId());
         assertEquals("B", r2.getStudentAnswer());
+        assertEquals(0, r2.getIsCorrect());
+        assertEquals(0.0, r2.getScore());
     }
 
     // ===================== getAllExamResult =====================
