@@ -19,10 +19,13 @@ import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.BasePaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
+import com.ai.exam_spring.modules.paper.pojo.vo.PaperQuestionVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperQuestionVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperVO;
+import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
 import com.ai.exam_spring.modules.question.pojo.vo.StuQuestionCompleteVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.BaseStudentAnswerVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StuAnswerReviewVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
@@ -43,6 +46,8 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class StuExamServiceImpl implements StuExamService {
@@ -194,6 +199,60 @@ public class StuExamServiceImpl implements StuExamService {
             BaseStudentAnswerVO baseStudentAnswerVO = new BaseStudentAnswerVO();
             BeanUtil.copyProperties(studentStudentAnswerVO, baseStudentAnswerVO);
             return baseStudentAnswerVO;
+        }).toList();
+    }
+
+    /**
+     * 获取学生答卷回顾（含标准答案与解析，仅向考生本人返回）
+     * 复用试卷管理的完整题目数据（含答案与解析），与学生本人的作答合并返回
+     *
+     * @param examId 考试ID
+     * @return 题目（含标准答案与解析）+ 学生作答合并列表
+     */
+    @Override
+    public List<StuAnswerReviewVO> getAnswerReview(Integer examId) {
+        Integer currentUserId = getCurrentUserId();
+        Exam exam = examManagementService.getById(examId);
+        if (exam == null) {
+            throw new BusinessException(ErrorCodeEnum.EXAM_NOT_FOUND);
+        }
+        Integer paperId = exam.getPaperId();
+        if (paperId == null) {
+            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
+        }
+        PaperContentVO paperContentVO = paperManagementService.getPaperById(paperId);
+        if (paperContentVO == null) {
+            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
+        }
+        List<PaperQuestionVO> paperQuestionVOS = paperContentVO.getPaperQuestionVOS();
+        if (paperQuestionVOS == null || paperQuestionVOS.isEmpty()) {
+            return List.of();
+        }
+        List<StudentAnswerVO> studentAnswerVOS = studentAnswerService.getStudentAnswer(currentUserId, examId);
+        Map<Integer, StudentAnswerVO> answerMap = studentAnswerVOS.stream()
+                .collect(Collectors.toMap(StudentAnswerVO::getQuestionId, Function.identity(), (a, b) -> a));
+
+        return paperQuestionVOS.stream().map(paperQuestionVO -> {
+            QuestionCompleteVO questionCompleteVO = paperQuestionVO.getQuestionCompleteVO();
+            StuAnswerReviewVO vo = new StuAnswerReviewVO();
+            if (questionCompleteVO == null) {
+                return vo;
+            }
+            vo.setQuestionId(questionCompleteVO.getId());
+            vo.setType(questionCompleteVO.getType() == null ? null : questionCompleteVO.getType().name());
+            vo.setContent(questionCompleteVO.getContent());
+            vo.setOptions(questionCompleteVO.getOptions());
+            vo.setCorrectAnswer(questionCompleteVO.getAnswer());
+            vo.setExplanation(questionCompleteVO.getAnalysis());
+            vo.setFullScore(paperQuestionVO.getScore());
+            StudentAnswerVO answer = answerMap.get(questionCompleteVO.getId());
+            if (answer != null) {
+                vo.setStudentAnswer(answer.getStudentAnswer());
+                vo.setIsCorrect(answer.getIsCorrect());
+                vo.setScore(answer.getScore());
+                vo.setTeacherComment(answer.getTeacherComment());
+            }
+            return vo;
         }).toList();
     }
 

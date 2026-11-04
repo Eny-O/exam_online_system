@@ -74,109 +74,8 @@
         </div>
       </div>
 
-      <!-- 答题详情列表 -->
-      <div class="detail-card fade-in-up delay-200">
-        <h2 class="section-title">答题详情</h2>
-
-        <div class="question-list">
-          <div
-            v-for="(q, index) in questions"
-            :key="q.id"
-            class="question-item fade-in-left"
-            :style="{ animationDelay: `${index * 0.05}s` }"
-            :class="getBorderClass(q)"
-          >
-            <div class="question-content">
-              <div class="status-icon" :class="getStatusIconClass(q)">
-                <el-icon :size="20" color="#fff">
-                  <Check v-if="q.answerData?.isCorrect === 1" />
-                  <Close v-else-if="q.answerData?.isCorrect === 0" />
-                  <span v-else style="font-size: 12px; color: #fff">--</span>
-                </el-icon>
-              </div>
-
-              <div class="question-info">
-                <h3 class="question-text">
-                  {{ index + 1 }}. {{ q.content }}
-                  <el-tag
-                    size="small"
-                    :type="typeTagColor(q.type)"
-                    style="margin-left: 8px"
-                  >
-                    {{ typeLabel(q.type) }}
-                  </el-tag>
-                </h3>
-
-                <div class="answer-details">
-                  <!-- 客观题 -->
-                  <template v-if="q.type !== 'essay'">
-                    <div class="options-compact">
-                      <div
-                        v-for="opt in q.options"
-                        :key="opt.label"
-                        :class="[
-                          'option-compact',
-                          getOptionClass(q, opt.label),
-                        ]"
-                      >
-                        <span class="opt-label">{{ opt.label }}</span>
-                        <span class="opt-text">{{ opt.content }}</span>
-                      </div>
-                    </div>
-                    <div class="answer-row">
-                      <span class="label">你的答案:</span>
-                      <span
-                        class="value"
-                        :class="
-                          q.answerData?.isCorrect === 1
-                            ? 'text-green'
-                            : 'text-red'
-                        "
-                      >
-                        {{ q.answerData?.studentAnswer || "未作答" }}
-                      </span>
-                    </div>
-                  </template>
-
-                  <!-- 主观题 -->
-                  <template v-else>
-                    <div class="answer-row">
-                      <span class="label">你的回答:</span>
-                    </div>
-                    <div class="essay-answer-display">
-                      {{ q.answerData?.studentAnswer || "（未作答）" }}
-                    </div>
-                  </template>
-
-                  <!-- 批阅状态 -->
-                  <div
-                    v-if="q.answerData?.isCorrect === null"
-                    class="grade-pending"
-                  >
-                    <el-tag type="warning" size="small">待批阅</el-tag>
-                  </div>
-                  <div
-                    v-else-if="q.answerData?.isCorrect === 2"
-                    class="grade-partial"
-                  >
-                    <el-tag type="warning" size="small">部分正确</el-tag>
-                  </div>
-                </div>
-              </div>
-
-              <div class="score-section">
-                <span
-                  class="score-value"
-                  :class="q.answerData?.score > 0 ? 'text-green' : 'text-red'"
-                >
-                  {{ q.answerData?.score ?? 0 }}
-                </span>
-                <span class="score-total">/ {{ q.score }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- 答题详情列表（公共组件） -->
+      <AnswerReview :questions="questions" :filterable="true" />
     </div>
   </div>
 </template>
@@ -187,35 +86,17 @@ import { useRoute, useRouter } from "vue-router";
 import {
   ArrowLeft,
   Trophy,
-  Check,
-  Close,
   Loading,
 } from "@element-plus/icons-vue";
 import {
   getExamResult,
   getExamInfo,
-  getExamPaper,
-  getAnswerDetail,
+  getStuAnswerReview,
 } from "@/api/examTask";
+import AnswerReview from "@/components/AnswerReview.vue";
 
 const route = useRoute();
 const router = useRouter();
-
-// ========== 题型映射 ==========
-const TYPE_LABEL = {
-  single: "单选",
-  multiple: "多选",
-  judge: "判断",
-  essay: "简答",
-};
-const TYPE_TAG_COLOR = {
-  single: "",
-  multiple: "warning",
-  judge: "success",
-  essay: "danger",
-};
-const typeLabel = (type) => TYPE_LABEL[type] ?? "未知";
-const typeTagColor = (type) => TYPE_TAG_COLOR[type] ?? "info";
 
 // ========== 状态定义 ==========
 const loading = ref(true);
@@ -233,7 +114,7 @@ const questions = ref([]);
 // ========== 计算属性 ==========
 // 答对题数（客观题 isCorrect === 1）
 const correctCount = computed(() => {
-  return questions.value.filter((q) => q.answerData?.isCorrect === 1).length;
+  return questions.value.filter((q) => q.isCorrect === 1).length;
 });
 
 // 实际用时（根据考试开始时间和提交时间计算）
@@ -287,37 +168,6 @@ const formatDateTime = (dt) => {
   return dt.replace("T", " ").substring(0, 16);
 };
 
-// 题目边框样式
-const getBorderClass = (q) => {
-  const isCorrect = q.answerData?.isCorrect;
-  if (isCorrect === 1) return "correct-border";
-  if (isCorrect === 0) return "wrong-border";
-  return "pending-border";
-};
-
-// 状态图标样式
-const getStatusIconClass = (q) => {
-  const isCorrect = q.answerData?.isCorrect;
-  if (isCorrect === 1) return "bg-green";
-  if (isCorrect === 0) return "bg-red";
-  return "bg-gray";
-};
-
-// 选项样式：高亮学生的选择，正确/错误用不同颜色
-const getOptionClass = (q, optLabel) => {
-  const answer = q.answerData;
-  if (!answer || !answer.studentAnswer) return "";
-
-  const selected = answer.studentAnswer.split(",").map((s) => s.trim());
-  const isSelected = selected.includes(optLabel);
-  if (!isSelected) return "";
-
-  // 学生选了该选项
-  if (answer.isCorrect === 1) return "opt-selected opt-correct";
-  if (answer.isCorrect === 0) return "opt-selected opt-wrong";
-  return "opt-selected opt-neutral";
-};
-
 // ========== 数据获取 ==========
 const fetchData = async () => {
   loading.value = true;
@@ -333,37 +183,12 @@ const fetchData = async () => {
     // 填充考试结果
     examResult.value = resultRes.data;
 
-    // 获取试卷内容
-    const paperId = infoRes.data.paperId;
-    const paperRes = await getExamPaper(paperId);
-    const rawQuestions = (paperRes.data.stuPaperQuestionVOS || []).map(
-      (pq) => ({
-        sortOrder: pq.sortOrder,
-        score: pq.score,
-        id: pq.stuQuestionCompleteVO.id,
-        content: pq.stuQuestionCompleteVO.content,
-        type: pq.stuQuestionCompleteVO.type?.toLowerCase(),
-        options: pq.stuQuestionCompleteVO.options || [],
-        answerData: null,
-      })
-    );
-
-    // 获取学生答题情况（学生端接口，按当前登录学生查询，无需传studentId）
-    const answerRes = await getAnswerDetail(examId);
-    const answerList = answerRes.data || [];
-
-    // 构建 questionId → answerData 映射
-    const answerMap = {};
-    answerList.forEach((a) => {
-      answerMap[a.questionId] = a;
-    });
-
-    // 合并答题数据到题目
-    rawQuestions.forEach((q) => {
-      q.answerData = answerMap[q.id] || null;
-    });
-
-    questions.value = rawQuestions;
+    // 获取答卷回顾（含标准答案与解析 + 学生作答，由后端合并）
+    const reviewRes = await getStuAnswerReview(examId);
+    questions.value = (reviewRes.data || []).map((v) => ({
+      ...v,
+      id: v.questionId,
+    }));
   } catch (error) {
     console.error("加载考试结果失败:", error);
   } finally {

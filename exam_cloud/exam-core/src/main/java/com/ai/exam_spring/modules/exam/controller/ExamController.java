@@ -9,6 +9,7 @@ import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.BaseStudentAnswerVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StuAnswerReviewVO;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.exam.service.StuExamService;
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
@@ -98,6 +99,15 @@ public class ExamController {
         log.info("学生获取答题详情: {}", examId);
         List<BaseStudentAnswerVO> baseStudentAnswerVOS = stuExamService.getAnswerDetail(examId);
         return ResponseResult.success(baseStudentAnswerVOS);
+    }
+
+    @Operation(summary = "学生获取答卷回顾（含标准答案与解析）")
+    @PreAuthorize("hasAuthority('stu:exam:view')")
+    @GetMapping("/getAnswerReview")
+    public ResponseResult<List<StuAnswerReviewVO>> getAnswerReview(@RequestParam Integer examId) {
+        log.info("学生获取答卷回顾: {}", examId);
+        List<StuAnswerReviewVO> list = stuExamService.getAnswerReview(examId);
+        return ResponseResult.success(list);
     }
 
     @Operation(summary = "学生获取考试结果")

@@ -6,6 +6,7 @@ import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.BaseStudentAnswerVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StuAnswerReviewVO;
 
 import java.util.List;
 
@@ -44,6 +45,13 @@ public interface StuExamService {
      * @return
      */
     List<BaseStudentAnswerVO> getAnswerDetail(Integer examId);
+
+    /**
+     * 获取学生答卷回顾（含标准答案与解析，仅向考生本人返回）
+     * @param examId 考试ID
+     * @return 题目（含标准答案与解析）+ 学生作答合并列表
+     */
+    List<StuAnswerReviewVO> getAnswerReview(Integer examId);
 
     /**
      * 获取考试结果

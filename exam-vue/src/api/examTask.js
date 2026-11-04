@@ -102,6 +102,11 @@ export function getAnswerDetail(examId) {
   return request.get("/stu/exam/getAnswerDetail", { params: { examId } });
 }
 
+// 学生获取答卷回顾（含标准答案与解析）
+export function getStuAnswerReview(examId) {
+  return request.get("/stu/exam/getAnswerReview", { params: { examId } });
+}
+
 // 学生获取考试结果
 export function getExamResult(examId) {
   return request.get("/stu/exam/getExamResult", { params: { examId } });
