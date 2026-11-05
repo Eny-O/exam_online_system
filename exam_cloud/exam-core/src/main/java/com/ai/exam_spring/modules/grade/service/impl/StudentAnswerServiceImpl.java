@@ -9,8 +9,8 @@ import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.StudentAnswerUpdateDT
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
 import com.ai.exam_spring.modules.exam.pojo.dos.stu_answer.StudentAnswer;
 import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
+import com.ai.exam_spring.modules.grade.pojo.vo.StudentScoreSummaryVO;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
-import com.ai.exam_spring.modules.question.pojo.enums.QuestionTypeEnum;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
@@ -93,13 +93,16 @@ public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, S
         }
         Integer examId = studentAnswerUpdateDTOS.get(0).getExamId();
         Integer studentId = studentAnswerUpdateDTOS.get(0).getStudentId();
+        if (examId == null || studentId == null) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        }
         ExamStudent dbExamStudent = examStudentService.getOne(new LambdaQueryWrapper<ExamStudent>()
                 .eq(ExamStudent::getExamId, examId)
                 .eq(ExamStudent::getStudentId, studentId));
         if (dbExamStudent == null){
             throw new BusinessException(ErrorCodeEnum.EXAM_STUDENT_NOT_FOUND);
         }
-        ExamStudent examStudent = getExamStudent(studentAnswerUpdateDTOS, dbExamStudent);
+        ExamStudent examStudent = getExamStudent(dbExamStudent);
         List<StudentAnswer> studentAnswers = studentAnswerUpdateDTOS.stream().map(studentAnswerUpdateDTO -> {
             StudentAnswer studentAnswer = new StudentAnswer();
             BeanUtil.copyProperties(studentAnswerUpdateDTO, studentAnswer);
@@ -111,6 +114,17 @@ public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, S
         transactionTemplate.execute(status -> {
             this.updateBatchById(studentAnswers);
 
+            List<StudentScoreSummaryVO> summaries =
+                    baseMapper.selectScoreSummary(examId, List.of(studentId));
+            StudentScoreSummaryVO summary = summaries == null || summaries.isEmpty()
+                    ? null : summaries.get(0);
+            examStudent.setObjectiveScore(summary == null || summary.getObjectiveScore() == null
+                    ? 0.0 : summary.getObjectiveScore());
+            examStudent.setSubjectiveScore(summary == null || summary.getSubjectiveScore() == null
+                    ? 0.0 : summary.getSubjectiveScore());
+            examStudent.setTotalScore(summary == null || summary.getTotalScore() == null
+                    ? 0.0 : summary.getTotalScore());
+
             examStudentService.update(examStudent, new LambdaQueryWrapper<ExamStudent>()
                     .eq(ExamStudent::getExamId, examId)
                     .eq(ExamStudent::getStudentId, studentId));
@@ -119,33 +133,16 @@ public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, S
     }
 
     /**
-     * 根据学生答案列表和数据库中的学生考试详情，计算并更新考试学生关联信息,返回新的考试学生关联信息
+     * 根据数据库中的学生考试详情，构建待更新的考试学生关联信息
      *
-     * @param studentAnswerUpdateDTOS
      * @param dbExamStudent
      * @return ExamStudent
      */
-    private static @NonNull ExamStudent getExamStudent(List<StudentAnswerUpdateDTO> studentAnswerUpdateDTOS, ExamStudent dbExamStudent) {
+    private static @NonNull ExamStudent getExamStudent(ExamStudent dbExamStudent) {
         if (dbExamStudent.getStatus() != StudentExamEnum.SUBMITTED) {
             throw new BusinessException(ErrorCodeEnum.PAPER_STATUS_ERROR_NOT_GRADE);
         }
-        // 遍历学生答案列表，计算主观题和客观题的总分
-        Double subjectiveScore = 0.0;
-        Double objectiveScore = 0.0;
-        for (StudentAnswerUpdateDTO studentAnswerUpdateDTO : studentAnswerUpdateDTOS) {
-            if (studentAnswerUpdateDTO.getIsCorrect() != null
-                    && studentAnswerUpdateDTO.getIsCorrect() == 1
-                    && studentAnswerUpdateDTO.getType() != QuestionTypeEnum.ESSAY) {
-                subjectiveScore += studentAnswerUpdateDTO.getScore();
-            } else if (studentAnswerUpdateDTO.getIsCorrect() != null
-                    && studentAnswerUpdateDTO.getIsCorrect() == 1) {
-                objectiveScore += studentAnswerUpdateDTO.getScore();
-            }
-        }
         ExamStudent examStudent = new ExamStudent();
-        examStudent.setSubjectiveScore(subjectiveScore);
-        examStudent.setObjectiveScore(objectiveScore);
-        examStudent.setTotalScore(subjectiveScore + objectiveScore);
         examStudent.setStatus(StudentExamEnum.GRADED);
         return examStudent;
     }
