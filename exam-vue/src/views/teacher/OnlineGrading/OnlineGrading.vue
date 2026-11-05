@@ -461,7 +461,13 @@ const loadStudentList = async () => {
   loadingStudents.value = true;
   try {
     const res = await getGradeStudentList(examId);
-    studentList.value = res.data || [];
+    const list = Array.isArray(res?.data) ? res.data : [];
+    studentList.value = list;
+    list.forEach((s) => {
+      if (s?.studentId != null && s.status === "已批阅") {
+        gradedStudents[s.studentId] = true;
+      }
+    });
   } catch (e) {
     console.error("加载学生列表失败:", e);
   } finally {

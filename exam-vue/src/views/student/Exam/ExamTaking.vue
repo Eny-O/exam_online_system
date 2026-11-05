@@ -116,7 +116,7 @@
                 下一题
                 <el-icon><ArrowRight /></el-icon>
               </el-button>
-              <el-button v-else type="success" @click="submitExam">
+              <el-button v-else type="success" @click="submitExam()">
                 提交试卷
               </el-button>
             </div>
@@ -379,19 +379,26 @@ const handleLeave = async () => {
 };
 
 const submitExam = async (autoSubmit = false) => {
-  if (!autoSubmit) {
+  if (autoSubmit !== true) {
+    const unanswered = (questions.value || []).filter(
+      (q) => !hasAnswer(q.id)
+    ).length;
+    const tip =
+      unanswered > 0
+        ? `你还有 ${unanswered} 道题未作答，确定要提交吗？`
+        : `所有题目均已作答，确定要提交吗？`;
     try {
       await ElMessageBox.confirm(
-        `确定要提交试卷吗？剩余时间: ${formatTime(timeLeft.value)}`,
+        `${tip}（剩余时间 ${formatTime(timeLeft.value)}）`,
         "提交确认",
         {
           confirmButtonText: "确定提交",
           cancelButtonText: "再检查一下",
-          type: "warning",
+          type: unanswered > 0 ? "warning" : "info",
         }
       );
     } catch {
-      return; // 取消操作
+      return;
     }
   }
 

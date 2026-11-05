@@ -110,9 +110,9 @@
           >
             查看考试
           </el-button>
-          <!-- 待批阅(4) + submitted = 查看考试 -->
+          <!-- 待批阅(4) + submitted/graded = 查看考试 -->
           <el-button
-            v-if="getRealStatus(row) === 4 && row.studentExamStatus === 'submitted'"
+            v-if="getRealStatus(row) === 4 && ['submitted', 'graded'].includes(row.studentExamStatus)"
             link
             type="info"
             size="small"
