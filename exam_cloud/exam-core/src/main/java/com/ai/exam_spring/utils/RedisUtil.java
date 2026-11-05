@@ -56,6 +56,17 @@ public class RedisUtil {
         }
     }
 
+    /** 按前缀批量删除缓存 */
+    public void deleteByPattern(String pattern) {
+        if (pattern == null || pattern.isBlank()) {
+            return;
+        }
+        Set<String> keys = stringRedisTemplate.keys(pattern);
+        if (keys != null && !keys.isEmpty()) {
+            stringRedisTemplate.delete(keys);
+        }
+    }
+
     // ============================= String (字符串操作) =============================
 
     /**
@@ -144,6 +155,26 @@ public class RedisUtil {
                 stringRedisTemplate.opsForValue().set(key, jsonValue);
             }
             return true;
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("对象转JSON失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 仅当 key 不存在时写入对象并设置过期时间
+     * @param key 键
+     * @param value 任意 Java 对象
+     * @param time 时间(秒)
+     * @return true 写入成功 false key 已存在
+     */
+    public boolean setIfAbsent(String key, Object value, long time) {
+        try {
+            String jsonValue = objectMapper.writeValueAsString(value);
+            if (time > 0) {
+                return Boolean.TRUE.equals(
+                        stringRedisTemplate.opsForValue().setIfAbsent(key, jsonValue, time, TimeUnit.SECONDS));
+            }
+            return Boolean.TRUE.equals(stringRedisTemplate.opsForValue().setIfAbsent(key, jsonValue));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("对象转JSON失败: " + e.getMessage(), e);
         }

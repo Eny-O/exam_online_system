@@ -1,36 +1,29 @@
 package com.ai.exam_spring.modules.grade.service.impl;
 
-import cn.hutool.core.bean.BeanUtil;
 import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_spring.modules.grade.mapper.GradePaperMapper;
 import com.ai.exam_spring.modules.grade.mapper.StudentAnswerMapper;
 import com.ai.exam_spring.modules.grade.service.GradePaperService;
-import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
-import com.ai.exam_spring.modules.paper.pojo.vo.PaperQuestionVO;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.BatchGradeDTO;
-import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
+import com.ai.exam_spring.modules.exam.pojo.dto.ExamPaperSnapshotDTO;
 import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
-import com.ai.exam_spring.modules.question.pojo.enums.QuestionTypeEnum;
+import com.ai.exam_spring.modules.exam.service.IExamPaperSnapshotService;
 import com.ai.exam_spring.modules.grade.pojo.vo.GradePaperContentVO;
-import com.ai.exam_spring.modules.grade.pojo.vo.GradePaperQuestionVO;
 import com.ai.exam_spring.modules.grade.pojo.vo.GradeStudentVO;
 import com.ai.exam_spring.modules.grade.pojo.vo.StudentScoreSummaryVO;
-import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.ExamAnswerVO;
-import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
-import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
 import com.ai.exam_api.feign.UserFeignClient;
 import com.ai.exam_api.pojo.dto.UserBriefDTO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -40,10 +33,7 @@ import java.util.stream.Collectors;
 public class GradePaperServiceImpl implements GradePaperService {
 
     @Autowired
-    private IPaperManagementService paperManagementService;
-
-    @Autowired
-    private IExamManagementService examManagementService;
+    private IExamPaperSnapshotService examPaperSnapshotService;
 
     @Autowired
     private IExamStudentService examStudentService;
@@ -57,55 +47,18 @@ public class GradePaperServiceImpl implements GradePaperService {
     @Autowired
     private StudentAnswerMapper studentAnswerMapper;
 
-    @Autowired
-    private SqlSessionFactory sqlSessionFactory;
-
     /**
-     * 根据考试id获取试卷内容
-     * 复用试卷管理获取试卷的接口,获得试卷内容封装成批阅试卷内容VO
+     * 根据考试id从试卷快照获取批阅试卷内容
      *
      * @param examId
      * @return
      */
     @Override
     public GradePaperContentVO getGradePaper(Integer examId) {
-        Exam exam = examManagementService.getById(examId);
-        if (exam == null) {
-            throw new BusinessException(ErrorCodeEnum.EXAM_NOT_FOUND);
+        if (examId == null) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
         }
-        Integer paperId = exam.getPaperId();
-        if (paperId == null) {
-            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
-        }
-        PaperContentVO paperContentVO = paperManagementService.getPaperById(paperId);
-        if (paperContentVO == null) {
-            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
-        }
-        GradePaperContentVO gradePaperContentVO = new GradePaperContentVO();
-        BeanUtil.copyProperties(paperContentVO, gradePaperContentVO);
-        // 封装批阅试卷题目列表
-        List<PaperQuestionVO> paperQuestionVOS = paperContentVO.getPaperQuestionVOS();
-        if (paperQuestionVOS == null || paperQuestionVOS.isEmpty()) {
-            return gradePaperContentVO;
-        }
-        List<GradePaperQuestionVO> gradePaperQuestionVOS = paperQuestionVOS.stream().map(paperQuestionVO -> {
-            GradePaperQuestionVO gradePaperQuestionVO = new GradePaperQuestionVO();
-            gradePaperQuestionVO.setSortOrder(paperQuestionVO.getSortOrder());
-            gradePaperQuestionVO.setScore(paperQuestionVO.getScore());
-            QuestionCompleteVO questionCompleteVO = paperQuestionVO.getQuestionCompleteVO();
-            if (questionCompleteVO == null) {
-                throw new BusinessException(ErrorCodeEnum.PAPER_INCOMPLETE_NOT_GRADE);
-            }
-            gradePaperQuestionVO.setContent(questionCompleteVO.getContent());
-            gradePaperQuestionVO.setId(questionCompleteVO.getId());
-            gradePaperQuestionVO.setCorrectAnswer(questionCompleteVO.getAnswer());
-            gradePaperQuestionVO.setOptions(questionCompleteVO.getOptions());
-            gradePaperQuestionVO.setExplanation(questionCompleteVO.getAnalysis());
-            gradePaperQuestionVO.setType(questionCompleteVO.getType().name());
-            return gradePaperQuestionVO;
-        }).toList();
-        gradePaperContentVO.setGradePaperQuestionVOS(gradePaperQuestionVOS);
-        return gradePaperContentVO;
+        return examPaperSnapshotService.toGradePaper(examPaperSnapshotService.getRequired(examId));
     }
 
 
@@ -173,22 +126,34 @@ public class GradePaperServiceImpl implements GradePaperService {
             throw new BusinessException(ErrorCodeEnum.EXAM_ANSWER_NOT_FOUND_NOT_AUTO_GRADE);
         }
 
-        // 构建批量评分数据（只包含客观题）
+        ExamPaperSnapshotDTO snapshot = examPaperSnapshotService.getRequired(examId);
+        Map<Integer, String> correctAnswerMap = new HashMap<>();
+        if (snapshot.getQuestions() != null) {
+            for (ExamPaperSnapshotDTO.QuestionInfo question : snapshot.getQuestions()) {
+                if (question != null && question.getQuestionId() != null) {
+                    correctAnswerMap.put(question.getQuestionId(), question.getAnswer());
+                }
+            }
+        }
         List<BatchGradeDTO> gradeList = new ArrayList<>();
         for (ExamAnswerVO examAnswerVO : examAnswerVOS) {
-            // 简答题不批阅
-            if (examAnswerVO.getType() != QuestionTypeEnum.ESSAY) {
-                BatchGradeDTO dto = new BatchGradeDTO();
-                dto.setId(examAnswerVO.getId());
-                if (examAnswerVO.getAnswer().equals(examAnswerVO.getStudentAnswer())) {
-                    dto.setIsCorrect(1);
-                    dto.setScore(examAnswerVO.getFullScore());
-                } else {
-                    dto.setIsCorrect(0);
-                    dto.setScore(0.0);
-                }
-                gradeList.add(dto);
+            if ("essay".equals(examAnswerVO.getType())) {
+                continue;
             }
+            String correctAnswer = correctAnswerMap.get(examAnswerVO.getQuestionId());
+            if (correctAnswer == null) {
+                continue;
+            }
+            BatchGradeDTO dto = new BatchGradeDTO();
+            dto.setId(examAnswerVO.getId());
+            if (correctAnswer.equals(examAnswerVO.getStudentAnswer())) {
+                dto.setIsCorrect(1);
+                dto.setScore(examAnswerVO.getFullScore() == null ? 0.0 : examAnswerVO.getFullScore());
+            } else {
+                dto.setIsCorrect(0);
+                dto.setScore(0.0);
+            }
+            gradeList.add(dto);
         }
 
         if (!gradeList.isEmpty()) {

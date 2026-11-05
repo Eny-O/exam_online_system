@@ -15,9 +15,9 @@ public class RedisConstant {
     public static final String EXAM_ANSWER_PREFIX = "exam:answer:";
 
     /**
-     * 已发布的考试的试卷内容缓存
+     * 已发布考试的卷面缓存
      * 完整key格式: exam:publish:{examId}
-     * Value: PaperContentVO JSON
+     * Value: StuExamPaperVO JSON
      */
     public static final String EXAM_PUBLISH_PREFIX = "exam:publish:";
 }

@@ -13,7 +13,6 @@ import com.ai.exam_spring.modules.grade.pojo.vo.StudentScoreSummaryVO;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
-import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.NonNull;
@@ -26,9 +25,6 @@ import java.util.List;
 
 @Service
 public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, StudentAnswer> implements IStudentAnswerService {
-
-    @Autowired
-    private IPaperManagementService paperManagementService;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -147,44 +143,4 @@ public class StudentAnswerServiceImpl extends ServiceImpl<StudentAnswerMapper, S
         return examStudent;
     }
 
-//    /**
-//     * 批量保存学生答案
-//     *
-//     * @param studentUpdateAnswerDTO
-//     */
-//    @Override
-//    public List<Integer> batchSaveStudentAnswers(StudentUpdateAnswerDTO studentUpdateAnswerDTO) {
-//        String currentUserId = SecurityUtil.getCurrentUserId();
-//        if (currentUserId == null) {
-//            throw new BusinessException(ErrorCodeEnum.USER_NOT_LOGIN);
-//        }
-//        PaperContentVO paperContentVO = paperManagementService.getPaperById(studentUpdateAnswerDTO.getPaperId());
-//        // 获取该试卷的的题目列表(包含答案)
-//        List<PaperQuestionVO> paperQuestionVOS = paperContentVO.getPaperQuestionVOS();
-//        if (paperQuestionVOS == null || paperQuestionVOS.isEmpty()) {
-//            throw new BusinessException(ErrorCodeEnum.PAPER_CONTENT_EMPTY_NOT_GRADE);
-//        }
-//        // 将题目列表转换为Map，方便后续根据题序快速查找题目
-//        Map<Integer, PaperQuestionVO> paperQuestionVOHashMap = paperQuestionVOS
-//                .stream()
-//                .collect(Collectors.toMap(PaperQuestionVO::getSortOrder, paperQuestionVO -> paperQuestionVO));
-//        Integer examId = studentUpdateAnswerDTO.getExamId();
-//        List<AnswerDTO> answers = studentUpdateAnswerDTO.getAnswers();
-//        // 遍历学生答案列表，封装到StudentAnswer对象中,实现批量插入
-//        List<StudentAnswer> studentAnswers = answers.stream().map(answerDTO -> {
-//            StudentAnswer studentAnswerObject = new StudentAnswer();
-//            PaperQuestionVO paperQuestionVO = paperQuestionVOHashMap.get(answerDTO.getSortOrder());
-//            studentAnswerObject.setExamId(examId);
-//            studentAnswerObject.setStudentId(Integer.parseInt(currentUserId));
-//            studentAnswerObject.setQuestionId(answerDTO.getQuestionId());
-//            studentAnswerObject.setFullScore(paperQuestionVO.getScore());
-//            return studentAnswerObject;
-//        }).toList();
-//       transactionTemplate.execute(status -> {
-//           baseMapper.insert(studentAnswers);
-//           return null;
-//        });
-//
-//        return studentAnswers.stream().map(StudentAnswer::getId).toList();
-//    }
 }

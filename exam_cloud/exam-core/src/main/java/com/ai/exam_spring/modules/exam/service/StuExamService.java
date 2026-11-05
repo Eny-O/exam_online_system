@@ -26,11 +26,11 @@ public interface StuExamService {
     StuExamPaperVO getExamPaperWithExam(Integer examId);
 
     /**
-     * 根据试卷ID获取试卷内容
-     * @param paperId 试卷ID
+     * 根据考试ID获取该场考试的试卷快照
+     * @param examId 考试ID
      * @return StuPaperVO
      */
-    StuPaperVO getPaperById(Integer paperId);
+    StuPaperVO getPaperById(Integer examId);
 
     /**
      * 提交试卷

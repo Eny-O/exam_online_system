@@ -40,6 +40,9 @@ public class StudentAnswer {
     @Schema(description = "满分", example = "10.0")
     private Double fullScore;
 
+    @Schema(description = "题目类型: single-单选 multiple-多选 judge-判断 essay-简答")
+    private String questionType;
+
     @Schema(description = "教师批注(主观题)", example = "回答思路清晰，但缺少关键点。")
     private String teacherComment;
 

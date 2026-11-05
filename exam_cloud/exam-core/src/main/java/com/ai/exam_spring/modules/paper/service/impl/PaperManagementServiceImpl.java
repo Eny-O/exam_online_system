@@ -202,30 +202,6 @@ public class PaperManagementServiceImpl extends ServiceImpl<PaperManagementMappe
     }
 
     /**
-     * 获取试卷中各题目的ID与分值
-     *
-     * @param paperId 试卷ID
-     * @return 题目ID与分值的映射
-     */
-    @Override
-    public Map<Integer, Double> getQuestionScoreMap(Integer paperId) {
-        if (paperId == null) {
-            return Map.of();
-        }
-        List<PaperQuestion> paperQuestions = paperQuestionMapper.selectByPaperId(paperId);
-        if (paperQuestions == null || paperQuestions.isEmpty()) {
-            return Map.of();
-        }
-        return paperQuestions.stream()
-                .filter(paperQuestion -> paperQuestion.getQuestionId() != null)
-                .collect(Collectors.toMap(
-                        PaperQuestion::getQuestionId,
-                        PaperQuestion::getScore,
-                        (existing, replacement) -> replacement
-                ));
-    }
-
-    /**
      * 批量删除试卷
      * 先删除试卷题目关联表数据,再删除试卷基本信息
      * //TODO 后续可做逻辑删除
@@ -263,17 +239,19 @@ public class PaperManagementServiceImpl extends ServiceImpl<PaperManagementMappe
     /**
      * 修改试卷状态
      * @param paperStatusUpdateDTO
-     * TODO 后续完成考试基本业务后,添加试卷是否被引用的判断
      */
     @Override
     public void updatePaperStatus(PaperStatusUpdateDTO paperStatusUpdateDTO) {
-        if (paperStatusUpdateDTO == null) {
+        if (paperStatusUpdateDTO == null || paperStatusUpdateDTO.getId() == null) {
             throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
         }
         Paper paper = baseMapper.selectById(paperStatusUpdateDTO.getId());
         if (paper == null) throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
         PaperStatus existStatus = paper.getStatus();
         PaperStatus targetStatus = paperStatusUpdateDTO.getStatus();
+        if (existStatus == null || targetStatus == null) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        }
         if (!existStatus.canTransferTo(targetStatus)) throw new BusinessException(ErrorCodeEnum.PAPER_STATUS_TRANSFER_NOT_ALLOWED);
         int i = baseMapper.update(
                 new LambdaUpdateWrapper<Paper>()

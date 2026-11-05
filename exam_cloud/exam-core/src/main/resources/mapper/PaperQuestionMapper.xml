@@ -8,11 +8,4 @@
             (#{item.paperId},#{item.questionId},#{item.sortOrder},#{item.score},now(),now())
         </foreach>
     </insert>
-
-    <!-- 查询某张试卷下各题目的ID与分值 -->
-    <select id="selectByPaperId" resultType="com.ai.exam_spring.modules.paper.pojo.dos.PaperQuestion">
-        SELECT id, paper_id, question_id, sort_order, score
-        FROM paper_question
-        WHERE paper_id = #{paperId}
-    </select>
 </mapper>

@@ -217,7 +217,7 @@ const handleDelete = (row) => {
 
 // 更新试卷状态（启用/取消启用）
 const handleUpdateStatus = (row, newStatus) => {
-  const actionText = newStatus === 2 ? "启用" : "取消启用";
+  const actionText = newStatus === "ALREADY_ENABLE" ? "启用" : "取消启用";
   ElMessageBox.confirm(`确定要${actionText}试卷"${row.name}"吗？`, "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",

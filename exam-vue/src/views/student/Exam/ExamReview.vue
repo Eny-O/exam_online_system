@@ -149,11 +149,10 @@ const fetchData = async () => {
   const examId = route.params.id;
   try {
     // 1. 获取考试信息
-    const infoRes = await getExamInfo(examId);
-    const paperId = infoRes.data.paperId;
+    await getExamInfo(examId);
 
-    // 2. 获取试卷内容
-    const paperRes = await getExamPaper(paperId);
+    // 2. 获取该场考试的试卷快照
+    const paperRes = await getExamPaper(examId);
     paper.value = paperRes.data;
 
     // 扁平化题目

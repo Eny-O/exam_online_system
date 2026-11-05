@@ -4,29 +4,34 @@ import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
+import com.ai.exam_spring.modules.exam.pojo.dto.ExamPaperSnapshotDTO;
 import com.ai.exam_spring.modules.exam.pojo.dto.ExamStatusUpdateDTO;
 import com.ai.exam_spring.modules.exam.pojo.enums.ExamEnum;
 import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
 import com.ai.exam_spring.modules.exam.mapper.ExamManagementMapper;
+import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
+import com.ai.exam_spring.modules.exam.service.IExamPaperSnapshotService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
-import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperVO;
 import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
-import com.ai.exam_spring.modules.paper.service.PaperContentConverter;
 import com.ai.exam_common.common.constant.RedisConstant;
 import com.ai.exam_spring.utils.RedisUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -40,9 +45,11 @@ class ExamManagementServiceImplTest {
     @Mock
     private IPaperManagementService paperManagementService;
     @Mock
-    private PaperContentConverter paperContentConverter;
-    @Mock
     private RedisUtil redisUtil;
+    @Mock
+    private IExamPaperSnapshotService examPaperSnapshotService;
+    @Mock
+    private ExamRuntimePaperService examRuntimePaperService;
 
     @InjectMocks
     private ExamManagementServiceImpl examManagementService;
@@ -250,16 +257,102 @@ class ExamManagementServiceImplTest {
     // ========== publishExam ==========
 
     @Test
-    @DisplayName("publishExam 正常：考试信息与试卷内容存Redis")
+    @DisplayName("publishExam 正常：生成快照、置为已发布并写入卷面缓存")
     void publish_normal() {
         when(examManagementMapper.selectById(EXAM_ID)).thenReturn(examOf(ExamEnum.NOT_POST));
         when(paperManagementService.getPaperById(PAPER_ID)).thenReturn(new PaperContentVO());
-        when(paperContentConverter.toStudentPaper(any(PaperContentVO.class))).thenReturn(new StuPaperVO());
+        when(examPaperSnapshotService.getRequired(EXAM_ID)).thenReturn(new ExamPaperSnapshotDTO());
+        when(examPaperSnapshotService.toStuExamPaper(any(ExamPaperSnapshotDTO.class)))
+                .thenReturn(new StuExamPaperVO());
 
         examManagementService.publishExam(EXAM_ID);
 
-        verify(redisUtil).set(eq(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID), any(Object.class), anyLong());
+        verify(examPaperSnapshotService).createOnce(any(Exam.class), any(PaperContentVO.class));
+        verify(examManagementMapper).updateById(argThat(e -> e.getStatus() == ExamEnum.ALREADY_POST));
+        verify(redisUtil).setIfAbsent(eq(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID),
+                any(Object.class), anyLong());
+        verify(redisUtil, never()).set(any(), any(Object.class), anyLong());
+    }
+
+    @Test
+    @DisplayName("publishExam 已发布且快照存在 -> 幂等返回并恢复卷面缓存")
+    void publish_alreadyPublished_idempotent() {
+        when(examManagementMapper.selectById(EXAM_ID)).thenReturn(examOf(ExamEnum.ALREADY_POST));
+        when(examPaperSnapshotService.exists(EXAM_ID)).thenReturn(true);
+
+        examManagementService.publishExam(EXAM_ID);
+
+        verify(examRuntimePaperService).restoreCache(EXAM_ID);
+        verify(paperManagementService, never()).getPaperById(any());
+        verify(examPaperSnapshotService, never()).createOnce(any(), any());
         verify(examManagementMapper, never()).updateById(any(Exam.class));
+        verify(redisUtil, never()).setIfAbsent(any(), any(), anyLong());
+    }
+
+    @Test
+    @DisplayName("publishExam 缓存TTL按快照中的考试时间计算")
+    void publish_ttlFromSnapshot() {
+        when(examManagementMapper.selectById(EXAM_ID)).thenReturn(examOf(ExamEnum.NOT_POST));
+        when(paperManagementService.getPaperById(PAPER_ID)).thenReturn(new PaperContentVO());
+        when(examPaperSnapshotService.getRequired(EXAM_ID)).thenReturn(new ExamPaperSnapshotDTO());
+        StuExamVO snapshotExam = new StuExamVO();
+        snapshotExam.setStartTime(LocalDateTime.now().plusHours(2));
+        snapshotExam.setDuration(60);
+        StuExamPaperVO examPaperVO = new StuExamPaperVO();
+        examPaperVO.setExam(snapshotExam);
+        when(examPaperSnapshotService.toStuExamPaper(any(ExamPaperSnapshotDTO.class)))
+                .thenReturn(examPaperVO);
+
+        examManagementService.publishExam(EXAM_ID);
+
+        ArgumentCaptor<Long> ttlCaptor = ArgumentCaptor.forClass(Long.class);
+        verify(redisUtil).setIfAbsent(eq(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID),
+                any(Object.class), ttlCaptor.capture());
+        assertTrue(ttlCaptor.getValue() > 24 * 60 * 60L);
+    }
+
+    @Test
+    @DisplayName("publishExam 非未发布状态且快照缺失 -> EXAM_PUBLISH_NOT_ALLOWED")
+    void publish_alreadyPublished() {
+        when(examManagementMapper.selectById(EXAM_ID)).thenReturn(examOf(ExamEnum.ALREADY_POST));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> examManagementService.publishExam(EXAM_ID));
+        assertEquals(ErrorCodeEnum.EXAM_PUBLISH_NOT_ALLOWED.getCode(), ex.getErrorCode());
+        verify(examPaperSnapshotService, never()).createOnce(any(), any());
+        verify(examManagementMapper, never()).updateById(any(Exam.class));
+        verify(redisUtil, never()).setIfAbsent(any(), any(), anyLong());
+    }
+
+    @Test
+    @DisplayName("publishExam 快照已存在但未发布 -> 不重建快照，补齐状态与缓存")
+    void publish_snapshotExists() {
+        when(examManagementMapper.selectById(EXAM_ID)).thenReturn(examOf(ExamEnum.NOT_POST));
+        when(examPaperSnapshotService.exists(EXAM_ID)).thenReturn(true);
+        when(examPaperSnapshotService.getRequired(EXAM_ID)).thenReturn(new ExamPaperSnapshotDTO());
+        when(examPaperSnapshotService.toStuExamPaper(any(ExamPaperSnapshotDTO.class)))
+                .thenReturn(new StuExamPaperVO());
+
+        examManagementService.publishExam(EXAM_ID);
+
+        verify(paperManagementService, never()).getPaperById(any());
+        verify(examPaperSnapshotService, never()).createOnce(any(), any());
+        verify(examManagementMapper).updateById(argThat(e -> e.getStatus() == ExamEnum.ALREADY_POST));
+        verify(redisUtil).setIfAbsent(eq(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID),
+                any(Object.class), anyLong());
+    }
+
+    @Test
+    @DisplayName("publishExam 乐观锁冲突 -> EXAM_STATUS_CHANGE_FAIL 且不写缓存")
+    void publish_versionConflict() {
+        when(examManagementMapper.selectById(EXAM_ID)).thenReturn(examOf(ExamEnum.NOT_POST));
+        when(paperManagementService.getPaperById(PAPER_ID)).thenReturn(new PaperContentVO());
+        when(examManagementMapper.updateById(any(Exam.class))).thenReturn(0);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> examManagementService.publishExam(EXAM_ID));
+        assertEquals(ErrorCodeEnum.EXAM_STATUS_CHANGE_FAIL.getCode(), ex.getErrorCode());
+        verify(redisUtil, never()).setIfAbsent(any(), any(), anyLong());
     }
 
     @Test
@@ -271,7 +364,8 @@ class ExamManagementServiceImplTest {
                 () -> examManagementService.publishExam(EXAM_ID));
         assertEquals(ErrorCodeEnum.EXAM_NOT_FOUND.getCode(), ex.getErrorCode());
         verify(paperManagementService, never()).getPaperById(any());
-        verify(redisUtil, never()).set(any(), any(Object.class), anyLong());
+        verify(examManagementMapper, never()).updateById(any(Exam.class));
+        verify(redisUtil, never()).setIfAbsent(any(), any(), anyLong());
     }
 
     @Test
@@ -283,16 +377,35 @@ class ExamManagementServiceImplTest {
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> examManagementService.publishExam(EXAM_ID));
         assertEquals(ErrorCodeEnum.PAPER_NOT_EXIST.getCode(), ex.getErrorCode());
-        verify(redisUtil, never()).set(any(), any(Object.class), anyLong());
+        verify(examManagementMapper, never()).updateById(any(Exam.class));
+        verify(redisUtil, never()).setIfAbsent(any(), any(), anyLong());
     }
 
     // ========== clearExamCache ==========
 
     @Test
-    @DisplayName("clearExamCache 正常：删除Redis缓存")
+    @DisplayName("clearExamCache 正常：删缓存与快照并置回未发布")
     void clearCache_normal() {
+        when(examManagementMapper.selectById(EXAM_ID)).thenReturn(examOf(ExamEnum.ALREADY_POST));
+
         examManagementService.clearExamCache(EXAM_ID);
 
         verify(redisUtil).delete(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID);
+        verify(redisUtil).deleteByPattern(RedisConstant.EXAM_ANSWER_PREFIX + EXAM_ID + ":*");
+        verify(examPaperSnapshotService).deleteSnapshot(EXAM_ID);
+        verify(examManagementMapper).updateById(argThat(e -> e.getStatus() == ExamEnum.NOT_POST));
     }
+
+    @Test
+    @DisplayName("clearExamCache 非发布/未发布状态 -> EXAM_STATUS_CHANGE_FAIL")
+    void clearCache_statusNotAllowed() {
+        when(examManagementMapper.selectById(EXAM_ID)).thenReturn(examOf(ExamEnum.ONGOING));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> examManagementService.clearExamCache(EXAM_ID));
+        assertEquals(ErrorCodeEnum.EXAM_STATUS_CHANGE_FAIL.getCode(), ex.getErrorCode());
+        verify(examPaperSnapshotService, never()).deleteSnapshot(any());
+        verify(examManagementMapper, never()).updateById(any(Exam.class));
+    }
+
 }

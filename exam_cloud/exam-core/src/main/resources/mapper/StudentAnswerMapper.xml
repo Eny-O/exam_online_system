@@ -23,10 +23,10 @@
 
     <!-- 多值批量插入：1条SQL插入多条记录 -->
     <insert id="batchInsert">
-        INSERT INTO student_answer (exam_id, student_id, question_id, student_answer, full_score, create_time, update_time)
+        INSERT INTO student_answer (exam_id, student_id, question_id, student_answer, full_score, question_type, create_time, update_time)
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.examId}, #{item.studentId}, #{item.questionId}, #{item.studentAnswer}, #{item.fullScore}, #{item.createTime}, #{item.updateTime})
+            (#{item.examId}, #{item.studentId}, #{item.questionId}, #{item.studentAnswer}, #{item.fullScore}, #{item.questionType}, #{item.createTime}, #{item.updateTime})
         </foreach>
     </insert>
 
@@ -40,11 +40,10 @@
     <select id="selectScoreSummary" resultType="com.ai.exam_spring.modules.grade.pojo.vo.StudentScoreSummaryVO">
         SELECT
             sa.student_id AS studentId,
-            COALESCE(SUM(CASE WHEN q.type = 'essay' THEN 0 ELSE sa.score END), 0) AS objectiveScore,
-            COALESCE(SUM(CASE WHEN q.type = 'essay' THEN sa.score ELSE 0 END), 0) AS subjectiveScore,
+            COALESCE(SUM(CASE WHEN sa.question_type = 'essay' THEN 0 ELSE sa.score END), 0) AS objectiveScore,
+            COALESCE(SUM(CASE WHEN sa.question_type = 'essay' THEN sa.score ELSE 0 END), 0) AS subjectiveScore,
             COALESCE(SUM(sa.score), 0) AS totalScore
         FROM student_answer sa
-        LEFT JOIN question q ON sa.question_id = q.id
         WHERE sa.exam_id = #{examId}
           AND sa.student_id IN
           <foreach collection="studentIds" item="sid" open="(" separator="," close=")">

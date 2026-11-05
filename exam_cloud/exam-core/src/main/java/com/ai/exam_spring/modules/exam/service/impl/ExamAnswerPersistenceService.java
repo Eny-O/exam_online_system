@@ -30,6 +30,7 @@ public class ExamAnswerPersistenceService {
     private final RedisUtil redisUtil;
     private final ObjectMapper objectMapper;
     private final StudentAnswerMapper studentAnswerMapper;
+    private final ExamRuntimePaperService examRuntimePaperService;
 
     /**
      * 读取某考生在某场考试下暂存于 Redis 的答案
@@ -94,6 +95,10 @@ public class ExamAnswerPersistenceService {
         }
         Integer examId = studentAnswers.get(0).getExamId();
         Integer studentId = studentAnswers.get(0).getStudentId();
+        Map<Integer, String> questionTypeMap = examRuntimePaperService.getQuestionTypeMap(examId);
+        for (StudentAnswer studentAnswer : studentAnswers) {
+            studentAnswer.setQuestionType(questionTypeMap.get(studentAnswer.getQuestionId()));
+        }
         studentAnswerMapper.deleteByExamAndStudent(examId, studentId);
         studentAnswerMapper.batchInsert(studentAnswers);
         log.info("答案落库完成：examId={} studentId={} 条数={}", examId, studentId, studentAnswers.size());

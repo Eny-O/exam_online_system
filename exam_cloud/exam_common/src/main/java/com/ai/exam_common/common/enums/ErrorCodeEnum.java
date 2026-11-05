@@ -50,6 +50,12 @@ public enum ErrorCodeEnum {
     EXAM_REFERENCE_PAPER_NOT_FOUND("3008", "考试关联的试卷不存在"),
     EXAM_QUESTION_NOT_IN_PAPER("3009", "题目不属于该场考试的试卷"),
     EXAM_DELETE_NOT_ALLOWED("3010","当前状态不允许删除考试"),
+    EXAM_SNAPSHOT_NOT_FOUND("3011","考试试卷快照不存在"),
+    EXAM_SNAPSHOT_WRITE_FAIL("3012","考试试卷快照生成失败"),
+    EXAM_CANCEL_PUBLISH_NOT_ALLOWED("3013","考试已开始或已有作答，不能取消发布"),
+    EXAM_PUBLISH_NOT_ALLOWED("3014","当前状态不允许发布考试"),
+    EXAM_NOT_STARTED("3015","考试尚未开始"),
+    EXAM_ALREADY_ENDED("3016","考试已结束"),
 
     // 文件与导入错误码
     FILE_FORMAT_ERROR("4001", "仅支持 .xlsx 格式文件"),

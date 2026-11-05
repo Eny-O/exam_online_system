@@ -21,12 +21,12 @@ import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.BasePaperVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
+import com.ai.exam_spring.modules.exam.service.IExamPaperSnapshotService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
 import com.ai.exam_spring.modules.exam.service.IExamClassService;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
 import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
-import com.ai.exam_spring.modules.paper.service.PaperContentConverter;
 import com.ai.exam_api.feign.ClassFeignClient;
 import com.ai.exam_api.feign.UserFeignClient;
 import com.ai.exam_api.pojo.dto.ClassBriefDTO;
@@ -44,7 +44,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import com.ai.exam_common.common.security.SecurityUtil;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -53,9 +52,6 @@ import java.util.function.Function;
 
 @Service
 public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper, Exam> implements IExamManagementService {
-
-    /** 已发布考试缓存的额外保留时长(秒)：考试结束后再保留一天 */
-    private static final long CACHE_EXPIRE_AFTER_EXAM_END_SECONDS = 24 * 60 * 60L;
 
     @Autowired
     private ExamManagementMapper examManagementMapper;
@@ -67,7 +63,10 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
     private IPaperManagementService paperManagementService;
 
     @Autowired
-    private PaperContentConverter paperContentConverter;
+    private IExamPaperSnapshotService examPaperSnapshotService;
+
+    @Autowired
+    private ExamRuntimePaperService examRuntimePaperService;
 
     @Autowired
     private IExamStudentService examStudentService;
@@ -410,34 +409,83 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
     }
 
     /**
-     * 将考试信息与试卷内容加载到redis缓存
+     * 发布考试：生成试卷快照、加载考试缓存并置为已发布
      * @param id 考试ID
      */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void publishExam(Integer id) {
+        if (id == null) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        }
         Exam exam = examManagementMapper.selectById(id);
         if (exam == null) {
             throw new BusinessException(ErrorCodeEnum.EXAM_NOT_FOUND);
         }
-        PaperContentVO paperContentVO = paperManagementService.getPaperById(exam.getPaperId());
-        if (paperContentVO == null) {
-            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
+        ExamEnum status = exam.getStatus();
+        if (status != ExamEnum.NOT_POST) {
+            if (status == ExamEnum.ALREADY_POST && examPaperSnapshotService.exists(id)) {
+                examRuntimePaperService.restoreCache(id);
+                return;
+            }
+            throw new BusinessException(ErrorCodeEnum.EXAM_PUBLISH_NOT_ALLOWED);
         }
-        StuExamVO examVO = new StuExamVO();
-        BeanUtil.copyProperties(exam, examVO);
-        StuExamPaperVO examPaperVO = new StuExamPaperVO();
-        examPaperVO.setExam(examVO);
-        examPaperVO.setPaper(paperContentConverter.toStudentPaper(paperContentVO));
-        redisUtil.set(RedisConstant.EXAM_PUBLISH_PREFIX + id, examPaperVO, cacheExpireSeconds(exam));
+        if (!examPaperSnapshotService.exists(id)) {
+            if (exam.getPaperId() == null) {
+                throw new BusinessException(ErrorCodeEnum.EXAM_REFERENCE_PAPER_NOT_FOUND);
+            }
+            PaperContentVO paperContentVO = paperManagementService.getPaperById(exam.getPaperId());
+            if (paperContentVO == null) {
+                throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
+            }
+            examPaperSnapshotService.createOnce(exam, paperContentVO);
+        }
+        Exam update = new Exam();
+        update.setId(id);
+        update.setStatus(ExamEnum.ALREADY_POST);
+        update.setVersion(exam.getVersion());
+        if (examManagementMapper.updateById(update) <= 0) {
+            throw new BusinessException(ErrorCodeEnum.EXAM_STATUS_CHANGE_FAIL);
+        }
+        StuExamPaperVO examPaperVO = examPaperSnapshotService.toStuExamPaper(
+                examPaperSnapshotService.getRequired(id));
+        redisUtil.setIfAbsent(RedisConstant.EXAM_PUBLISH_PREFIX + id, examPaperVO,
+                ExamRuntimePaperService.cacheExpireSeconds(examPaperVO.getExam()));
     }
 
     /**
-     * 清除考试在redis中的缓存
+     * 取消发布：清理考试缓存、暂存答案与试卷快照并置回未发布
      * @param id 考试ID
      */
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void clearExamCache(Integer id) {
+        if (id == null) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        }
+        Exam exam = examManagementMapper.selectById(id);
+        if (exam == null) {
+            throw new BusinessException(ErrorCodeEnum.EXAM_NOT_FOUND);
+        }
+        ExamEnum status = exam.getStatus();
+        if (status != ExamEnum.ALREADY_POST && status != ExamEnum.NOT_POST) {
+            throw new BusinessException(ErrorCodeEnum.EXAM_STATUS_CHANGE_FAIL);
+        }
+        boolean beforeStart = exam.getStartTime() == null
+                || LocalDateTime.now().isBefore(exam.getStartTime());
+        if (!beforeStart || examPaperSnapshotService.hasAnswers(id)) {
+            throw new BusinessException(ErrorCodeEnum.EXAM_CANCEL_PUBLISH_NOT_ALLOWED);
+        }
         redisUtil.delete(RedisConstant.EXAM_PUBLISH_PREFIX + id);
+        redisUtil.deleteByPattern(RedisConstant.EXAM_ANSWER_PREFIX + id + ":*");
+        examPaperSnapshotService.deleteSnapshot(id);
+        Exam update = new Exam();
+        update.setId(id);
+        update.setStatus(ExamEnum.NOT_POST);
+        update.setVersion(exam.getVersion());
+        if (examManagementMapper.updateById(update) <= 0) {
+            throw new BusinessException(ErrorCodeEnum.EXAM_STATUS_CHANGE_FAIL);
+        }
     }
 
     /**
@@ -458,6 +506,7 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
             examStudentService.remove(new LambdaQueryWrapper<ExamStudent>()
                     .eq(ExamStudent::getExamId, id));
             examManagementMapper.deleteById(id);
+            examPaperSnapshotService.deleteSnapshot(id);
         } else if (status == ExamEnum.REVIEW_FINISHED) {
             Exam update = new Exam();
             update.setId(id);
@@ -468,21 +517,7 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         } else {
             throw new BusinessException(ErrorCodeEnum.EXAM_DELETE_NOT_ALLOWED);
         }
-        clearExamCache(id);
+        redisUtil.delete(RedisConstant.EXAM_PUBLISH_PREFIX + id);
     }
 
-    /**
-     * 计算已发布考试缓存的过期秒数：以考试结束时间为准,考试结束后再保留一天
-     * @param exam 考试
-     * @return 过期秒数
-     */
-    private long cacheExpireSeconds(Exam exam) {
-        long expireSeconds = CACHE_EXPIRE_AFTER_EXAM_END_SECONDS;
-        if (exam.getStartTime() != null && exam.getDuration() != null) {
-            LocalDateTime examEndTime = exam.getStartTime().plusMinutes(exam.getDuration());
-            long secondsUntilExamEnd = Duration.between(LocalDateTime.now(), examEndTime).getSeconds();
-            expireSeconds += Math.max(secondsUntilExamEnd, 0);
-        }
-        return expireSeconds;
-    }
 }

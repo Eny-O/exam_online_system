@@ -600,6 +600,8 @@ const buildSavePayload = () => {
         type: q.type ? q.type.toLowerCase() : "",
         isCorrect: isCorrect,
         score: q.score,
+        teacherComment:
+          aiResults[aiKey(q.questionId)]?.reviewResult?.reviewComment || null,
       };
     });
 };

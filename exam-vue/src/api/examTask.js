@@ -85,8 +85,8 @@ export function getExamPaperWithExam(examId) {
 }
 
 // 学生获取试卷内容
-export function getExamPaper(paperId) {
-  return request.get("/stu/exam/getExamPaper", { params: { paperId } });
+export function getExamPaper(examId) {
+  return request.get("/stu/exam/getExamPaper", { params: { examId } });
 }
 
 // 学生提交试卷（仅更新考试状态，答案已通过updateAnswer实时保存）

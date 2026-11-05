@@ -7,8 +7,17 @@
       <p>正在加载试卷...</p>
     </div>
 
-    <!-- 主体内容 -->
+    <!-- 加载失败 -->
+    <div v-else-if="loadError" class="load-error-wrapper">
+      <div class="load-error-icon">!</div>
+      <h2 class="load-error-title">无法进入考试</h2>
+      <p class="load-error-message">{{ loadError }}</p>
+      <el-button type="primary" @click="router.push('/exam/list')">
+        返回考试列表
+      </el-button>
+    </div>
     <template v-else>
+      <!-- 主体内容 -->
       <header class="exam-header">
         <div class="header-content">
           <div class="header-left">
@@ -208,6 +217,7 @@ const typeTagColor = (type) => TYPE_TAG_COLOR[type] ?? "info";
 
 // ========== 状态定义 ==========
 const loading = ref(true);
+const loadError = ref("");
 const examId = ref(null);
 const paperId = ref(null);
 const paper = ref({ name: "", totalScore: 0, stuPaperQuestionVOS: [] });
@@ -216,36 +226,56 @@ const currentIndex = ref(0);
 const answers = ref({}); // { questionId: ['A'] or ['A','B'] }
 const essayAnswers = ref({}); // { questionId: '文本内容' }
 const markedIndices = ref(new Set());
-const timeLeft = ref(0);
+const timeLeft = ref(null);
 const essayTimers = {}; // 主观题防抖定时器 { questionId: timer }
 let timer = null;
 
 // ========== 数据获取 ==========
 const fetchData = async () => {
   loading.value = true;
+  loadError.value = "";
   examId.value = route.params.id;
   try {
     // 获取考试信息与试卷内容
     const examPaperRes = await getExamPaperWithExam(examId.value);
-    const examInfo = examPaperRes.data.exam;
-    const paperData = examPaperRes.data.paper;
+    const examInfo = examPaperRes?.data?.exam;
+    const paperData = examPaperRes?.data?.paper;
+    if (!examInfo || !paperData) {
+      throw new Error("考试数据不完整，无法进入考试");
+    }
     paperId.value = examInfo.paperId;
 
+    // 校验开考时间与时长
+    const startMs = new Date(examInfo.startTime).getTime();
+    const durationMinutes = Number(examInfo.duration);
+    if (
+      !Number.isFinite(startMs) ||
+      startMs <= 0 ||
+      !Number.isFinite(durationMinutes) ||
+      durationMinutes <= 0
+    ) {
+      throw new Error("考试时间信息异常，无法进入考试");
+    }
+
     // 根据开始时间和时长动态计算剩余时间
-    const startTime = new Date(examInfo.startTime).getTime();
-    const durationSeconds = examInfo.duration * 60;
-    const endTime = startTime + durationSeconds * 1000;
+    const durationSeconds = durationMinutes * 60;
+    const endTime = startMs + durationSeconds * 1000;
     const now = Date.now();
     const remaining = Math.floor((endTime - now) / 1000);
     // 未开始则显示完整时长，已过期则为0
     timeLeft.value =
       remaining > durationSeconds ? durationSeconds : Math.max(remaining, 0);
 
+    const questionList = paperData.stuPaperQuestionVOS;
+    if (!Array.isArray(questionList) || questionList.length === 0) {
+      throw new Error("试卷没有题目，无法进入考试");
+    }
+
     // 保存试卷原始数据
     paper.value = paperData;
 
     // 扁平化题目数据（后端返回type为大写，统一转小写匹配前端逻辑）
-    questions.value = paperData.stuPaperQuestionVOS.map((pq) => ({
+    questions.value = questionList.map((pq) => ({
       sortOrder: pq.sortOrder,
       score: pq.score,
       id: pq.stuQuestionCompleteVO.id,
@@ -262,6 +292,12 @@ const fetchData = async () => {
     await initStuExam(examId.value);
   } catch (error) {
     console.error("加载试卷失败:", error);
+    timeLeft.value = null;
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    loadError.value = error?.message || "试卷加载失败，请稍后重试";
   } finally {
     loading.value = false;
   }
@@ -416,10 +452,12 @@ const submitExam = async (autoSubmit = false) => {
 onMounted(() => {
   fetchData();
   timer = setInterval(() => {
+    if (timeLeft.value === null) return;
     if (timeLeft.value > 0) {
       timeLeft.value--;
     } else {
       clearInterval(timer);
+      timer = null;
       ElMessage.warning("考试时间已到，自动提交试卷");
       submitExam(true);
     }
@@ -455,6 +493,43 @@ onUnmounted(() => {
   font-size: 32px;
   color: #2563eb;
   margin-bottom: 16px;
+}
+
+/* 加载失败 */
+.load-error-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 16px;
+  text-align: center;
+}
+
+.load-error-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #fef3c7;
+  color: #d97706;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 48px;
+  margin-bottom: 20px;
+}
+
+.load-error-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 12px;
+}
+
+.load-error-message {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0 0 24px;
+  max-width: 480px;
 }
 
 /* 头部 */

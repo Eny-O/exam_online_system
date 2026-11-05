@@ -2,29 +2,21 @@ package com.ai.exam_spring.modules.grade.service.impl;
 
 import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import com.ai.exam_common.common.exception.BusinessException;
-import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
-import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
+import com.ai.exam_spring.modules.exam.pojo.dto.ExamPaperSnapshotDTO;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.BatchGradeDTO;
+import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.ExamAnswerVO;
-import com.ai.exam_spring.modules.exam.service.IExamManagementService;
+import com.ai.exam_spring.modules.exam.service.IExamPaperSnapshotService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.grade.mapper.GradePaperMapper;
 import com.ai.exam_spring.modules.grade.mapper.StudentAnswerMapper;
 import com.ai.exam_spring.modules.grade.pojo.vo.GradePaperContentVO;
-import com.ai.exam_spring.modules.grade.pojo.vo.GradePaperQuestionVO;
 import com.ai.exam_spring.modules.grade.pojo.vo.GradeStudentVO;
-import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
-import com.ai.exam_spring.modules.paper.pojo.vo.PaperQuestionVO;
-import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
-import com.ai.exam_spring.modules.question.pojo.enums.OptionLabelEnum;
-import com.ai.exam_spring.modules.question.pojo.enums.QuestionTypeEnum;
-import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
-import com.ai.exam_spring.modules.question.pojo.vo.QuestionOptionVO;
+import com.ai.exam_spring.modules.grade.pojo.vo.StudentScoreSummaryVO;
 import com.ai.exam_api.feign.UserFeignClient;
 import com.ai.exam_api.pojo.dto.UserBriefDTO;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,246 +29,256 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class GradePaperServiceImplTest {
+class GradePaperServiceImplTest {
 
     @Mock
     private GradePaperMapper gradePaperMapper;
     @Mock
     private StudentAnswerMapper studentAnswerMapper;
     @Mock
-    private IPaperManagementService paperManagementService;
-    @Mock
-    private IExamManagementService examManagementService;
+    private IExamPaperSnapshotService examPaperSnapshotService;
     @Mock
     private IExamStudentService examStudentService;
     @Mock
     private UserFeignClient userFeignClient;
-    @Mock
-    private SqlSessionFactory sqlSessionFactory;
 
     @InjectMocks
     private GradePaperServiceImpl gradePaperService;
 
     private static final Integer EXAM_ID = 10;
-    private static final Integer PAPER_ID = 5;
+    private static final Integer STUDENT_ID = 20;
 
-    private ExamAnswerVO answerOf(Integer id, String answer, String studentAnswer,
-                                  Double fullScore, QuestionTypeEnum type) {
+    private ExamAnswerVO answerOf(Integer id, Integer questionId, String type,
+                                  String studentAnswer, Double fullScore) {
         ExamAnswerVO vo = new ExamAnswerVO();
         vo.setId(id);
-        vo.setAnswer(answer);
+        vo.setQuestionId(questionId);
+        vo.setType(type);
         vo.setStudentAnswer(studentAnswer);
         vo.setFullScore(fullScore);
-        vo.setType(type);
         return vo;
     }
 
-    // ===================== autoGradeObjectiveQuestions =====================
+    private ExamPaperSnapshotDTO.QuestionInfo questionOf(Integer questionId, String answer) {
+        ExamPaperSnapshotDTO.QuestionInfo question = new ExamPaperSnapshotDTO.QuestionInfo();
+        question.setQuestionId(questionId);
+        question.setAnswer(answer);
+        return question;
+    }
 
-    @Test
-    @DisplayName("客观题答案正确 -> isCorrect=1 且得分=满分")
-    void autoGrade_correctAnswer_scoresFull() {
-        ExamAnswerVO vo = answerOf(1, "A", "A", 2.0, QuestionTypeEnum.SINGLE);
-        when(gradePaperMapper.getExamAnswerDetail(10, 20)).thenReturn(List.of(vo));
+    private ExamPaperSnapshotDTO snapshotOf(ExamPaperSnapshotDTO.QuestionInfo... questions) {
+        ExamPaperSnapshotDTO dto = new ExamPaperSnapshotDTO();
+        dto.setQuestions(List.of(questions));
+        return dto;
+    }
 
-        gradePaperService.autoGradeObjectiveQuestions(10, 20);
+    private ExamStudent examStudentOf(Integer studentId, StudentExamEnum status) {
+        ExamStudent examStudent = new ExamStudent();
+        examStudent.setExamId(EXAM_ID);
+        examStudent.setStudentId(studentId);
+        examStudent.setStatus(status);
+        return examStudent;
+    }
 
+    private StudentScoreSummaryVO summaryOf(Integer studentId,
+                                            Double objective, Double subjective, Double total) {
+        StudentScoreSummaryVO summary = new StudentScoreSummaryVO();
+        summary.setStudentId(studentId);
+        summary.setObjectiveScore(objective);
+        summary.setSubjectiveScore(subjective);
+        summary.setTotalScore(total);
+        return summary;
+    }
+
+    private UserBriefDTO userOf(Integer id, String realName, String studentNo) {
+        UserBriefDTO user = new UserBriefDTO();
+        user.setId(id);
+        user.setRealName(realName);
+        user.setStudentNo(studentNo);
+        return user;
+    }
+
+    private List<BatchGradeDTO> captureGraded() {
         ArgumentCaptor<List<BatchGradeDTO>> captor = ArgumentCaptor.forClass(List.class);
         verify(studentAnswerMapper).batchUpdateScore(captor.capture());
-        List<BatchGradeDTO> graded = captor.getValue();
-        assertEquals(1, graded.size());
-        assertEquals(1, graded.get(0).getIsCorrect());
-        assertEquals(2.0, graded.get(0).getScore());
-    }
-
-    @Test
-    @DisplayName("客观题答案错误 -> isCorrect=0 且得分=0")
-    void autoGrade_wrongAnswer_scoresZero() {
-        ExamAnswerVO vo = answerOf(2, "A", "B", 2.0, QuestionTypeEnum.SINGLE);
-        when(gradePaperMapper.getExamAnswerDetail(10, 20)).thenReturn(List.of(vo));
-
-        gradePaperService.autoGradeObjectiveQuestions(10, 20);
-
-        ArgumentCaptor<List<BatchGradeDTO>> captor = ArgumentCaptor.forClass(List.class);
-        verify(studentAnswerMapper).batchUpdateScore(captor.capture());
-        BatchGradeDTO dto = captor.getValue().get(0);
-        assertEquals(0, dto.getIsCorrect());
-        assertEquals(0.0, dto.getScore());
-    }
-
-    @Test
-    @DisplayName("简答题(ESSAY)不评分，不参与批量更新")
-    void autoGrade_essaySkipped() {
-        ExamAnswerVO essay = answerOf(3, "参考答案", "学生作答", 10.0, QuestionTypeEnum.ESSAY);
-        when(gradePaperMapper.getExamAnswerDetail(10, 20)).thenReturn(List.of(essay));
-
-        gradePaperService.autoGradeObjectiveQuestions(10, 20);
-
-        verify(studentAnswerMapper, never()).batchUpdateScore(anyList());
-    }
-
-    @Test
-    @DisplayName("答案明细为空 -> 抛 EXAM_ANSWER_NOT_FOUND_NOT_AUTO_GRADE")
-    void autoGrade_emptyAnswers_throws() {
-        when(gradePaperMapper.getExamAnswerDetail(10, 20)).thenReturn(List.of());
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> gradePaperService.autoGradeObjectiveQuestions(10, 20));
-        assertEquals(ErrorCodeEnum.EXAM_ANSWER_NOT_FOUND_NOT_AUTO_GRADE.getCode(), ex.getErrorCode());
-        verify(studentAnswerMapper, never()).batchUpdateScore(anyList());
-    }
-
-    @Test
-    @DisplayName("混合题型：单选对+多选错+简答跳过 -> 仅2条非简答被评分")
-    void autoGrade_mixedTypes() {
-        ExamAnswerVO single = answerOf(1, "A", "A", 2.0, QuestionTypeEnum.SINGLE);
-        ExamAnswerVO multiple = answerOf(2, "AB", "AC", 4.0, QuestionTypeEnum.MULTIPLE);
-        ExamAnswerVO essay = answerOf(3, "要点", "学生要点", 10.0, QuestionTypeEnum.ESSAY);
-        when(gradePaperMapper.getExamAnswerDetail(10, 20)).thenReturn(List.of(single, multiple, essay));
-
-        gradePaperService.autoGradeObjectiveQuestions(10, 20);
-
-        ArgumentCaptor<List<BatchGradeDTO>> captor = ArgumentCaptor.forClass(List.class);
-        verify(studentAnswerMapper).batchUpdateScore(captor.capture());
-        List<BatchGradeDTO> graded = captor.getValue();
-        assertEquals(2, graded.size());
-        BatchGradeDTO s = graded.stream().filter(d -> d.getId().equals(1)).findFirst().orElseThrow();
-        assertEquals(1, s.getIsCorrect());
-        assertEquals(2.0, s.getScore());
-        BatchGradeDTO m = graded.stream().filter(d -> d.getId().equals(2)).findFirst().orElseThrow();
-        assertEquals(0, m.getIsCorrect());
-        assertEquals(0.0, m.getScore());
+        return captor.getValue();
     }
 
     // ===================== getGradePaper =====================
 
     @Test
-    @DisplayName("getGradePaper 考试不存在 -> 抛 EXAM_NOT_FOUND")
-    void getGradePaper_examNotFound() {
-        when(examManagementService.getById(any())).thenReturn(null);
-
+    @DisplayName("getGradePaper 入参为null -> 抛 PARAM_ERROR 且不读快照")
+    void getGradePaper_nullParam() {
         BusinessException ex = assertThrows(BusinessException.class,
-                () -> gradePaperService.getGradePaper(EXAM_ID));
-        assertEquals(ErrorCodeEnum.EXAM_NOT_FOUND.getCode(), ex.getErrorCode());
-        verify(paperManagementService, never()).getPaperById(anyInt());
+                () -> gradePaperService.getGradePaper(null));
+        assertEquals(ErrorCodeEnum.PARAM_ERROR.getCode(), ex.getErrorCode());
+        verifyNoInteractions(examPaperSnapshotService);
     }
 
     @Test
-    @DisplayName("getGradePaper 试卷id为null -> 抛 PAPER_NOT_EXIST")
-    void getGradePaper_paperIdNull() {
-        Exam exam = new Exam();
-        exam.setPaperId(null);
-        when(examManagementService.getById(any())).thenReturn(exam);
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> gradePaperService.getGradePaper(EXAM_ID));
-        assertEquals(ErrorCodeEnum.PAPER_NOT_EXIST.getCode(), ex.getErrorCode());
-        verify(paperManagementService, never()).getPaperById(anyInt());
-    }
-
-    @Test
-    @DisplayName("getGradePaper 试卷无题目 -> 返回VO, 题目列表为null不抛异常")
-    void getGradePaper_noQuestions() {
-        Exam exam = new Exam();
-        exam.setPaperId(PAPER_ID);
-        PaperContentVO pc = new PaperContentVO();
-        pc.setId(PAPER_ID);
-        pc.setName("期中试卷");
-        pc.setTotalScore(100.0);
-        pc.setPaperQuestionVOS(null);
-
-        when(examManagementService.getById(any())).thenReturn(exam);
-        when(paperManagementService.getPaperById(anyInt())).thenReturn(pc);
+    @DisplayName("getGradePaper 正常 -> 读快照并转换为批阅卷面")
+    void getGradePaper_usesSnapshot() {
+        ExamPaperSnapshotDTO dto = new ExamPaperSnapshotDTO();
+        GradePaperContentVO vo = new GradePaperContentVO();
+        vo.setName("期中试卷");
+        vo.setTotalScore(100.0);
+        when(examPaperSnapshotService.getRequired(EXAM_ID)).thenReturn(dto);
+        when(examPaperSnapshotService.toGradePaper(dto)).thenReturn(vo);
 
         GradePaperContentVO result = gradePaperService.getGradePaper(EXAM_ID);
 
-        assertNotNull(result);
+        assertSame(vo, result);
         assertEquals("期中试卷", result.getName());
-        assertEquals(100.0, result.getTotalScore());
-        assertNull(result.getGradePaperQuestionVOS());
+        verify(examPaperSnapshotService).getRequired(EXAM_ID);
+        verify(examPaperSnapshotService).toGradePaper(dto);
     }
 
     @Test
-    @DisplayName("getGradePaper 正常有题目 -> 题目列表与字段正确映射")
-    void getGradePaper_withQuestions() {
-        Exam exam = new Exam();
-        exam.setPaperId(PAPER_ID);
-
-        QuestionOptionVO opt = new QuestionOptionVO();
-        opt.setId(1);
-        opt.setLabel(OptionLabelEnum.A);
-        opt.setContent("选项A");
-
-        QuestionCompleteVO qc = new QuestionCompleteVO();
-        qc.setId(100);
-        qc.setContent("1+1=?");
-        qc.setAnswer("A");
-        qc.setType(QuestionTypeEnum.SINGLE);
-        qc.setOptions(List.of(opt));
-
-        PaperQuestionVO pq = new PaperQuestionVO();
-        pq.setSortOrder(1);
-        pq.setScore(2.0);
-        pq.setQuestionCompleteVO(qc);
-
-        PaperContentVO pc = new PaperContentVO();
-        pc.setId(PAPER_ID);
-        pc.setName("期中试卷");
-        pc.setTotalScore(100.0);
-        pc.setPaperQuestionVOS(List.of(pq));
-
-        when(examManagementService.getById(any())).thenReturn(exam);
-        when(paperManagementService.getPaperById(anyInt())).thenReturn(pc);
-
-        GradePaperContentVO result = gradePaperService.getGradePaper(EXAM_ID);
-
-        assertNotNull(result);
-        List<GradePaperQuestionVO> questions = result.getGradePaperQuestionVOS();
-        assertNotNull(questions);
-        assertEquals(1, questions.size());
-        GradePaperQuestionVO gq = questions.get(0);
-        assertEquals(1, gq.getSortOrder());
-        assertEquals(2.0, gq.getScore());
-        assertEquals(100, gq.getId());
-        assertEquals("1+1=?", gq.getContent());
-        assertEquals("A", gq.getCorrectAnswer());
-        assertEquals("SINGLE", gq.getType());
-        assertNotNull(gq.getOptions());
-        assertEquals(1, gq.getOptions().size());
-    }
-
-    @Test
-    @DisplayName("getGradePaper 题目questionCompleteVO为null -> 抛 PAPER_INCOMPLETE_NOT_GRADE(试卷不完整, 不能阅卷)")
-    void getGradePaper_questionCompleteNull_throws() {
-        Exam exam = new Exam();
-        exam.setPaperId(PAPER_ID);
-
-        PaperQuestionVO pq = new PaperQuestionVO();
-        pq.setSortOrder(1);
-        pq.setScore(2.0);
-        pq.setQuestionCompleteVO(null); // 数据异常: 题目下挂的题完整信息为null
-
-        PaperContentVO pc = new PaperContentVO();
-        pc.setId(PAPER_ID);
-        pc.setName("期中试卷");
-        pc.setTotalScore(100.0);
-        pc.setPaperQuestionVOS(List.of(pq));
-
-        when(examManagementService.getById(any())).thenReturn(exam);
-        when(paperManagementService.getPaperById(anyInt())).thenReturn(pc);
+    @DisplayName("getGradePaper 快照不存在 -> 透传 EXAM_SNAPSHOT_NOT_FOUND")
+    void getGradePaper_snapshotMissing() {
+        when(examPaperSnapshotService.getRequired(EXAM_ID))
+                .thenThrow(new BusinessException(ErrorCodeEnum.EXAM_SNAPSHOT_NOT_FOUND));
 
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> gradePaperService.getGradePaper(EXAM_ID));
-        assertEquals(ErrorCodeEnum.PAPER_INCOMPLETE_NOT_GRADE.getCode(), ex.getErrorCode());
+        assertEquals(ErrorCodeEnum.EXAM_SNAPSHOT_NOT_FOUND.getCode(), ex.getErrorCode());
+        verify(examPaperSnapshotService, never()).toGradePaper(any(ExamPaperSnapshotDTO.class));
+    }
+
+    // ===================== autoGradeObjectiveQuestions =====================
+
+    @Test
+    @DisplayName("自动批阅 答案明细为空 -> 抛 EXAM_ANSWER_NOT_FOUND_NOT_AUTO_GRADE")
+    void autoGrade_emptyAnswers_throws() {
+        when(gradePaperMapper.getExamAnswerDetail(EXAM_ID, STUDENT_ID)).thenReturn(List.of());
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> gradePaperService.autoGradeObjectiveQuestions(EXAM_ID, STUDENT_ID));
+        assertEquals(ErrorCodeEnum.EXAM_ANSWER_NOT_FOUND_NOT_AUTO_GRADE.getCode(), ex.getErrorCode());
+        verify(studentAnswerMapper, never()).batchUpdateScore(anyList());
+        verifyNoInteractions(examPaperSnapshotService);
+    }
+
+    @Test
+    @DisplayName("自动批阅 答案正确 -> isCorrect=1 且得分=满分")
+    void autoGrade_correctAnswer_scoresFull() {
+        when(gradePaperMapper.getExamAnswerDetail(EXAM_ID, STUDENT_ID))
+                .thenReturn(List.of(answerOf(1, 100, "single", "A", 2.0)));
+        when(examPaperSnapshotService.getRequired(EXAM_ID))
+                .thenReturn(snapshotOf(questionOf(100, "A")));
+
+        gradePaperService.autoGradeObjectiveQuestions(EXAM_ID, STUDENT_ID);
+
+        List<BatchGradeDTO> graded = captureGraded();
+        assertEquals(1, graded.size());
+        assertEquals(1, graded.get(0).getId().intValue());
+        assertEquals(1, graded.get(0).getIsCorrect().intValue());
+        assertEquals(2.0, graded.get(0).getScore(), 1e-9);
+    }
+
+    @Test
+    @DisplayName("自动批阅 答案错误 -> isCorrect=0 且得分=0")
+    void autoGrade_wrongAnswer_scoresZero() {
+        when(gradePaperMapper.getExamAnswerDetail(EXAM_ID, STUDENT_ID))
+                .thenReturn(List.of(answerOf(2, 100, "single", "B", 2.0)));
+        when(examPaperSnapshotService.getRequired(EXAM_ID))
+                .thenReturn(snapshotOf(questionOf(100, "A")));
+
+        gradePaperService.autoGradeObjectiveQuestions(EXAM_ID, STUDENT_ID);
+
+        List<BatchGradeDTO> graded = captureGraded();
+        assertEquals(1, graded.size());
+        assertEquals(0, graded.get(0).getIsCorrect().intValue());
+        assertEquals(0.0, graded.get(0).getScore(), 1e-9);
+    }
+
+    @Test
+    @DisplayName("自动批阅 满分为null -> 判对但得分按0处理")
+    void autoGrade_nullFullScore_scoresZero() {
+        when(gradePaperMapper.getExamAnswerDetail(EXAM_ID, STUDENT_ID))
+                .thenReturn(List.of(answerOf(5, 100, "single", "A", null)));
+        when(examPaperSnapshotService.getRequired(EXAM_ID))
+                .thenReturn(snapshotOf(questionOf(100, "A")));
+
+        gradePaperService.autoGradeObjectiveQuestions(EXAM_ID, STUDENT_ID);
+
+        List<BatchGradeDTO> graded = captureGraded();
+        assertEquals(1, graded.get(0).getIsCorrect().intValue());
+        assertEquals(0.0, graded.get(0).getScore(), 1e-9);
+    }
+
+    @Test
+    @DisplayName("自动批阅 简答题跳过 -> 不批量更新")
+    void autoGrade_essaySkipped() {
+        when(gradePaperMapper.getExamAnswerDetail(EXAM_ID, STUDENT_ID))
+                .thenReturn(List.of(answerOf(3, 100, "essay", "学生作答", 10.0)));
+        when(examPaperSnapshotService.getRequired(EXAM_ID))
+                .thenReturn(snapshotOf(questionOf(100, "要点")));
+
+        gradePaperService.autoGradeObjectiveQuestions(EXAM_ID, STUDENT_ID);
+
+        verify(studentAnswerMapper, never()).batchUpdateScore(anyList());
+    }
+
+    @Test
+    @DisplayName("自动批阅 题目不在快照 -> 跳过，不批量更新")
+    void autoGrade_questionNotInSnapshot_skipped() {
+        when(gradePaperMapper.getExamAnswerDetail(EXAM_ID, STUDENT_ID))
+                .thenReturn(List.of(answerOf(4, 100, "single", "A", 2.0)));
+        when(examPaperSnapshotService.getRequired(EXAM_ID))
+                .thenReturn(snapshotOf(questionOf(999, "A")));
+
+        gradePaperService.autoGradeObjectiveQuestions(EXAM_ID, STUDENT_ID);
+
+        verify(studentAnswerMapper, never()).batchUpdateScore(anyList());
+    }
+
+    @Test
+    @DisplayName("自动批阅 快照题目列表为null -> 跳过，不批量更新")
+    void autoGrade_nullQuestions_skipped() {
+        when(gradePaperMapper.getExamAnswerDetail(EXAM_ID, STUDENT_ID))
+                .thenReturn(List.of(answerOf(1, 100, "single", "A", 2.0)));
+        when(examPaperSnapshotService.getRequired(EXAM_ID))
+                .thenReturn(new ExamPaperSnapshotDTO());
+
+        gradePaperService.autoGradeObjectiveQuestions(EXAM_ID, STUDENT_ID);
+
+        verify(studentAnswerMapper, never()).batchUpdateScore(anyList());
+    }
+
+    @Test
+    @DisplayName("自动批阅 混合题型 -> 仅单选对与多选错被评分")
+    void autoGrade_mixedTypes() {
+        when(gradePaperMapper.getExamAnswerDetail(EXAM_ID, STUDENT_ID)).thenReturn(List.of(
+                answerOf(1, 100, "single", "A", 2.0),
+                answerOf(2, 101, "multiple", "AC", 4.0),
+                answerOf(3, 102, "essay", "要点", 10.0),
+                answerOf(4, 103, "judge", "A", 1.0)));
+        when(examPaperSnapshotService.getRequired(EXAM_ID))
+                .thenReturn(snapshotOf(questionOf(100, "A"), questionOf(101, "AB")));
+
+        gradePaperService.autoGradeObjectiveQuestions(EXAM_ID, STUDENT_ID);
+
+        List<BatchGradeDTO> graded = captureGraded();
+        assertEquals(2, graded.size());
+        BatchGradeDTO single = graded.stream().filter(d -> d.getId().equals(1)).findFirst().orElseThrow();
+        assertEquals(1, single.getIsCorrect().intValue());
+        assertEquals(2.0, single.getScore(), 1e-9);
+        BatchGradeDTO multiple = graded.stream().filter(d -> d.getId().equals(2)).findFirst().orElseThrow();
+        assertEquals(0, multiple.getIsCorrect().intValue());
+        assertEquals(0.0, multiple.getScore(), 1e-9);
     }
 
     // ===================== getGradeStudentList =====================
@@ -303,49 +305,59 @@ public class GradePaperServiceImplTest {
     }
 
     @Test
-    @DisplayName("getGradeStudentList 正常多个学生 -> 正确映射姓名/学号")
+    @DisplayName("getGradeStudentList 正常 -> 映射姓名/学号/分项得分/批阅状态")
     void getGradeStudentList_normal() {
-        ExamStudent es1 = new ExamStudent();
-        es1.setExamId(EXAM_ID);
-        es1.setStudentId(20);
-        es1.setStatus(StudentExamEnum.SUBMITTED);
-        ExamStudent es2 = new ExamStudent();
-        es2.setExamId(EXAM_ID);
-        es2.setStudentId(21);
-        es2.setStatus(StudentExamEnum.GRADED);
-        when(examStudentService.list(any(Wrapper.class))).thenReturn(List.of(es1, es2));
-
-        UserBriefDTO u1 = new UserBriefDTO();
-        u1.setId(20);
-        u1.setRealName("张三");
-        u1.setStudentNo("1001");
-        UserBriefDTO u2 = new UserBriefDTO();
-        u2.setId(21);
-        u2.setRealName("李四");
-        u2.setStudentNo("1002");
-        when(userFeignClient.listUserBriefs(any())).thenReturn(List.of(u1, u2));
-
+        when(examStudentService.list(any(Wrapper.class))).thenReturn(List.of(
+                examStudentOf(20, StudentExamEnum.SUBMITTED),
+                examStudentOf(21, StudentExamEnum.GRADED)));
+        when(studentAnswerMapper.selectScoreSummary(eq(EXAM_ID), anyList())).thenReturn(List.of(
+                summaryOf(20, 8.0, 5.0, 13.0),
+                summaryOf(21, 6.0, 4.0, 10.0)));
+        when(userFeignClient.listUserBriefs(any())).thenReturn(List.of(
+                userOf(20, "张三", "1001"),
+                userOf(21, "李四", "1002")));
 
         List<GradeStudentVO> result = gradePaperService.getGradeStudentList(EXAM_ID);
 
-        assertNotNull(result);
         assertEquals(2, result.size());
         GradeStudentVO v1 = result.stream().filter(v -> v.getStudentId().equals(20)).findFirst().orElseThrow();
         assertEquals("张三", v1.getStudentName());
         assertEquals("1001", v1.getStudentNo());
+        assertEquals(8.0, v1.getObjectiveScore(), 1e-9);
+        assertEquals(5.0, v1.getSubjectiveScore(), 1e-9);
+        assertEquals(13.0, v1.getTotalScore(), 1e-9);
+        assertEquals("待批阅", v1.getStatus());
         GradeStudentVO v2 = result.stream().filter(v -> v.getStudentId().equals(21)).findFirst().orElseThrow();
         assertEquals("李四", v2.getStudentName());
-        assertEquals("1002", v2.getStudentNo());
+        assertEquals(10.0, v2.getTotalScore(), 1e-9);
+        assertEquals("已批阅", v2.getStatus());
+    }
+
+    @Test
+    @DisplayName("getGradeStudentList 无成绩汇总 -> 三项得分均为0")
+    void getGradeStudentList_noSummary_zeros() {
+        when(examStudentService.list(any(Wrapper.class)))
+                .thenReturn(List.of(examStudentOf(20, StudentExamEnum.SUBMITTED)));
+        when(studentAnswerMapper.selectScoreSummary(eq(EXAM_ID), anyList())).thenReturn(List.of());
+        when(userFeignClient.listUserBriefs(any()))
+                .thenReturn(List.of(userOf(20, "张三", "1001")));
+
+        List<GradeStudentVO> result = gradePaperService.getGradeStudentList(EXAM_ID);
+
+        assertEquals(1, result.size());
+        GradeStudentVO vo = result.get(0);
+        assertEquals(0.0, vo.getObjectiveScore(), 1e-9);
+        assertEquals(0.0, vo.getSubjectiveScore(), 1e-9);
+        assertEquals(0.0, vo.getTotalScore(), 1e-9);
+        assertEquals("待批阅", vo.getStatus());
     }
 
     @Test
     @DisplayName("getGradeStudentList 学生存在但查不到用户 -> 返回空列表")
     void getGradeStudentList_usersEmpty() {
-        ExamStudent es = new ExamStudent();
-        es.setExamId(EXAM_ID);
-        es.setStudentId(20);
-        es.setStatus(StudentExamEnum.SUBMITTED);
-        when(examStudentService.list(any(Wrapper.class))).thenReturn(List.of(es));
+        when(examStudentService.list(any(Wrapper.class)))
+                .thenReturn(List.of(examStudentOf(20, StudentExamEnum.SUBMITTED)));
+        when(studentAnswerMapper.selectScoreSummary(eq(EXAM_ID), anyList())).thenReturn(List.of());
         when(userFeignClient.listUserBriefs(any())).thenReturn(List.of());
 
         List<GradeStudentVO> result = gradePaperService.getGradeStudentList(EXAM_ID);

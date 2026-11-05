@@ -66,9 +66,9 @@ public class ExamController {
     @Operation(summary = "学生获取试卷内容")
     @PreAuthorize("hasAuthority('stu:exam:view')")
     @GetMapping("/getExamPaper")
-    public ResponseResult<StuPaperVO> getPaperById(@RequestParam Integer paperId) {
-        log.info("学生获取试卷内容: {}", paperId);
-        StuPaperVO stuPaperVO = stuExamService.getPaperById(paperId);
+    public ResponseResult<StuPaperVO> getPaperById(@RequestParam Integer examId) {
+        log.info("学生获取试卷内容: {}", examId);
+        StuPaperVO stuPaperVO = stuExamService.getPaperById(examId);
         return ResponseResult.success(stuPaperVO);
     }
 

@@ -7,32 +7,26 @@ import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_common.common.security.SecurityUtil;
 import com.ai.exam_spring.modules.exam.mapper.StuExamMapper;
 import com.ai.exam_spring.modules.grade.pojo.dto.GradeMessageDTO;
+import com.ai.exam_spring.modules.exam.pojo.dto.ExamPaperSnapshotDTO;
+import com.ai.exam_spring.modules.exam.pojo.dto.ExamResultMetaDTO;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.RedisAnswerDTO;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.StudentUpdateAnswerDTO;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
 import com.ai.exam_spring.modules.exam.pojo.dos.stu_answer.StudentAnswer;
 import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
-import com.ai.exam_spring.modules.exam.pojo.vo.ExamDetailVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.ExamResultVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
-import com.ai.exam_spring.modules.paper.pojo.vo.BasePaperVO;
-import com.ai.exam_spring.modules.paper.pojo.vo.PaperContentVO;
-import com.ai.exam_spring.modules.paper.pojo.vo.PaperQuestionVO;
-import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperQuestionVO;
 import com.ai.exam_spring.modules.paper.pojo.vo.StuPaperVO;
-import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
-import com.ai.exam_spring.modules.question.pojo.vo.StuQuestionCompleteVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.BaseStudentAnswerVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StuAnswerReviewVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
+import com.ai.exam_spring.modules.exam.service.IExamPaperSnapshotService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.exam.service.StuExamService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
-import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
-import com.ai.exam_spring.modules.paper.service.PaperContentConverter;
 import com.ai.exam_spring.utils.RedisUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.NonNull;
@@ -41,19 +35,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class StuExamServiceImpl implements StuExamService {
-
-    /** 考生答案缓存的额外保留时长(秒)：考试结束后再保留一天 */
-    private static final long ANSWER_CACHE_EXPIRE_AFTER_EXAM_END_SECONDS = 24 * 60 * 60L;
 
     @Autowired
     private IExamManagementService examManagementService;
@@ -65,10 +58,10 @@ public class StuExamServiceImpl implements StuExamService {
     private IExamStudentService examStudentService;
 
     @Autowired
-    private IPaperManagementService paperManagementService;
+    private IExamPaperSnapshotService examPaperSnapshotService;
 
     @Autowired
-    private PaperContentConverter paperContentConverter;
+    private ExamRuntimePaperService examRuntimePaperService;
 
     @Autowired
     private StuExamMapper stuExamMapper;
@@ -91,6 +84,9 @@ public class StuExamServiceImpl implements StuExamService {
 
     @Override
     public StuExamVO examInfoById(Integer id) {
+        if (id == null) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        }
         Exam exam = examManagementService.getById(id);
         if (exam == null) {
             throw new BusinessException(ErrorCodeEnum.EXAM_NOT_FOUND);
@@ -102,33 +98,25 @@ public class StuExamServiceImpl implements StuExamService {
 
     /**
      * 获取某场考试的考试信息与试卷内容
-     * 数据来自教师发布考试时写入的redis缓存
      *
      * @param examId 考试ID
      * @return 考试信息与试卷内容
      */
     @Override
     public StuExamPaperVO getExamPaperWithExam(Integer examId) {
-        StuExamPaperVO examPaperVO = redisUtil.get(RedisConstant.EXAM_PUBLISH_PREFIX + examId, StuExamPaperVO.class);
-        if (examPaperVO == null || examPaperVO.getPaper() == null) {
-            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
-        }
-        return examPaperVO;
+        examRuntimePaperService.assertWithinExamWindow(examId);
+        return examPaperSnapshotService.toStuExamPaper(examPaperSnapshotService.getRequired(examId));
     }
 
     /**
-     * 根据试卷ID获取试卷内容
+     * 根据考试ID获取该场考试的试卷快照
      *
-     * @param paperId 试卷ID
+     * @param examId 考试ID
      * @return StuPaperVO
      */
     @Override
-    public StuPaperVO getPaperById(Integer paperId) {
-        PaperContentVO paperContentVO = paperManagementService.getPaperById(paperId);
-        if (paperContentVO == null) {
-            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
-        }
-        return paperContentConverter.toStudentPaper(paperContentVO);
+    public StuPaperVO getPaperById(Integer examId) {
+        return examPaperSnapshotService.toStudentPaper(examPaperSnapshotService.getRequired(examId));
     }
 
     /**
@@ -142,6 +130,7 @@ public class StuExamServiceImpl implements StuExamService {
     @Override
     public void submitPaper(Integer examId) {
         Integer currentUserId = getCurrentUserId();
+        examRuntimePaperService.assertExamStarted(examId);
         // 从Redis读取暂存答案并落库（与定时自动交卷共用同一份实现）
         List<StudentAnswer> studentAnswers = examAnswerPersistenceService.loadAnswersFromRedis(examId, currentUserId);
         if (studentAnswers.isEmpty()) {
@@ -204,7 +193,6 @@ public class StuExamServiceImpl implements StuExamService {
 
     /**
      * 获取学生答卷回顾（含标准答案与解析，仅向考生本人返回）
-     * 复用试卷管理的完整题目数据（含答案与解析），与学生本人的作答合并返回
      *
      * @param examId 考试ID
      * @return 题目（含标准答案与解析）+ 学生作答合并列表
@@ -212,48 +200,14 @@ public class StuExamServiceImpl implements StuExamService {
     @Override
     public List<StuAnswerReviewVO> getAnswerReview(Integer examId) {
         Integer currentUserId = getCurrentUserId();
-        Exam exam = examManagementService.getById(examId);
-        if (exam == null) {
-            throw new BusinessException(ErrorCodeEnum.EXAM_NOT_FOUND);
-        }
-        Integer paperId = exam.getPaperId();
-        if (paperId == null) {
-            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
-        }
-        PaperContentVO paperContentVO = paperManagementService.getPaperById(paperId);
-        if (paperContentVO == null) {
-            throw new BusinessException(ErrorCodeEnum.PAPER_NOT_EXIST);
-        }
-        List<PaperQuestionVO> paperQuestionVOS = paperContentVO.getPaperQuestionVOS();
-        if (paperQuestionVOS == null || paperQuestionVOS.isEmpty()) {
-            return List.of();
-        }
+        ExamPaperSnapshotDTO snapshot = examPaperSnapshotService.getRequired(examId);
         List<StudentAnswerVO> studentAnswerVOS = studentAnswerService.getStudentAnswer(currentUserId, examId);
-        Map<Integer, StudentAnswerVO> answerMap = studentAnswerVOS.stream()
+        Map<Integer, StudentAnswerVO> answerMap = studentAnswerVOS == null
+                ? Map.of()
+                : studentAnswerVOS.stream()
+                .filter(answer -> answer != null && answer.getQuestionId() != null)
                 .collect(Collectors.toMap(StudentAnswerVO::getQuestionId, Function.identity(), (a, b) -> a));
-
-        return paperQuestionVOS.stream().map(paperQuestionVO -> {
-            QuestionCompleteVO questionCompleteVO = paperQuestionVO.getQuestionCompleteVO();
-            StuAnswerReviewVO vo = new StuAnswerReviewVO();
-            if (questionCompleteVO == null) {
-                return vo;
-            }
-            vo.setQuestionId(questionCompleteVO.getId());
-            vo.setType(questionCompleteVO.getType() == null ? null : questionCompleteVO.getType().name());
-            vo.setContent(questionCompleteVO.getContent());
-            vo.setOptions(questionCompleteVO.getOptions());
-            vo.setCorrectAnswer(questionCompleteVO.getAnswer());
-            vo.setExplanation(questionCompleteVO.getAnalysis());
-            vo.setFullScore(paperQuestionVO.getScore());
-            StudentAnswerVO answer = answerMap.get(questionCompleteVO.getId());
-            if (answer != null) {
-                vo.setStudentAnswer(answer.getStudentAnswer());
-                vo.setIsCorrect(answer.getIsCorrect());
-                vo.setScore(answer.getScore());
-                vo.setTeacherComment(answer.getTeacherComment());
-            }
-            return vo;
-        }).toList();
+        return examPaperSnapshotService.toAnswerReview(snapshot, answerMap);
     }
 
     /**
@@ -264,6 +218,9 @@ public class StuExamServiceImpl implements StuExamService {
      */
     @Override
     public ExamResultVO getExamResult(Integer examId) {
+        if (examId == null) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        }
         ExamStudent dbExamStudent = examStudentService.getOne(new LambdaQueryWrapper<ExamStudent>()
                 .eq(ExamStudent::getExamId, examId)
                 .eq(ExamStudent::getStudentId, getCurrentUserId()));
@@ -273,8 +230,12 @@ public class StuExamServiceImpl implements StuExamService {
         if (!StudentExamEnum.GRADED.equals(dbExamStudent.getStatus())) {
             throw new BusinessException(ErrorCodeEnum.EXAM_STATUS_NOT_GRADED);
         }
-        ExamDetailVO dbExamDetail = examManagementService.getExamDetailById(examId);
-        return getExamResultVO(dbExamDetail, dbExamStudent);
+        Map<Integer, ExamResultMetaDTO> metaMap = examPaperSnapshotService.getResultMetaMap(List.of(examId));
+        ExamResultMetaDTO meta = metaMap == null ? null : metaMap.get(examId);
+        if (meta == null) {
+            throw new BusinessException(ErrorCodeEnum.EXAM_SNAPSHOT_NOT_FOUND);
+        }
+        return getExamResultVO(examId, meta, dbExamStudent);
     }
 
     /**
@@ -284,7 +245,32 @@ public class StuExamServiceImpl implements StuExamService {
      */
     @Override
     public List<ExamResultVO> getAllExamResult() {
-        return stuExamMapper.getAllExamResult(getCurrentUserId());
+        List<ExamResultVO> queried = stuExamMapper.getAllExamResult(getCurrentUserId());
+        if (queried == null || queried.isEmpty()) {
+            return List.of();
+        }
+        List<ExamResultVO> results = new ArrayList<>(queried);
+        results.removeIf(Objects::isNull);
+        if (results.isEmpty()) {
+            return List.of();
+        }
+        List<Integer> examIds = results.stream()
+                .map(ExamResultVO::getExamId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Integer, ExamResultMetaDTO> metaMap = examIds.isEmpty()
+                ? Map.of()
+                : examPaperSnapshotService.getResultMetaMap(examIds);
+        Map<Integer, ExamResultMetaDTO> safeMetaMap = metaMap == null ? Map.of() : metaMap;
+        for (ExamResultVO vo : results) {
+            fillExamResultMeta(vo, safeMetaMap.get(vo.getExamId()));
+        }
+        Comparator<ExamResultVO> byExamTimeDesc = Comparator.comparing(
+                ExamResultVO::getExamTime,
+                Comparator.nullsLast(Comparator.<LocalDateTime>reverseOrder()));
+        results.sort(byExamTimeDesc);
+        return results;
     }
 
     /**
@@ -296,6 +282,7 @@ public class StuExamServiceImpl implements StuExamService {
     @Override
     public void initStuExam(Integer examId) {
         Integer currentUserId = getCurrentUserId();
+        examRuntimePaperService.assertWithinExamWindow(examId);
         // 校验考试是否存在
         Exam exam = examManagementService.getById(examId);
         if (exam == null) {
@@ -327,19 +314,22 @@ public class StuExamServiceImpl implements StuExamService {
         Integer currentUserId = getCurrentUserId();
         LocalDateTime now = LocalDateTime.now();
 
-        Map<Integer, Exam> examCache = new HashMap<>();
+        Map<Integer, StuExamPaperVO> runtimeCache = new HashMap<>();
         Map<Integer, Map<Integer, Double>> scoreCache = new HashMap<>();
         Map<Integer, Long> ttlCache = new HashMap<>();
         for (StudentUpdateAnswerDTO dto : studentUpdateAnswerDTOS) {
+            if (dto == null) {
+                throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+            }
             Integer examId = dto.getExamId();
             Integer questionId = dto.getQuestionId();
             if (examId == null || questionId == null) {
                 throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
             }
-            Map<Integer, Double> scoreMap = scoreCache.computeIfAbsent(examId, id -> {
-                Exam exam = examCache.computeIfAbsent(id, examManagementService::getById);
-                return paperManagementService.getQuestionScoreMap(requirePaperId(exam));
-            });
+            StuExamPaperVO runtimePaper = runtimeCache.computeIfAbsent(examId,
+                    examRuntimePaperService::requireWithinExamWindow);
+            Map<Integer, Double> scoreMap = scoreCache.computeIfAbsent(examId,
+                    id -> examRuntimePaperService.getScoreMap(runtimePaper));
             Double fullScore = scoreMap.get(questionId);
             if (fullScore == null) {
                 throw new BusinessException(ErrorCodeEnum.EXAM_QUESTION_NOT_IN_PAPER);
@@ -348,7 +338,6 @@ public class StuExamServiceImpl implements StuExamService {
             String redisKey = RedisConstant.EXAM_ANSWER_PREFIX + examId + ":" + currentUserId;
             String field = String.valueOf(questionId);
 
-            // 先读取已有的答案数据（保留createTime）
             RedisAnswerDTO existing = redisUtil.hGet(redisKey, field, RedisAnswerDTO.class);
             RedisAnswerDTO answerDTO = new RedisAnswerDTO();
             answerDTO.setStudentAnswer(dto.getStudentAnswer());
@@ -358,64 +347,37 @@ public class StuExamServiceImpl implements StuExamService {
 
             Map<String, Object> map = new HashMap<>();
             map.put(field, answerDTO);
-            long ttlSeconds = ttlCache.computeIfAbsent(examId, id -> {
-                Exam exam = examCache.computeIfAbsent(id, examManagementService::getById);
-                return answerCacheExpireSeconds(exam);
-            });
+            long ttlSeconds = ttlCache.computeIfAbsent(examId, id ->
+                    ExamRuntimePaperService.cacheExpireSeconds(
+                            runtimePaper == null ? null : runtimePaper.getExam()));
             redisUtil.hSetAll(redisKey, map, ttlSeconds);
         }
     }
 
     /**
-     * 获取考试关联的试卷ID
-     *
-     * @param exam 考试
-     * @return 试卷ID
+     * 用快照元数据补齐考试结果
      */
-    private static Integer requirePaperId(Exam exam) {
-        if (exam == null || exam.getPaperId() == null) {
-            throw new BusinessException(ErrorCodeEnum.EXAM_REFERENCE_PAPER_NOT_FOUND);
+    private static void fillExamResultMeta(ExamResultVO vo, ExamResultMetaDTO meta) {
+        if (meta == null) {
+            return;
         }
-        return exam.getPaperId();
-    }
-
-    /**
-     * 计算考生答案缓存的过期时间
-     *
-     * @param exam 考试
-     * @return 过期秒数
-     */
-    private static long answerCacheExpireSeconds(Exam exam) {
-        long expireSeconds = ANSWER_CACHE_EXPIRE_AFTER_EXAM_END_SECONDS;
-        if (exam != null && exam.getStartTime() != null && exam.getDuration() != null) {
-            LocalDateTime examEndTime = exam.getStartTime().plusMinutes(exam.getDuration());
-            long secondsUntilExamEnd = Duration.between(LocalDateTime.now(), examEndTime).getSeconds();
-            expireSeconds += Math.max(secondsUntilExamEnd, 0);
-        }
-        return expireSeconds;
+        vo.setExamName(meta.getExamName());
+        vo.setExamTime(meta.getStartTime());
+        vo.setExamDuration(meta.getDuration());
+        vo.setTotalScore(meta.getTotalScore());
     }
 
     /**
      * 组装考试结果
-     *
-     * @param dbExamDetail  考试详情
-     * @param dbExamStudent 考试学生信息
-     * @return 考试结果VO
      */
-    private static @NonNull ExamResultVO getExamResultVO(ExamDetailVO dbExamDetail, ExamStudent dbExamStudent) {
-        BasePaperVO basePaperVO = dbExamDetail.getBasePaperVO();
-        if (basePaperVO == null) {
-            throw new BusinessException(ErrorCodeEnum.EXAM_REFERENCE_PAPER_NOT_FOUND);
-        }
+    private static @NonNull ExamResultVO getExamResultVO(Integer examId, ExamResultMetaDTO meta,
+                                                         ExamStudent dbExamStudent) {
         ExamResultVO examResultVO = new ExamResultVO();
-        examResultVO.setExamName(dbExamDetail.getExamName());
-        examResultVO.setExamId(dbExamDetail.getId());
-        examResultVO.setExamId(dbExamDetail.getId());
-        examResultVO.setTotalScore(basePaperVO.getTotalScore());
-        examResultVO.setExamTime(dbExamDetail.getStartTime());
+        examResultVO.setExamId(examId);
         examResultVO.setSubmitTime(dbExamStudent.getSubmitTime());
         examResultVO.setExamScore(dbExamStudent.getTotalScore());
-        examResultVO.setExamDuration(dbExamDetail.getDuration());
+        examResultVO.setStudentExamStatus(dbExamStudent.getStatus());
+        fillExamResultMeta(examResultVO, meta);
         return examResultVO;
     }
 

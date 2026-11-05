@@ -34,5 +34,8 @@ public class StudentAnswerUpdateDTO {
 
     @Schema(description = "得分", example = "9.5")
     private Double score;
+
+    @Schema(description = "教师批注")
+    private String teacherComment;
 }
 

@@ -377,7 +377,6 @@ const handlePublish = async (row) => {
       }
     );
     await publishExam(row.id);
-    await updateExamStatus(row.id, 1);
     ElMessage.success("发布成功");
     fetchExamList();
   } catch (error) {
@@ -422,7 +421,6 @@ const handleCancelPublish = async (row) => {
       }
     );
     await clearExamCache(row.id);
-    await updateExamStatus(row.id, 0);
     ElMessage.success("已取消发布");
     fetchExamList();
   } catch (error) {

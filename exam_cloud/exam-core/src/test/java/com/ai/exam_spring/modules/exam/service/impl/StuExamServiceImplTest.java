@@ -6,6 +6,7 @@ import com.ai.exam_common.common.security.SecurityUtil;
 import com.ai.exam_spring.modules.grade.pojo.dto.GradeMessageDTO;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.RedisAnswerDTO;
 import com.ai.exam_spring.modules.exam.pojo.dto.stu_answer.StudentUpdateAnswerDTO;
+import com.ai.exam_spring.modules.exam.pojo.dto.ExamResultMetaDTO;
 import com.ai.exam_spring.modules.exam.pojo.dos.Exam;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamStudent;
 import com.ai.exam_spring.modules.exam.pojo.dos.stu_answer.StudentAnswer;
@@ -13,13 +14,14 @@ import com.ai.exam_spring.modules.exam.pojo.enums.ExamEnum;
 import com.ai.exam_spring.modules.exam.pojo.enums.StudentExamEnum;
 import com.ai.exam_spring.modules.exam.mapper.StuExamMapper;
 import com.ai.exam_spring.modules.exam.pojo.vo.ExamResultVO;
+import com.ai.exam_spring.modules.exam.pojo.vo.StuExamPaperVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.StuExamVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.BaseStudentAnswerVO;
 import com.ai.exam_spring.modules.exam.pojo.vo.stu_answer.StudentAnswerVO;
 import com.ai.exam_spring.modules.exam.service.IExamManagementService;
+import com.ai.exam_spring.modules.exam.service.IExamPaperSnapshotService;
 import com.ai.exam_spring.modules.exam.service.IExamStudentService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
-import com.ai.exam_spring.modules.paper.service.IPaperManagementService;
 import com.ai.exam_spring.utils.RedisUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -52,7 +54,8 @@ class StuExamServiceImplTest {
     @Mock private IExamManagementService examManagementService;
     @Mock private IStudentAnswerService studentAnswerService;
     @Mock private IExamStudentService examStudentService;
-    @Mock private IPaperManagementService paperManagementService;
+    @Mock private IExamPaperSnapshotService examPaperSnapshotService;
+    @Mock private ExamRuntimePaperService examRuntimePaperService;
     @Mock private StuExamMapper stuExamMapper;
     @Mock private ExamAnswerPersistenceService examAnswerPersistenceService;
     @Mock private RocketMQTemplate rocketMQTemplate;
@@ -72,6 +75,15 @@ class StuExamServiceImplTest {
         // 让 TransactionTemplate 真正执行回调（模拟事务提交）
         lenient().when(transactionTemplate.execute(any(TransactionCallback.class)))
                 .thenAnswer(inv -> ((TransactionCallback<?>) inv.getArgument(0)).doInTransaction(null));
+    }
+
+    private static StuExamPaperVO runtimePaperOf(LocalDateTime startTime, Integer duration) {
+        StuExamVO exam = new StuExamVO();
+        exam.setStartTime(startTime);
+        exam.setDuration(duration);
+        StuExamPaperVO paper = new StuExamPaperVO();
+        paper.setExam(exam);
+        return paper;
     }
 
     @Test
@@ -135,6 +147,31 @@ class StuExamServiceImplTest {
 
         BusinessException ex = assertThrows(BusinessException.class, () -> stuExamService.getExamResult(EXAM_ID));
         assertEquals(ErrorCodeEnum.EXAM_STATUS_NOT_GRADED.getCode(), ex.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("getExamResult 正常：考试信息与总分取自快照")
+    void getExamResult_fromSnapshot() {
+        ExamStudent es = new ExamStudent();
+        es.setStatus(StudentExamEnum.GRADED);
+        es.setTotalScore(85.0);
+        when(examStudentService.getOne(any(LambdaQueryWrapper.class))).thenReturn(es);
+        ExamResultMetaDTO meta = new ExamResultMetaDTO();
+        meta.setExamName("期末数学");
+        meta.setTotalScore(100.0);
+        meta.setDuration(90);
+        meta.setStartTime(LocalDateTime.of(2026, 11, 1, 9, 0));
+        when(examPaperSnapshotService.getResultMetaMap(anyList())).thenReturn(Map.of(EXAM_ID, meta));
+
+        ExamResultVO result = stuExamService.getExamResult(EXAM_ID);
+
+        assertEquals(EXAM_ID, result.getExamId());
+        assertEquals("期末数学", result.getExamName());
+        assertEquals(100.0, result.getTotalScore());
+        assertEquals(85.0, result.getExamScore());
+        assertEquals(90, result.getExamDuration());
+        assertEquals(LocalDateTime.of(2026, 11, 1, 9, 0), result.getExamTime());
+        verify(examManagementService, never()).getExamDetailById(any());
     }
 
     // ===================== examInfoById =====================
@@ -222,11 +259,9 @@ class StuExamServiceImplTest {
     @Test
     @DisplayName("updateBatchAnswer 正常：题目满分以试卷为准，不采信前端传入值")
     void updateBatchAnswer_usesPaperScore() {
-        Exam exam = new Exam();
-        exam.setId(EXAM_ID);
-        exam.setPaperId(77);
-        when(examManagementService.getById(EXAM_ID)).thenReturn(exam);
-        when(paperManagementService.getQuestionScoreMap(77)).thenReturn(Map.of(101, 3.5));
+        StuExamPaperVO runtimePaper = runtimePaperOf(LocalDateTime.now().minusMinutes(1), 60);
+        when(examRuntimePaperService.requireWithinExamWindow(EXAM_ID)).thenReturn(runtimePaper);
+        when(examRuntimePaperService.getScoreMap(runtimePaper)).thenReturn(Map.of(101, 3.5));
 
         StudentUpdateAnswerDTO dto = new StudentUpdateAnswerDTO();
         dto.setExamId(EXAM_ID);
@@ -245,13 +280,9 @@ class StuExamServiceImplTest {
     @Test
     @DisplayName("updateBatchAnswer 正常：答案缓存设置了过期时间")
     void updateBatchAnswer_setsTtl() {
-        Exam exam = new Exam();
-        exam.setId(EXAM_ID);
-        exam.setPaperId(77);
-        exam.setStartTime(LocalDateTime.now());
-        exam.setDuration(60);
-        when(examManagementService.getById(EXAM_ID)).thenReturn(exam);
-        when(paperManagementService.getQuestionScoreMap(77)).thenReturn(Map.of(101, 3.5));
+        StuExamPaperVO runtimePaper = runtimePaperOf(LocalDateTime.now(), 60);
+        when(examRuntimePaperService.requireWithinExamWindow(EXAM_ID)).thenReturn(runtimePaper);
+        when(examRuntimePaperService.getScoreMap(runtimePaper)).thenReturn(Map.of(101, 3.5));
 
         StudentUpdateAnswerDTO dto = new StudentUpdateAnswerDTO();
         dto.setExamId(EXAM_ID);
@@ -271,11 +302,9 @@ class StuExamServiceImplTest {
     @Test
     @DisplayName("updateBatchAnswer 题目不属于该场考试的试卷：抛异常且不写Redis")
     void updateBatchAnswer_questionNotInPaper() {
-        Exam exam = new Exam();
-        exam.setId(EXAM_ID);
-        exam.setPaperId(77);
-        when(examManagementService.getById(EXAM_ID)).thenReturn(exam);
-        when(paperManagementService.getQuestionScoreMap(77)).thenReturn(Map.of(101, 3.5));
+        StuExamPaperVO runtimePaper = runtimePaperOf(LocalDateTime.now().minusMinutes(1), 60);
+        when(examRuntimePaperService.requireWithinExamWindow(EXAM_ID)).thenReturn(runtimePaper);
+        when(examRuntimePaperService.getScoreMap(runtimePaper)).thenReturn(Map.of(101, 3.5));
 
         StudentUpdateAnswerDTO dto = new StudentUpdateAnswerDTO();
         dto.setExamId(EXAM_ID);
@@ -289,9 +318,11 @@ class StuExamServiceImplTest {
     }
 
     @Test
-    @DisplayName("updateBatchAnswer 考试无关联试卷：抛异常且不写Redis")
-    void updateBatchAnswer_examWithoutPaper() {
-        when(examManagementService.getById(EXAM_ID)).thenReturn(new Exam());
+    @DisplayName("updateBatchAnswer 卷面无题目：抛异常且不写Redis")
+    void updateBatchAnswer_emptyRuntimePaper() {
+        StuExamPaperVO runtimePaper = runtimePaperOf(LocalDateTime.now().minusMinutes(1), 60);
+        when(examRuntimePaperService.requireWithinExamWindow(EXAM_ID)).thenReturn(runtimePaper);
+        when(examRuntimePaperService.getScoreMap(runtimePaper)).thenReturn(Map.of());
 
         StudentUpdateAnswerDTO dto = new StudentUpdateAnswerDTO();
         dto.setExamId(EXAM_ID);
@@ -300,7 +331,7 @@ class StuExamServiceImplTest {
 
         BusinessException ex = assertThrows(BusinessException.class,
                 () -> stuExamService.updateBatchAnswer(List.of(dto)));
-        assertEquals(ErrorCodeEnum.EXAM_REFERENCE_PAPER_NOT_FOUND.getCode(), ex.getErrorCode());
+        assertEquals(ErrorCodeEnum.EXAM_QUESTION_NOT_IN_PAPER.getCode(), ex.getErrorCode());
         verify(redisUtil, never()).hSetAll(any(), any(), anyLong());
     }
 
@@ -319,17 +350,22 @@ class StuExamServiceImplTest {
     }
 
     @Test
-    @DisplayName("getAllExamResult 正常 -> 透传 ExamResultVO 列表且按当前用户查询")
+    @DisplayName("getAllExamResult 正常 -> 考试信息由快照补齐且按当前用户查询")
     void getAllExamResult_normal() {
         ExamResultVO r1 = new ExamResultVO();
         r1.setExamId(10);
-        r1.setExamName("期末数学");
         r1.setExamScore(88.0);
         ExamResultVO r2 = new ExamResultVO();
         r2.setExamId(11);
-        r2.setExamName("期中英语");
         r2.setExamScore(92.0);
         when(stuExamMapper.getAllExamResult(eq(STUDENT_ID))).thenReturn(List.of(r1, r2));
+        ExamResultMetaDTO m1 = new ExamResultMetaDTO();
+        m1.setExamName("期末数学");
+        m1.setTotalScore(100.0);
+        ExamResultMetaDTO m2 = new ExamResultMetaDTO();
+        m2.setExamName("期中英语");
+        m2.setTotalScore(120.0);
+        when(examPaperSnapshotService.getResultMetaMap(anyList())).thenReturn(Map.of(10, m1, 11, m2));
 
         List<ExamResultVO> result = stuExamService.getAllExamResult();
 
@@ -337,9 +373,11 @@ class StuExamServiceImplTest {
         assertEquals(2, result.size());
         assertEquals(10, result.get(0).getExamId());
         assertEquals("期末数学", result.get(0).getExamName());
+        assertEquals(100.0, result.get(0).getTotalScore());
         assertEquals(88.0, result.get(0).getExamScore());
         assertEquals(11, result.get(1).getExamId());
         assertEquals("期中英语", result.get(1).getExamName());
+        assertEquals(120.0, result.get(1).getTotalScore());
         verify(stuExamMapper).getAllExamResult(STUDENT_ID);
     }
 }

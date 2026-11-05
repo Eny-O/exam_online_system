@@ -5,10 +5,10 @@
         SELECT
             sa.id AS id,
             sa.student_answer AS studentAnswer,
-            sa.full_score,
-            q.answer,
-            q.type
-        FROM student_answer sa LEFT JOIN question q ON sa.question_id = q.id
+            sa.full_score AS fullScore,
+            sa.question_id AS questionId,
+            sa.question_type AS type
+        FROM student_answer sa
         WHERE sa.exam_id = #{examId}
           AND sa.student_id = #{studentId}
     </select>
