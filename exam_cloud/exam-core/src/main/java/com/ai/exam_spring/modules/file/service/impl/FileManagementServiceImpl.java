@@ -57,8 +57,9 @@ public class FileManagementServiceImpl implements FileManagementService {
                 String content = getCellStringValue(row.getCell(0));
                 String type = getCellStringValue(row.getCell(1));
                 String difficulty = getCellStringValue(row.getCell(2));
+                // 题干内容为空的行跳过，不计入导入
                 if (content == null || content.trim().isEmpty()) {
-                    throw new BusinessException(ErrorCodeEnum.FILE_CONTENT_REQUIRED_FIELD_EMPTY, "第" + (i + 1) + "行题干内容不能为空");
+                    continue;
                 }
                 if (type == null || type.trim().isEmpty()) {
                     throw new BusinessException(ErrorCodeEnum.FILE_CONTENT_REQUIRED_FIELD_EMPTY, "第" + (i + 1) + "行题目类型不能为空");

@@ -7,9 +7,12 @@ import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_auth_user.pojo.dto.UserAddDTO;
 import com.ai.exam_auth_user.pojo.dto.UserQueryDTO;
 import com.ai.exam_auth_user.pojo.dto.UserUpdateDTO;
+import com.ai.exam_auth_user.pojo.dos.Role;
 import com.ai.exam_auth_user.pojo.dos.User;
 import com.ai.exam_auth_user.pojo.enums.UserClassRelationEnum;
 import com.ai.exam_auth_user.pojo.vo.UserManageVO;
+import com.ai.exam_auth_user.mapper.RoleMapper;
+import com.ai.exam_auth_user.mapper.SysUserRoleMapper;
 import com.ai.exam_auth_user.mapper.UserManageMapper;
 import com.ai.exam_auth_user.mapper.UserMapper;
 import com.ai.exam_auth_user.service.user.IUserClassService;
@@ -37,6 +40,12 @@ public class UserManageServiceImpl extends ServiceImpl<UserMapper, User> impleme
 
     @Autowired
     private IUserClassService userClassService;
+
+    @Autowired
+    private RoleMapper roleMapper;
+
+    @Autowired
+    private SysUserRoleMapper sysUserRoleMapper;
 
     @Override
     public PageResult<UserManageVO> pageUser(UserQueryDTO dto) {
@@ -68,6 +77,7 @@ public class UserManageServiceImpl extends ServiceImpl<UserMapper, User> impleme
         user.setMajor(dto.getMajor());
         user.setStatus(1);
         save(user);
+        assignDefaultRole(user.getId(), user.getUserType());
         UserClassRelationEnum relationType = relationTypeOf(user.getUserType());
         if (relationType == null) {
             return;
@@ -151,6 +161,38 @@ public class UserManageServiceImpl extends ServiceImpl<UserMapper, User> impleme
         }
         if (Integer.valueOf(2).equals(userType)) {
             return UserClassRelationEnum.TEACHER;
+        }
+        return null;
+    }
+
+    /**
+     * 按用户类型分配默认角色
+     */
+    private void assignDefaultRole(Integer userId, Integer userType) {
+        String roleCode = roleCodeOf(userType);
+        if (roleCode == null) {
+            return;
+        }
+        Role role = roleMapper.selectOne(
+                new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, roleCode));
+        if (role == null) {
+            throw new BusinessException(ErrorCodeEnum.ROLE_NOT_FOUND, "默认角色缺失:" + roleCode);
+        }
+        sysUserRoleMapper.insertUserRole(userId, role.getId());
+    }
+
+    /**
+     * 用户类型到角色编码的映射
+     */
+    private String roleCodeOf(Integer userType) {
+        if (Integer.valueOf(1).equals(userType)) {
+            return "ROLE_STUDENT";
+        }
+        if (Integer.valueOf(2).equals(userType)) {
+            return "ROLE_TEACHER";
+        }
+        if (Integer.valueOf(3).equals(userType)) {
+            return "ROLE_ADMIN";
         }
         return null;
     }
