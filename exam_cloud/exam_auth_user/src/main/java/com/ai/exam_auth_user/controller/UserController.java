@@ -11,6 +11,7 @@ import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -38,7 +39,7 @@ public class UserController {
     @Operation(summary = "用户登录")
     @SentinelResource(value = "login", blockHandler = "loginBlocked")
     @PostMapping("/login")
-    public ResponseResult<HashMap<String,String>> login(@RequestBody UserLoginDTO userLoginDTO) {
+    public ResponseResult<HashMap<String,String>> login(@Valid @RequestBody UserLoginDTO userLoginDTO) {
         log.info("用户登录：{}", userLoginDTO);
         return ResponseResult.success(userService.login(userLoginDTO));
     }
@@ -62,7 +63,7 @@ public class UserController {
     }
 
     @Operation(summary = "根据班级id获取班级成员")
-    @PreAuthorize("hasAuthority('sys:user:view')")
+    @PreAuthorize("hasAnyAuthority('sys:user:view', 'tch:class:view')")
     @GetMapping("/getClassMember")
     public ResponseResult<List<UStudentVO>> getClassMember(Integer classId) {
         log.info("根据班级id获取班级成员 {}", classId);
@@ -71,7 +72,7 @@ public class UserController {
     }
 
     @Operation(summary = "分页条件查询学生")
-    @PreAuthorize("hasAuthority('sys:user:view')")
+    @PreAuthorize("hasAnyAuthority('sys:user:view', 'tch:class:view')")
     @GetMapping("/pageStudent")
     public ResponseResult<PageResult<UStudentVO>> pageStudent(StudentQueryDTO studentQueryDTO) {
         log.info("分页条件查询学生: {}", studentQueryDTO);

@@ -3,6 +3,8 @@ package com.ai.exam_spring.modules.exam.service.impl;
 import com.ai.exam_spring.modules.exam.pojo.dos.ExamClass;
 import com.ai.exam_spring.modules.exam.mapper.ExamClassMapper;
 import com.ai.exam_spring.modules.exam.service.IExamClassService;
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
@@ -30,5 +32,14 @@ public class ExamClassServiceImpl extends ServiceImpl<ExamClassMapper, ExamClass
                 .map(classId -> new ExamClass(examId, classId))
                 .toList();
         saveBatch(examClassList);
+    }
+
+    @Override
+    public boolean hasClassReference(Integer classId) {
+        if (classId == null) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        }
+        return count(new LambdaQueryWrapper<ExamClass>()
+                .eq(ExamClass::getClassId, classId)) > 0;
     }
 }

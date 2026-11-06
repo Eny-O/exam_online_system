@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Schema(description = "新增用户DTO")
 public class UserAddDTO {
@@ -37,6 +39,9 @@ public class UserAddDTO {
 
     @Schema(description = "班级ID（学生）")
     private Integer classId;
+
+    @Schema(description = "任教班级ID列表（教师）")
+    private List<Integer> classIds;
 
     @Schema(description = "专业")
     private String major;

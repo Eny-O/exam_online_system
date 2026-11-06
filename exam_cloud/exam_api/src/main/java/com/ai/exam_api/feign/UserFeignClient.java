@@ -21,4 +21,13 @@ public interface UserFeignClient {
      */
     @GetMapping("/inner/user/briefs")
     List<UserBriefDTO> listUserBriefs(@RequestParam("userIds") List<Integer> userIds);
+
+    /**
+     * 查询教师任教班级ID
+     *
+     * @param userId 教师用户ID
+     * @return 任教班级ID列表
+     */
+    @GetMapping("/inner/user/teacher-class-ids")
+    List<Integer> listTeacherClassIds(@RequestParam("userId") Integer userId);
 }

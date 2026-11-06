@@ -76,6 +76,11 @@ public enum ErrorCodeEnum {
 
     // 班级错误码
     CLASS_NOT_FOUND("6001", "班级不存在"),
+    CLASS_NAME_DUPLICATE("6002", "班级名称已存在"),
+    CLASS_HAS_MEMBERS("6003", "班级下还有学生或教师,不能删除"),
+    STUDENT_CLASS_CONFLICT("6004", "该学生已归属其他班级"),
+    CLASS_REFERENCED_BY_EXAM("6005", "班级已被考试引用,不能删除"),
+    CLASS_REF_CHECK_FAILED("6006", "班级引用校验失败,请稍后重试"),
 
     // 阅卷错误码
     PAPER_CONTENT_EMPTY_NOT_GRADE("7001", "试卷内容为空，不能阅卷"),

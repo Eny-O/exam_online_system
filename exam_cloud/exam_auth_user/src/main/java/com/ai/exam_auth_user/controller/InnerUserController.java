@@ -6,6 +6,8 @@ import com.ai.exam_auth_user.mapper.SysClassMapper;
 import com.ai.exam_auth_user.mapper.UserMapper;
 import com.ai.exam_auth_user.pojo.dos.SysClass;
 import com.ai.exam_auth_user.pojo.dos.User;
+import com.ai.exam_auth_user.pojo.enums.UserClassRelationEnum;
+import com.ai.exam_auth_user.service.user.IUserClassService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 内部用户查询接口（供 exam-core 等服务调用）
@@ -36,6 +39,9 @@ public class InnerUserController {
     @Autowired
     private SysClassMapper sysClassMapper;
 
+    @Autowired
+    private IUserClassService userClassService;
+
     @Operation(summary = "按ID批量查询用户摘要")
     @GetMapping("/user/briefs")
     public List<UserBriefDTO> listUserBriefs(@RequestParam("userIds") List<Integer> userIds) {
@@ -43,15 +49,30 @@ public class InnerUserController {
             return Collections.emptyList();
         }
         List<User> users = userMapper.selectBatchIds(userIds);
+        if (users == null || users.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<Integer, List<Integer>> classMap =
+                userClassService.listClassIdsByUserIds(userIds, UserClassRelationEnum.STUDENT);
         return users.stream().map(user -> {
             UserBriefDTO dto = new UserBriefDTO();
             dto.setId(user.getId());
             dto.setStudentNo(user.getStudentNo());
             dto.setRealName(user.getRealName());
             dto.setMajor(user.getMajor());
-            dto.setClassId(user.getClassId());
+            List<Integer> classIds = classMap.get(user.getId());
+            dto.setClassId(classIds == null || classIds.isEmpty() ? null : classIds.get(0));
             return dto;
         }).toList();
+    }
+
+    @Operation(summary = "查询教师任教班级ID")
+    @GetMapping("/user/teacher-class-ids")
+    public List<Integer> listTeacherClassIds(@RequestParam("userId") Integer userId) {
+        if (userId == null) {
+            return Collections.emptyList();
+        }
+        return userClassService.listClassIds(userId, UserClassRelationEnum.TEACHER);
     }
 
     @Operation(summary = "按ID批量查询班级摘要")

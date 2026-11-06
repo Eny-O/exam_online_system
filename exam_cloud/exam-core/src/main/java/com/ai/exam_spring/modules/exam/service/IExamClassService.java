@@ -12,4 +12,11 @@ public interface IExamClassService extends IService<ExamClass> {
      * @param classIds
      */
     void add(Integer examId, List<Integer> classIds);
+
+    /**
+     * 查询班级是否被考试引用
+     * @param classId 班级ID
+     * @return 是否存在引用
+     */
+    boolean hasClassReference(Integer classId);
 }

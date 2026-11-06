@@ -139,18 +139,76 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
     @Override
     public Integer addExam(ExamDetailAddDTO examDetailAddDTO) {
         if (examDetailAddDTO == null) throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        List<Integer> classIds = distinctIds(examDetailAddDTO.getClassIds());
+        List<Integer> studentIds = distinctIds(examDetailAddDTO.getStudentIds());
+        assertTeacherScope(classIds, studentIds);
         PaperStatus paperStatus = paperManagementService.getPaperStatusById(examDetailAddDTO.getPaperId());
         if (paperStatus != PaperStatus.ALREADY_ENABLE) {
             throw new BusinessException(ErrorCodeEnum.NOT_ADD_ENABLE_PAPER);
         }
         Exam exam = new Exam();
         BeanUtil.copyProperties(examDetailAddDTO, exam);
-        List<Integer> classIds = examDetailAddDTO.getClassIds().stream().distinct().toList();
-        List<Integer> studentIds = examDetailAddDTO.getStudentIds().stream().distinct().toList();
         examManagementMapper.insert(exam);
         examClassService.add(exam.getId(), classIds);
         examStudentService.add(exam.getId(),studentIds);
         return exam.getId();
+    }
+
+    /**
+     * 去除关联ID中的空值与重复项
+     */
+    private List<Integer> distinctIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return ids.stream().filter(Objects::nonNull).distinct().toList();
+    }
+
+    /**
+     * 校验教师提交的班级与学生在任教班级范围内
+     */
+    private void assertTeacherScope(List<Integer> classIds, List<Integer> studentIds) {
+        String userId = securityUtil.getCurrentUserId();
+        Integer userType = securityUtil.getCurrentUserType();
+        if (userId == null || userType == null) {
+            throw new BusinessException(ErrorCodeEnum.USER_NOT_LOGIN);
+        }
+        if (!Integer.valueOf(2).equals(userType)) {
+            return;
+        }
+        List<Integer> scopeClassIds = classIds == null ? Collections.emptyList()
+                : classIds.stream().filter(Objects::nonNull).toList();
+        List<Integer> scopeStudentIds = studentIds == null ? Collections.emptyList()
+                : studentIds.stream().filter(Objects::nonNull).toList();
+        List<Integer> teacherClassIds = userFeignClient.listTeacherClassIds(Integer.valueOf(userId));
+        Set<Integer> allowed = teacherClassIds == null
+                ? Collections.emptySet()
+                : teacherClassIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+        if (!scopeClassIds.isEmpty() && !allowed.containsAll(scopeClassIds)) {
+            throw new BusinessException(ErrorCodeEnum.PERMISSION_DENIED);
+        }
+        Set<Integer> requested = new HashSet<>(scopeStudentIds);
+        if (requested.isEmpty()) {
+            return;
+        }
+        List<UserBriefDTO> briefs = userFeignClient.listUserBriefs(new ArrayList<>(requested));
+        Map<Integer, Integer> classIdById = new HashMap<>();
+        if (briefs != null) {
+            for (UserBriefDTO brief : briefs) {
+                if (brief != null && brief.getId() != null) {
+                    classIdById.put(brief.getId(), brief.getClassId());
+                }
+            }
+        }
+        if (!classIdById.keySet().containsAll(requested)) {
+            throw new BusinessException(ErrorCodeEnum.PERMISSION_DENIED);
+        }
+        for (Integer id : requested) {
+            Integer classId = classIdById.get(id);
+            if (classId == null || !allowed.contains(classId)) {
+                throw new BusinessException(ErrorCodeEnum.PERMISSION_DENIED);
+            }
+        }
     }
 
     /**
@@ -240,6 +298,7 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         if (dbExam == null) {
             throw new BusinessException(ErrorCodeEnum.EXAM_NOT_FOUND);
         }
+        assertTeacherScope(examDetailUpdateDTO.getClassIds(), examDetailUpdateDTO.getStudentIds());
         // 准备更新的考试信息
         Exam exam = new Exam();
         BeanUtil.copyProperties(examDetailUpdateDTO, exam);

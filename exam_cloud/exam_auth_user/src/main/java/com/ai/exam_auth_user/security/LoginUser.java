@@ -59,8 +59,8 @@ public class LoginUser implements LoginUserPrincipal {
 
     @Override
     @JsonIgnore
-    public Integer getClassId() {
-        return user.getClassId();
+    public Integer getUserType() {
+        return user.getUserType();
     }
 
     @Override

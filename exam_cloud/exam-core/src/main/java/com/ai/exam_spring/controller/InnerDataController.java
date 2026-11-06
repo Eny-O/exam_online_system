@@ -4,6 +4,7 @@ import com.ai.exam_api.pojo.dto.QuestionBriefDTO;
 import com.ai.exam_api.pojo.dto.StudentAnswerDTO;
 import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_spring.modules.exam.pojo.dos.stu_answer.StudentAnswer;
+import com.ai.exam_spring.modules.exam.service.IExamClassService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
 import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
 import com.ai.exam_spring.modules.question.service.QuestionManagementService;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 内部数据接口：向 AI 模块提供题目与作答的批量查询
+ * 内部数据接口：跨服务只读数据查询
  */
 @RestController
 @RequestMapping("/inner")
@@ -27,6 +28,9 @@ public class InnerDataController {
 
     @Autowired
     private IStudentAnswerService studentAnswerService;
+
+    @Autowired
+    private IExamClassService examClassService;
 
     @GetMapping("/question/batch")
     public ResponseResult<List<QuestionBriefDTO>> listQuestions(@RequestParam("ids") List<Integer> ids) {
@@ -62,5 +66,10 @@ public class InnerDataController {
             return dto;
         }).toList();
         return ResponseResult.success(dtos);
+    }
+
+    @GetMapping("/class/exam-refs")
+    public ResponseResult<Boolean> hasClassReference(@RequestParam("classId") Integer classId) {
+        return ResponseResult.success(examClassService.hasClassReference(classId));
     }
 }

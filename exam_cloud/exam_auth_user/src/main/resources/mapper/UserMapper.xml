@@ -4,13 +4,22 @@
     <select id="pageStudent" resultType="com.ai.exam_api.pojo.vo.UStudentVO">
         select
             u.id,
-            student_no,
-            real_name,
-            class_name,
-            major,
-            grade
-        from sys_user u left join sys_class c on u.class_id = c.id
+            u.student_no,
+            u.real_name,
+            c.class_name,
+            u.major,
+            c.grade
+        from sys_user u
+        left join sys_user_class uc on uc.user_id = u.id and uc.relation_type = 1
+        left join sys_class c on uc.class_id = c.id
         WHERE u.user_type = 1 AND u.status = 1
+        <if test="classId != null">
+            AND uc.class_id = #{classId}
+        </if>
+        <if test="classIds != null and !classIds.isEmpty()">
+            AND uc.class_id IN
+            <foreach collection="classIds" item="cid" open="(" separator="," close=")">#{cid}</foreach>
+        </if>
         <if test="ew.sqlSegment != null and ew.sqlSegment != ''">
             AND ${ew.sqlSegment}
         </if>

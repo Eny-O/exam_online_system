@@ -13,14 +13,17 @@ import com.ai.exam_auth_user.mapper.PermissionMapper;
 import com.ai.exam_auth_user.pojo.dto.StudentQueryDTO;
 import com.ai.exam_auth_user.pojo.dos.SysClass;
 import com.ai.exam_auth_user.pojo.dos.User;
+import com.ai.exam_auth_user.pojo.enums.UserClassRelationEnum;
 import com.ai.exam_auth_user.pojo.enums.UserStatusEnum;
 import com.ai.exam_auth_user.pojo.vo.PermissionVO;
 import com.ai.exam_api.pojo.vo.UStudentVO;
 import com.ai.exam_auth_user.mapper.UserMapper;
 import com.ai.exam_auth_user.security.LoginUser;
+import com.ai.exam_auth_user.security.TeacherClassScope;
 import com.ai.exam_auth_user.pojo.dto.UserLoginDTO;
 import com.ai.exam_auth_user.pojo.vo.UserInfoVO;
 import com.ai.exam_auth_user.service.user.ISysClassService;
+import com.ai.exam_auth_user.service.user.IUserClassService;
 import com.ai.exam_auth_user.service.user.UserService;
 import com.ai.exam_common.common.utils.JwtUtil;
 import com.ai.exam_auth_user.utils.RedisUtil;
@@ -37,6 +40,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -61,6 +65,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Autowired
     private PermissionMapper permissionMapper;
+
+    @Autowired
+    private IUserClassService userClassService;
+
+    @Autowired
+    private TeacherClassScope teacherClassScope;
 
 
     /**
@@ -95,7 +105,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         snapshot.setUsername(loginUser.getUser().getUsername());
         snapshot.setRealName(loginUser.getUser().getRealName());
         snapshot.setStudentNo(loginUser.getUser().getStudentNo());
-        snapshot.setClassId(loginUser.getUser().getClassId());
+        snapshot.setUserType(loginUser.getUser().getUserType());
         snapshot.setStatus(loginUser.getUser().getStatus());
         snapshot.setPermissions(loginUser.getPermissionCodes());
 
@@ -118,7 +128,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     /**
      * 获取用户信息
      * <p>
-     * 登录态快照只承载身份与权限（id/用户名/姓名/学号/班级/状态/权限编码），
+     * 登录态快照只承载身份与权限（id/用户名/姓名/学号/状态/权限编码），
      * 用户档案（手机号/专业/用户类型等）与权限明细（permName/icon/path 等菜单信息）
      * 均按当前用户ID回查数据库，保证资料变更后立即生效。
      */
@@ -157,10 +167,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public List<UStudentVO> getClassMember(Integer classId) {
-        if (classId == null) throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
+        teacherClassScope.assertClassVisible(classId);
         SysClass sysClass = sysClassService.getById(classId);
         if (sysClass == null) throw new BusinessException(ErrorCodeEnum.CLASS_NOT_FOUND);
-        List<User> users = userMapper.selectList(new LambdaQueryWrapper<User>().eq(User::getClassId, classId));
+        List<Integer> userIds = userClassService.listUserIdsByClassId(classId, UserClassRelationEnum.STUDENT);
+        if (userIds == null || userIds.isEmpty()) return null;
+        List<User> users = userMapper.selectBatchIds(userIds);
         if (users == null || users.isEmpty()) return  null;
         return users.stream().map(user -> {
             UStudentVO uStudentVO = new UStudentVO();
@@ -181,12 +193,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (studentQueryDTO == null) {
             throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
         }
+        List<Integer> scopedClassIds = teacherClassScope.scopedClassIds();
+        if (scopedClassIds != null && scopedClassIds.isEmpty()) {
+            return PageResult.of(0L, Collections.emptyList(),
+                    studentQueryDTO.getPageNum(), studentQueryDTO.getPageSize());
+        }
         Page<UStudentVO> page = Page.of(studentQueryDTO.getPageNum(), studentQueryDTO.getPageSize());
         Wrapper<User> wrapper = new LambdaQueryWrapper<User>()
                 .like(StringUtils.isNotBlank(studentQueryDTO.getRealName()),User::getRealName, studentQueryDTO.getRealName())
-                .like(StringUtils.isNotBlank(studentQueryDTO.getStudentNo()),User::getStudentNo, studentQueryDTO.getStudentNo())
-                .eq(studentQueryDTO.getClassId() != null, User::getClassId, studentQueryDTO.getClassId());
-        Page<UStudentVO> userPage = userMapper.pageStudent(page, wrapper);
+                .like(StringUtils.isNotBlank(studentQueryDTO.getStudentNo()),User::getStudentNo, studentQueryDTO.getStudentNo());
+        Page<UStudentVO> userPage = userMapper.pageStudent(page, wrapper,
+                studentQueryDTO.getClassId(), scopedClassIds);
         return PageResult.of(userPage.getTotal(), userPage.getRecords(), studentQueryDTO.getPageNum(), studentQueryDTO.getPageSize());
     }
 }

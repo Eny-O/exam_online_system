@@ -268,7 +268,7 @@ class ExamManagementServiceImplTest {
         examManagementService.publishExam(EXAM_ID);
 
         verify(examPaperSnapshotService).createOnce(any(Exam.class), any(PaperContentVO.class));
-        verify(examManagementMapper).updateById(argThat(e -> e.getStatus() == ExamEnum.ALREADY_POST));
+        verify(examManagementMapper).updateById(argThat((Exam e) -> e.getStatus() == ExamEnum.ALREADY_POST));
         verify(redisUtil).setIfAbsent(eq(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID),
                 any(Object.class), anyLong());
         verify(redisUtil, never()).set(any(), any(Object.class), anyLong());
@@ -337,7 +337,7 @@ class ExamManagementServiceImplTest {
 
         verify(paperManagementService, never()).getPaperById(any());
         verify(examPaperSnapshotService, never()).createOnce(any(), any());
-        verify(examManagementMapper).updateById(argThat(e -> e.getStatus() == ExamEnum.ALREADY_POST));
+        verify(examManagementMapper).updateById(argThat((Exam e) -> e.getStatus() == ExamEnum.ALREADY_POST));
         verify(redisUtil).setIfAbsent(eq(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID),
                 any(Object.class), anyLong());
     }
@@ -393,7 +393,7 @@ class ExamManagementServiceImplTest {
         verify(redisUtil).delete(RedisConstant.EXAM_PUBLISH_PREFIX + EXAM_ID);
         verify(redisUtil).deleteByPattern(RedisConstant.EXAM_ANSWER_PREFIX + EXAM_ID + ":*");
         verify(examPaperSnapshotService).deleteSnapshot(EXAM_ID);
-        verify(examManagementMapper).updateById(argThat(e -> e.getStatus() == ExamEnum.NOT_POST));
+        verify(examManagementMapper).updateById(argThat((Exam e) -> e.getStatus() == ExamEnum.NOT_POST));
     }
 
     @Test

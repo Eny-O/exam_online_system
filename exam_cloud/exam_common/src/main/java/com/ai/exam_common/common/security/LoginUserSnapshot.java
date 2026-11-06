@@ -31,8 +31,8 @@ public class LoginUserSnapshot implements LoginUserPrincipal {
     /** 学号（学生）或工号（教师） */
     private String studentNo;
 
-    /** 班级ID（管理员为 null） */
-    private Integer classId;
+    /** 用户类型：1-学生，2-教师，3-管理员 */
+    private Integer userType;
 
     /** 用户状态：1-启用，2-禁用 */
     private Integer status;

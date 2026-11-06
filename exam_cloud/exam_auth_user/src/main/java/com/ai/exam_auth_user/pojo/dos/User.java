@@ -39,9 +39,6 @@ public class User {
     @Schema(description = "真实姓名", example = "张三")
     private String realName;
 
-    @Schema(description = "班级ID（管理员为null）", example = "10")
-    private Integer classId;
-
     @Schema(description = "手机号", example = "13800138000")
     private String phone;
 

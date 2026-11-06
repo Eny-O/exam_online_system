@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Schema(description = "人员管理列表VO")
@@ -38,6 +39,9 @@ public class UserManageVO {
 
     @Schema(description = "班级ID")
     private Integer classId;
+
+    @Schema(description = "关联班级ID列表")
+    private List<Integer> classIds;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;

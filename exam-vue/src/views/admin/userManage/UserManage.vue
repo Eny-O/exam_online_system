@@ -37,7 +37,7 @@
           <el-option label="禁用" :value="2" />
         </el-select>
         <el-select
-          v-if="searchForm.userType === 1"
+          v-if="searchForm.userType === 1 || searchForm.userType === 2"
           v-model="searchForm.classId"
           placeholder="班级"
           clearable
@@ -219,6 +219,29 @@
             />
           </el-select>
         </el-form-item>
+        <el-form-item
+          v-if="formData.userType === 2"
+          label="任教班级"
+          prop="classIds"
+        >
+          <el-select
+            v-model="formData.classIds"
+            multiple
+            filterable
+            clearable
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="请选择任教班级"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="c in classList"
+              :key="c.id"
+              :label="c.className"
+              :value="c.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="专业">
           <el-input v-model="formData.major" placeholder="请输入专业" />
         </el-form-item>
@@ -286,6 +309,7 @@ const formData = reactive({
   studentNo: "",
   staffNo: "",
   classId: null,
+  classIds: [],
   major: "",
   status: 1,
 });
@@ -379,6 +403,7 @@ const resetForm = () => {
   formData.studentNo = "";
   formData.staffNo = "";
   formData.classId = null;
+  formData.classIds = [];
   formData.major = "";
   formData.status = 1;
 };
@@ -402,6 +427,7 @@ const handleEdit = (row) => {
     studentNo: row.studentNo || "",
     staffNo: row.staffNo || "",
     classId: row.classId || null,
+    classIds: Array.isArray(row.classIds) ? [...row.classIds] : [],
     major: row.major || "",
     status: row.status,
   });
@@ -421,6 +447,7 @@ const handleSubmit = async () => {
         studentNo: formData.userType === 1 ? formData.studentNo : null,
         staffNo: formData.userType === 2 ? formData.staffNo : null,
         classId: formData.userType === 1 ? formData.classId : null,
+        classIds: formData.userType === 2 ? formData.classIds || [] : null,
         major: formData.major,
         status: formData.status,
       });
@@ -435,6 +462,7 @@ const handleSubmit = async () => {
         studentNo: formData.userType === 1 ? formData.studentNo : null,
         staffNo: formData.userType === 2 ? formData.staffNo : null,
         classId: formData.userType === 1 ? formData.classId : null,
+        classIds: formData.userType === 2 ? formData.classIds || [] : null,
         major: formData.major,
       });
       ElMessage.success("新增成功");

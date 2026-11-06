@@ -23,5 +23,17 @@ public class SecurityUtil {
         }
         return null;
     }
+
+    /**
+     * 获取当前登录用户的类型
+     * @return 用户类型；未登录时返回 null
+     */
+    public Integer getCurrentUserType() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof LoginUserPrincipal principal) {
+            return principal.getUserType();
+        }
+        return null;
+    }
 }
 

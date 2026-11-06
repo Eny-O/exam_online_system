@@ -12,8 +12,8 @@ public interface LoginUserPrincipal extends UserDetails {
     /** 真实姓名 */
     String getRealName();
 
-    /** 班级ID（管理员为 null） */
-    Integer getClassId();
+    /** 用户类型：1-学生，2-教师，3-管理员 */
+    Integer getUserType();
 
     /** 用户状态：1-启用，2-禁用 */
     Integer getStatus();

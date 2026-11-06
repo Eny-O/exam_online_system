@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Schema(description = "修改用户DTO")
 public class UserUpdateDTO {
@@ -23,6 +25,9 @@ public class UserUpdateDTO {
 
     @Schema(description = "班级ID（学生）")
     private Integer classId;
+
+    @Schema(description = "任教班级ID列表（教师）")
+    private List<Integer> classIds;
 
     @Schema(description = "专业")
     private String major;

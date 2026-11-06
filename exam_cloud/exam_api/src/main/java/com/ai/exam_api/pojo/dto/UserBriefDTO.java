@@ -25,6 +25,6 @@ public class UserBriefDTO {
     @Schema(description = "专业")
     private String major;
 
-    @Schema(description = "班级ID（管理员为 null）")
+    @Schema(description = "学生归属班级ID")
     private Integer classId;
 }

@@ -10,13 +10,16 @@
             u.user_type,
             u.student_no,
             u.staff_no,
-            u.class_id,
+            (SELECT MIN(uc.class_id) FROM sys_user_class uc
+              WHERE uc.user_id = u.id AND uc.relation_type = 1) AS class_id,
             u.major,
             u.status,
             u.create_time,
-            c.class_name
+            (SELECT GROUP_CONCAT(c.class_name ORDER BY c.class_name SEPARATOR ',')
+               FROM sys_user_class uc
+               JOIN sys_class c ON c.id = uc.class_id
+              WHERE uc.user_id = u.id) AS class_name
         FROM sys_user u
-        LEFT JOIN sys_class c ON u.class_id = c.id
         <where>
             <if test="realName != null and realName != ''">
                 AND u.real_name LIKE CONCAT('%', #{realName}, '%')
@@ -32,7 +35,8 @@
                 AND u.status = #{status}
             </if>
             <if test="classId != null">
-                AND u.class_id = #{classId}
+                AND EXISTS (SELECT 1 FROM sys_user_class uc
+                             WHERE uc.user_id = u.id AND uc.class_id = #{classId})
             </if>
         </where>
         ORDER BY u.create_time DESC

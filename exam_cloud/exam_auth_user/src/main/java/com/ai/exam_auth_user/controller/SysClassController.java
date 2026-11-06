@@ -2,18 +2,23 @@ package com.ai.exam_auth_user.controller;
 
 
 import cn.hutool.core.bean.BeanUtil;
+import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_auth_user.pojo.dos.SysClass;
+import com.ai.exam_auth_user.pojo.dto.ClassAddDTO;
+import com.ai.exam_auth_user.pojo.dto.ClassQueryDTO;
+import com.ai.exam_auth_user.pojo.dto.ClassUpdateDTO;
 import com.ai.exam_auth_user.pojo.vo.SysClassVO;
+import com.ai.exam_auth_user.security.TeacherClassScope;
 import com.ai.exam_auth_user.service.user.ISysClassService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -33,17 +38,59 @@ public class SysClassController {
     @Autowired
     private ISysClassService sysClassService;
 
+    @Autowired
+    private TeacherClassScope teacherClassScope;
+
     @Operation(summary = "获取班级列表")
     @PreAuthorize("hasAuthority('tch:class:view')")
     @GetMapping("/list")
     public ResponseResult<List<SysClassVO>> list() {
-        List<SysClass> list = sysClassService.list();
+        List<Integer> scopedClassIds = teacherClassScope.scopedClassIds();
+        List<SysClass> list;
+        if (scopedClassIds == null) {
+            list = sysClassService.list();
+        } else if (scopedClassIds.isEmpty()) {
+            list = Collections.emptyList();
+        } else {
+            list = sysClassService.listByIds(scopedClassIds);
+        }
         List<SysClassVO> sysClassVOList = list.stream().map(sysClass -> {
             SysClassVO sysClassVO = new SysClassVO();
             BeanUtil.copyProperties(sysClass, sysClassVO);
             return sysClassVO;
         }).toList();
         return ResponseResult.success(sysClassVOList);
+    }
+
+    @Operation(summary = "分页查询班级")
+    @PreAuthorize("hasAuthority('sys:class:view')")
+    @GetMapping("/page")
+    public ResponseResult<PageResult<SysClassVO>> page(ClassQueryDTO classQueryDTO) {
+        return ResponseResult.success(sysClassService.pageClass(classQueryDTO));
+    }
+
+    @Operation(summary = "新增班级")
+    @PreAuthorize("hasAuthority('sys:class:add')")
+    @PostMapping("/add")
+    public ResponseResult<Void> add(@Valid @RequestBody ClassAddDTO classAddDTO) {
+        sysClassService.addClass(classAddDTO);
+        return ResponseResult.success();
+    }
+
+    @Operation(summary = "编辑班级")
+    @PreAuthorize("hasAuthority('sys:class:edit')")
+    @PutMapping("/update")
+    public ResponseResult<Void> update(@Valid @RequestBody ClassUpdateDTO classUpdateDTO) {
+        sysClassService.updateClass(classUpdateDTO);
+        return ResponseResult.success();
+    }
+
+    @Operation(summary = "删除班级")
+    @PreAuthorize("hasAuthority('sys:class:delete')")
+    @DeleteMapping("/delete")
+    public ResponseResult<Void> delete(@RequestParam Integer id) {
+        sysClassService.deleteClass(id);
+        return ResponseResult.success();
     }
 
 
