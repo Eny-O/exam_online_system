@@ -1,5 +1,7 @@
 package com.ai.exam_auth_user.pojo.dos;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -24,8 +26,10 @@ public class SysClass {
 
     private String grade; // 年级
 
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime; //
 
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime; //
 
     private Integer deleted; // 0-启用；停用后写为该行id

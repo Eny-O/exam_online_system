@@ -1,5 +1,7 @@
 package com.ai.exam_auth_user.pojo.dos;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -40,9 +42,11 @@ public class Permission {
     @Schema(description = "前端组件路径", example = "system/user/index")
     private String component;
 
+    @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建时间", example = "2024-01-01 10:00:00")
     private LocalDateTime createTime;
 
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间", example = "2024-06-01 12:00:00")
     private LocalDateTime updateTime;
 }
