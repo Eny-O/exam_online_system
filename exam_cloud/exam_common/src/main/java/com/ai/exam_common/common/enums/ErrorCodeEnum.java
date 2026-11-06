@@ -64,6 +64,7 @@ public enum ErrorCodeEnum {
     FILE_CONTENT_REQUIRED_FIELD_EMPTY("4004", "文件内容有必填项为空"),
     FILE_NOT_FOUND("4005", "模板文件不存在"),
     ROLE_NOT_FOUND("4006", "默认角色不存在"),
+    FILE_TOO_LARGE("4007", "文件大小超出限制"),
 
     // 试卷错误码
     PAPER_NOT_EMPTY("5001", "试卷不能为空"),

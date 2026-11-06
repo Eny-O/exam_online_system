@@ -27,6 +27,8 @@ import java.util.List;
 @Slf4j
 public class FileManagementServiceImpl implements FileManagementService {
 
+    // 上传文件大小上限 5MB
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     @Autowired
     private QuestionManagementService questionManagementService;
@@ -39,6 +41,7 @@ public class FileManagementServiceImpl implements FileManagementService {
     @Override
     public BatchInsertResult uploadFile(MultipartFile file) {
         if (file == null || file.isEmpty()) throw new BusinessException(ErrorCodeEnum.FILE_EMPTY);
+        if (file.getSize() > MAX_FILE_SIZE) throw new BusinessException(ErrorCodeEnum.FILE_TOO_LARGE);
         String filename = file.getOriginalFilename();
         if (filename == null || !filename.endsWith(".xlsx"))
             throw new BusinessException(ErrorCodeEnum.FILE_FORMAT_ERROR);

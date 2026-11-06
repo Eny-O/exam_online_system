@@ -323,8 +323,16 @@ const handleBatchImport = () => {
   importDialogVisible.value = true;
 };
 
+// 上传文件大小上限 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 // 文件选择变化
 const handleFileChange = (file) => {
+  if (file.raw.size > MAX_FILE_SIZE) {
+    ElMessage.error("文件大小不能超过 5MB");
+    importFile.value = null;
+    return;
+  }
   importFile.value = file.raw;
   importResult.value = null;
 };
