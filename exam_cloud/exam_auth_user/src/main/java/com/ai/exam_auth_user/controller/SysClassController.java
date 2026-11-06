@@ -11,6 +11,7 @@ import com.ai.exam_auth_user.pojo.dto.ClassUpdateDTO;
 import com.ai.exam_auth_user.pojo.vo.SysClassVO;
 import com.ai.exam_auth_user.security.TeacherClassScope;
 import com.ai.exam_auth_user.service.user.ISysClassService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -48,7 +49,8 @@ public class SysClassController {
         List<Integer> scopedClassIds = teacherClassScope.scopedClassIds();
         List<SysClass> list;
         if (scopedClassIds == null) {
-            list = sysClassService.list();
+            list = sysClassService.list(new LambdaQueryWrapper<SysClass>()
+                    .eq(SysClass::getDeleted, 0));
         } else if (scopedClassIds.isEmpty()) {
             list = Collections.emptyList();
         } else {
@@ -85,11 +87,19 @@ public class SysClassController {
         return ResponseResult.success();
     }
 
-    @Operation(summary = "删除班级")
+    @Operation(summary = "停用班级")
     @PreAuthorize("hasAuthority('sys:class:delete')")
     @DeleteMapping("/delete")
     public ResponseResult<Void> delete(@RequestParam Integer id) {
         sysClassService.deleteClass(id);
+        return ResponseResult.success();
+    }
+
+    @Operation(summary = "恢复班级")
+    @PreAuthorize("hasAuthority('sys:class:edit')")
+    @PutMapping("/restore")
+    public ResponseResult<Void> restore(@RequestParam Integer id) {
+        sysClassService.restoreClass(id);
         return ResponseResult.success();
     }
 

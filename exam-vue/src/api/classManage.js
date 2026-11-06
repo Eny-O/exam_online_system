@@ -15,7 +15,12 @@ export function updateClass(data) {
   return request.put("/sysClass/update", data);
 }
 
-/** 删除班级 */
+/** 停用班级 */
 export function deleteClass(id) {
   return request.delete("/sysClass/delete", { params: { id } });
+}
+
+/** 恢复班级 */
+export function restoreClass(id) {
+  return request.put("/sysClass/restore", {}, { params: { id } });
 }

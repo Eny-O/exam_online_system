@@ -20,11 +20,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * <p>
@@ -70,7 +72,8 @@ public class SysClassServiceImpl extends ServiceImpl<SysClassMapper, SysClass> i
         }
         SysClass entity = new SysClass();
         entity.setClassName(className);
-        entity.setGrade(normalizeGrade(dto.getGrade()));
+        entity.setGrade(normalizeText(dto.getGrade()));
+        entity.setRemark(normalizeText(dto.getRemark()));
         try {
             save(entity);
         } catch (DuplicateKeyException e) {
@@ -89,7 +92,8 @@ public class SysClassServiceImpl extends ServiceImpl<SysClassMapper, SysClass> i
             throw new BusinessException(ErrorCodeEnum.CLASS_NAME_DUPLICATE);
         }
         entity.setClassName(className);
-        entity.setGrade(normalizeGrade(dto.getGrade()));
+        entity.setGrade(normalizeText(dto.getGrade()));
+        entity.setRemark(normalizeText(dto.getRemark()));
         try {
             updateById(entity);
         } catch (DuplicateKeyException e) {
@@ -106,41 +110,92 @@ public class SysClassServiceImpl extends ServiceImpl<SysClassMapper, SysClass> i
         if (entity == null) {
             throw new BusinessException(ErrorCodeEnum.CLASS_NOT_FOUND);
         }
-        if (userClassService.countByClassId(id) > 0) {
-            throw new BusinessException(ErrorCodeEnum.CLASS_HAS_MEMBERS);
+        if (isDisabled(entity)) {
+            return;
         }
-        ResponseResult<Boolean> result;
+        long memberCount = userClassService.countByClassId(id);
+        if (memberCount > 0) {
+            log.info("停用班级仍有本库师生关联。classId={}, count={}", id, memberCount);
+        }
         try {
-            result = examClassFeignClient.hasClassReference(id);
+            ResponseResult<Boolean> result = examClassFeignClient.hasClassReference(id);
+            if (result != null && Boolean.TRUE.equals(result.getData())) {
+                log.info("停用班级仍被历史考试引用。classId={}", id);
+            }
         } catch (Exception e) {
-            log.error("班级考试引用校验失败。classId={}", id, e);
-            throw new BusinessException(ErrorCodeEnum.CLASS_REF_CHECK_FAILED);
+            log.warn("班级考试引用校验失败。classId={}", id, e);
         }
-        if (result == null || result.getData() == null) {
-            throw new BusinessException(ErrorCodeEnum.CLASS_REF_CHECK_FAILED);
+        SysClass update = new SysClass();
+        update.setId(id);
+        update.setDeleted(id);
+        updateById(update);
+    }
+
+    @Override
+    public void restoreClass(Integer id) {
+        if (id == null) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
         }
-        if (Boolean.TRUE.equals(result.getData())) {
-            throw new BusinessException(ErrorCodeEnum.CLASS_REFERENCED_BY_EXAM);
+        SysClass entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCodeEnum.CLASS_NOT_FOUND);
         }
+        if (!isDisabled(entity)) {
+            return;
+        }
+        if (countByName(entity.getClassName(), id) > 0) {
+            throw new BusinessException(ErrorCodeEnum.CLASS_NAME_DUPLICATE);
+        }
+        SysClass update = new SysClass();
+        update.setId(id);
+        update.setDeleted(0);
         try {
-            removeById(id);
-        } catch (DataIntegrityViolationException e) {
-            throw new BusinessException(ErrorCodeEnum.CLASS_HAS_MEMBERS);
+            updateById(update);
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException(ErrorCodeEnum.CLASS_NAME_DUPLICATE);
         }
+    }
+
+    @Override
+    public List<Integer> filterActiveClassIds(Collection<Integer> classIds) {
+        if (classIds == null || classIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Integer> ids = classIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<SysClass> active = list(new LambdaQueryWrapper<SysClass>()
+                .select(SysClass::getId)
+                .in(SysClass::getId, ids)
+                .eq(SysClass::getDeleted, 0));
+        if (active == null || active.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return active.stream().map(SysClass::getId).toList();
+    }
+
+    private boolean isDisabled(SysClass entity) {
+        Integer deleted = entity.getDeleted();
+        return deleted != null && deleted != 0;
     }
 
     private long countByName(String className, Integer excludeId) {
         Long count = baseMapper.selectCount(new LambdaQueryWrapper<SysClass>()
                 .eq(SysClass::getClassName, className)
+                .eq(SysClass::getDeleted, 0)
                 .ne(excludeId != null, SysClass::getId, excludeId));
         return count == null ? 0L : count;
     }
 
-    private String normalizeGrade(String grade) {
-        if (grade == null) {
+    private String normalizeText(String text) {
+        if (text == null) {
             return null;
         }
-        String trimmed = grade.trim();
+        String trimmed = text.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 }

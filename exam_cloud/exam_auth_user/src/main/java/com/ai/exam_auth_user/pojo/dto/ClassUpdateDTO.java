@@ -22,4 +22,8 @@ public class ClassUpdateDTO {
     @Size(max = 20, message = "年级不能超过20个字符")
     @Schema(description = "年级")
     private String grade;
+
+    @Size(max = 200, message = "备注不能超过200个字符")
+    @Schema(description = "备注")
+    private String remark;
 }

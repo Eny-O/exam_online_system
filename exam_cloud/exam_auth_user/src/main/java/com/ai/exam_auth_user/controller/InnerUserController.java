@@ -7,6 +7,7 @@ import com.ai.exam_auth_user.mapper.UserMapper;
 import com.ai.exam_auth_user.pojo.dos.SysClass;
 import com.ai.exam_auth_user.pojo.dos.User;
 import com.ai.exam_auth_user.pojo.enums.UserClassRelationEnum;
+import com.ai.exam_auth_user.service.user.ISysClassService;
 import com.ai.exam_auth_user.service.user.IUserClassService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,6 +43,9 @@ public class InnerUserController {
     @Autowired
     private IUserClassService userClassService;
 
+    @Autowired
+    private ISysClassService sysClassService;
+
     @Operation(summary = "按ID批量查询用户摘要")
     @GetMapping("/user/briefs")
     public List<UserBriefDTO> listUserBriefs(@RequestParam("userIds") List<Integer> userIds) {
@@ -72,7 +76,9 @@ public class InnerUserController {
         if (userId == null) {
             return Collections.emptyList();
         }
-        return userClassService.listClassIds(userId, UserClassRelationEnum.TEACHER);
+        List<Integer> classIds = userClassService.listClassIds(userId, UserClassRelationEnum.TEACHER);
+        List<Integer> activeIds = sysClassService.filterActiveClassIds(classIds);
+        return activeIds == null ? Collections.emptyList() : activeIds;
     }
 
     @Operation(summary = "按ID批量查询班级摘要")

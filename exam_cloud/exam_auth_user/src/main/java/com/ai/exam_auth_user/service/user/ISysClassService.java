@@ -8,6 +8,9 @@ import com.ai.exam_auth_user.pojo.vo.SysClassVO;
 import com.ai.exam_common.common.pojo.result.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * <p>
  * 班级表
@@ -34,7 +37,17 @@ public interface ISysClassService extends IService<SysClass> {
     void updateClass(ClassUpdateDTO dto);
 
     /**
-     * 删除班级
+     * 停用班级
      */
     void deleteClass(Integer id);
+
+    /**
+     * 恢复班级
+     */
+    void restoreClass(Integer id);
+
+    /**
+     * 过滤出仍处于启用状态的班级ID
+     */
+    List<Integer> filterActiveClassIds(Collection<Integer> classIds);
 }

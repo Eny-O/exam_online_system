@@ -40,17 +40,34 @@
         <el-table-column prop="grade" label="年级" min-width="140">
           <template #default="{ row }">{{ row.grade || "--" }}</template>
         </el-table-column>
+        <el-table-column label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="isDisabled(row) ? 'info' : 'success'" size="small">
+              {{ isDisabled(row) ? "已停用" : "启用" }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="180">
+          <template #default="{ row }">{{ row.remark || "--" }}</template>
+        </el-table-column>
         <el-table-column prop="createTime" label="创建时间" min-width="180">
           <template #default="{ row }">{{ row.createTime || "--" }}</template>
         </el-table-column>
         <el-table-column label="操作" width="160" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleEdit(row)">
-              编辑
-            </el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">
-              删除
-            </el-button>
+            <template v-if="isDisabled(row)">
+              <el-button link type="success" size="small" @click="handleRestore(row)">
+                恢复
+              </el-button>
+            </template>
+            <template v-else>
+              <el-button link type="primary" size="small" @click="handleEdit(row)">
+                编辑
+              </el-button>
+              <el-button link type="danger" size="small" @click="handleDisable(row)">
+                停用
+              </el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -98,6 +115,16 @@
             show-word-limit
           />
         </el-form-item>
+        <el-form-item label="备注" prop="remark">
+          <el-input
+            v-model="formData.remark"
+            type="textarea"
+            :rows="3"
+            placeholder="如：改名、停用原因"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="drawerVisible = false">取消</el-button>
@@ -118,6 +145,7 @@ import {
   addClass,
   updateClass,
   deleteClass,
+  restoreClass,
 } from "@/api/classManage";
 
 const loading = ref(false);
@@ -129,7 +157,9 @@ const tableData = ref([]);
 
 const searchForm = reactive({ className: "", grade: "" });
 const pagination = reactive({ currentPage: 1, pageSize: 10, total: 0 });
-const formData = reactive({ id: null, className: "", grade: "" });
+const formData = reactive({ id: null, className: "", grade: "", remark: "" });
+
+const isDisabled = (row) => row.deleted != null && row.deleted !== 0;
 
 const formRules = {
   className: [
@@ -137,6 +167,7 @@ const formRules = {
     { max: 50, message: "班级名称不能超过50个字符", trigger: "blur" },
   ],
   grade: [{ max: 20, message: "年级不能超过20个字符", trigger: "blur" }],
+  remark: [{ max: 200, message: "备注不能超过200个字符", trigger: "blur" }],
 };
 
 const fetchList = async () => {
@@ -162,6 +193,7 @@ const resetForm = () => {
   formData.id = null;
   formData.className = "";
   formData.grade = "";
+  formData.remark = "";
 };
 
 const handleAdd = () => {
@@ -176,22 +208,49 @@ const handleEdit = (row) => {
   formData.id = row.id;
   formData.className = row.className || "";
   formData.grade = row.grade || "";
+  formData.remark = row.remark || "";
   drawerVisible.value = true;
 };
 
-const handleDelete = (row) => {
-  ElMessageBox.confirm(`确定要删除班级「${row.className}」吗？`, "删除确认", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  })
+const handleDisable = (row) => {
+  ElMessageBox.confirm(
+    `确定要停用班级「${row.className}」吗？停用后历史考试仍可复查。`,
+    "停用确认",
+    {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    }
+  )
     .then(async () => {
       try {
         await deleteClass(row.id);
-        ElMessage.success("删除成功");
+        ElMessage.success("停用成功");
         fetchList();
       } catch (error) {
-        console.error("删除班级失败:", error);
+        console.error("停用班级失败:", error);
+      }
+    })
+    .catch(() => {});
+};
+
+const handleRestore = (row) => {
+  ElMessageBox.confirm(
+    `确定要恢复班级「${row.className}」吗？`,
+    "恢复确认",
+    {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    }
+  )
+    .then(async () => {
+      try {
+        await restoreClass(row.id);
+        ElMessage.success("恢复成功");
+        fetchList();
+      } catch (error) {
+        console.error("恢复班级失败:", error);
       }
     })
     .catch(() => {});
@@ -205,6 +264,7 @@ const handleSubmit = async () => {
     const payload = {
       className: formData.className.trim(),
       grade: formData.grade.trim() || null,
+      remark: formData.remark.trim() || null,
     };
     if (isEdit.value) {
       await updateClass({ id: formData.id, ...payload });

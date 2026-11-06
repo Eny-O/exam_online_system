@@ -1,5 +1,7 @@
 package com.ai.exam_auth_user.pojo.dos;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -15,6 +17,7 @@ import java.time.LocalDateTime;
 @Data
 public class SysClass {
 
+    @TableId(value = "id", type = IdType.AUTO)
     private Integer id; //
 
     private String className; // 班级名称
@@ -24,5 +27,9 @@ public class SysClass {
     private LocalDateTime createTime; //
 
     private LocalDateTime updateTime; //
+
+    private Integer deleted; // 0-启用；停用后写为该行id
+
+    private String remark; // 备注
 
 }

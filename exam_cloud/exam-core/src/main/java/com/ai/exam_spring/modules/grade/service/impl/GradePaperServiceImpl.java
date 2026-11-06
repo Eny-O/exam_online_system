@@ -97,6 +97,7 @@ public class GradePaperServiceImpl implements GradePaperService {
             gradeStudentVO.setStudentId(user.getId());
             gradeStudentVO.setStudentName(user.getRealName());
             gradeStudentVO.setStudentNo(user.getStudentNo());
+            gradeStudentVO.setClassId(user.getClassId());
             StudentScoreSummaryVO summary = scoreMap.get(user.getId());
             gradeStudentVO.setObjectiveScore(summary == null ? 0.0 : summary.getObjectiveScore());
             gradeStudentVO.setSubjectiveScore(summary == null ? 0.0 : summary.getSubjectiveScore());

@@ -14,4 +14,8 @@ public class SysClassVO {
     private String grade; // 年级
 
     private LocalDateTime createTime; // 创建时间
+
+    private Integer deleted; // 0-启用；停用后写为该行id
+
+    private String remark; // 备注
 }

@@ -17,6 +17,22 @@
           :value="item.value"
         />
       </el-select>
+      <el-select
+        v-model="currentClassId"
+        placeholder="全部班级"
+        clearable
+        :disabled="!currentExamId"
+        style="width: 220px"
+        @change="handleClassChange"
+      >
+        <el-option
+          v-for="item in classOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+      <span class="nav-tip">清空班级即查看该考试全部成绩</span>
     </div>
     <!-- 顶部核心指标区 -->
     <el-row :gutter="20" class="top-cards-section">
@@ -161,6 +177,13 @@
         />
 
         <el-table-column
+          prop="className"
+          label="班级"
+          min-width="130"
+          show-overflow-tooltip
+        />
+
+        <el-table-column
           prop="objectiveScore"
           label="客观题得分"
           min-width="130"
@@ -216,7 +239,7 @@
           v-model:current-page="pagination.currentPage"
           v-model:page-size="pagination.pageSize"
           :page-sizes="[10, 20, 50]"
-          :total="pagination.total"
+          :total="filteredData.length"
           layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
@@ -227,7 +250,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, nextTick } from "vue";
+import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from "vue";
 import * as echarts from "echarts";
 import { ElMessage } from "element-plus";
 import {
@@ -239,7 +262,7 @@ import {
   Download,
 } from "@element-plus/icons-vue";
 import { useRouter, useRoute } from "vue-router";
-import { getExamPage, getGradeStudentList } from "@/api/examTask";
+import { getExamPage, getGradeStudentList, getClassList } from "@/api/examTask";
 
 //初始化路由
 const router = useRouter();
@@ -251,6 +274,15 @@ const currentExamId = ref(route.query.examId || "");
 // 考试下拉选项
 const examOptions = ref([]);
 const examLoading = ref(false);
+
+// 当前班级ID，空串表示不按班级过滤
+const currentClassId = ref("");
+
+// 班级ID到名称的映射
+const classNameMap = ref({});
+
+// 表格数据
+const tableData = ref([]);
 
 // 加载考试列表
 const loadExamOptions = async () => {
@@ -269,15 +301,62 @@ const loadExamOptions = async () => {
   }
 };
 
+// 加载班级名称
+const loadClassNameMap = async () => {
+  try {
+    const res = await getClassList();
+    const list = Array.isArray(res.data) ? res.data : [];
+    const map = {};
+    list.forEach((c) => {
+      if (c?.id != null) map[String(c.id)] = c.className || `班级 ${c.id}`;
+    });
+    classNameMap.value = map;
+  } catch (e) {
+    console.error("加载班级列表失败", e);
+  }
+};
+
+// 班级名称
+const classNameOf = (classId) => {
+  if (classId == null) return "—";
+  return classNameMap.value[String(classId)] || `班级 ${classId}`;
+};
+
+// 班级下拉选项
+const classOptions = computed(() => {
+  const ids = Array.from(
+    new Set(tableData.value.map((s) => s.classId).filter((id) => id != null))
+  );
+  return ids.map((id) => ({ value: id, label: classNameOf(id) }));
+});
+
+// 按班级过滤后的成绩数据
+const filteredData = computed(() => {
+  const classId = currentClassId.value;
+  if (classId === "" || classId == null) return tableData.value;
+  return tableData.value.filter(
+    (s) => s.classId != null && String(s.classId) === String(classId)
+  );
+});
+
 // 切换考试
 const handleExamChange = (val) => {
   currentExamId.value = val;
+  currentClassId.value = "";
+  pagination.currentPage = 1;
   loadTableData();
+};
+
+// 切换班级
+const handleClassChange = async () => {
+  pagination.currentPage = 1;
+  await nextTick();
+  drawCharts();
 };
 
 // 统计数据（由成绩列表计算）
 const statistics = computed(() => {
-  const list = tableData.value;
+  const list = filteredData.value;
   const total = list.length;
   if (total === 0) {
     return { totalStudents: 0, avgScore: 0, highestScore: 0, lowestScore: 0, passRate: 0, excellentRate: 0 };
@@ -301,7 +380,7 @@ const statistics = computed(() => {
 // 分数段分布数据
 const scoreDistribution = computed(() => {
   const buckets = { "<60": 0, "60-70": 0, "70-80": 0, "80-90": 0, ">90": 0 };
-  tableData.value.forEach((s) => {
+  filteredData.value.forEach((s) => {
     const v = s.totalScore || 0;
     if (v < 60) buckets["<60"]++;
     else if (v < 70) buckets["60-70"]++;
@@ -314,7 +393,7 @@ const scoreDistribution = computed(() => {
 
 // 主客观平均得分（雷达图）
 const abilityRadar = computed(() => {
-  const list = tableData.value;
+  const list = filteredData.value;
   if (list.length === 0) return [0, 0];
   const objSum = list.reduce((a, s) => a + (s.objectiveScore || 0), 0);
   const subSum = list.reduce((a, s) => a + (s.subjectiveScore || 0), 0);
@@ -333,21 +412,17 @@ let questionChart = null;
 // 加载状态
 const loading = ref(false);
 
-// 表格数据
-const tableData = ref([]);
-
 // 分页信息
 const pagination = reactive({
   currentPage: 1,
   pageSize: 10,
-  total: 0,
 });
 
 // 计算分页后的数据
 const paginatedData = computed(() => {
   const start = (pagination.currentPage - 1) * pagination.pageSize;
   const end = start + pagination.pageSize;
-  return tableData.value.slice(start, end);
+  return filteredData.value.slice(start, end);
 });
 
 // 表格数据由 loadTableData 从接口加载
@@ -419,18 +494,14 @@ const initScoreDistributionChart = () => {
   };
 
   chart.setOption(option);
-
-  // 响应式调整
-  window.addEventListener("resize", () => {
-    chart.resize();
-  });
 };
 
 // 初始化题型得分率雷达图
 const initQuestionTypeChart = () => {
   if (!questionTypeChartRef.value) return;
 
-  const chart = echarts.init(questionTypeChartRef.value);
+  if (questionChart) questionChart.dispose();
+  const chart = questionChart = echarts.init(questionTypeChartRef.value);
 
   const option = {
     tooltip: {
@@ -488,35 +559,33 @@ const initQuestionTypeChart = () => {
   };
 
   chart.setOption(option);
-
-  // 响应式调整
-  window.addEventListener("resize", () => {
-    chart.resize();
-  });
 };
 
 // 加载表格数据
 const loadTableData = async () => {
   if (!currentExamId.value) {
     tableData.value = [];
-    pagination.total = 0;
+    currentClassId.value = "";
+    pagination.currentPage = 1;
     return;
   }
   loading.value = true;
   try {
     const res = await getGradeStudentList(currentExamId.value);
-    const list = res.data || [];
+    const list = Array.isArray(res.data) ? res.data : [];
     tableData.value = list.map((s, index) => ({
       id: s.studentId,
       rank: index + 1,
       studentNo: s.studentNo,
       studentName: s.studentName,
+      classId: s.classId ?? null,
+      className: classNameOf(s.classId),
       objectiveScore: s.objectiveScore,
       subjectiveScore: s.subjectiveScore,
       totalScore: s.totalScore,
       status: s.status,
     }));
-    pagination.total = tableData.value.length;
+    pagination.currentPage = 1;
     await nextTick();
     drawCharts();
   } catch (e) {
@@ -565,16 +634,30 @@ const drawCharts = () => {
   initQuestionTypeChart();
 };
 
+// 窗口尺寸变化
+const handleResize = () => {
+  scoreChart?.resize();
+  questionChart?.resize();
+};
+
 // 初始化
 onMounted(async () => {
-  await loadExamOptions();
+  window.addEventListener("resize", handleResize);
+  await Promise.all([loadExamOptions(), loadClassNameMap()]);
   if (currentExamId.value) {
     await loadTableData();
+  } else {
+    await nextTick();
+    drawCharts();
   }
-  nextTick(() => {
-    initScoreDistributionChart();
-    initQuestionTypeChart();
-  });
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", handleResize);
+  scoreChart?.dispose();
+  questionChart?.dispose();
+  scoreChart = null;
+  questionChart = null;
 });
 </script>
 
@@ -587,7 +670,16 @@ onMounted(async () => {
 
 /* 顶部导航栏 */
 .nav-bar-section {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 20px;
+}
+
+.nav-tip {
+  font-size: 13px;
+  color: #909399;
 }
 
 /* 顶部核心指标区 */

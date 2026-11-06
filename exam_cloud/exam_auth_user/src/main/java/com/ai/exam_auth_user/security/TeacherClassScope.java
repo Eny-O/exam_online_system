@@ -1,6 +1,7 @@
 package com.ai.exam_auth_user.security;
 
 import com.ai.exam_auth_user.pojo.enums.UserClassRelationEnum;
+import com.ai.exam_auth_user.service.user.ISysClassService;
 import com.ai.exam_auth_user.service.user.IUserClassService;
 import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import com.ai.exam_common.common.exception.BusinessException;
@@ -22,8 +23,11 @@ public class TeacherClassScope {
     @Autowired
     private IUserClassService userClassService;
 
+    @Autowired
+    private ISysClassService sysClassService;
+
     /**
-     * 查询当前登录用户可见的班级ID
+     * 查询当前登录用户可见的启用班级ID
      *
      * @return null 表示不限制；教师返回任教班级ID列表
      */
@@ -36,7 +40,9 @@ public class TeacherClassScope {
         if (!Integer.valueOf(2).equals(userType)) {
             return null;
         }
-        return userClassService.listClassIds(Integer.valueOf(userId), UserClassRelationEnum.TEACHER);
+        List<Integer> classIds = userClassService.listClassIds(Integer.valueOf(userId), UserClassRelationEnum.TEACHER);
+        List<Integer> activeIds = sysClassService.filterActiveClassIds(classIds);
+        return activeIds == null ? List.of() : activeIds;
     }
 
     /**

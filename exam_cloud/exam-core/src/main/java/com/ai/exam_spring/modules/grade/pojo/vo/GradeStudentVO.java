@@ -16,6 +16,9 @@ public class GradeStudentVO {
     @Schema(description = "学生学号")
     private String studentNo;
 
+    @Schema(description = "学生归属班级ID")
+    private Integer classId;
+
     @Schema(description = "客观题得分")
     private Double objectiveScore;
 
