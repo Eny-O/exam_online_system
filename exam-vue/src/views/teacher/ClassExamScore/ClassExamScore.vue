@@ -139,7 +139,12 @@
       <template #header>
         <div class="table-header">
           <span>成绩明细</span>
-          <el-button type="primary" @click="handleExport">
+          <el-button
+            type="primary"
+            :loading="exporting"
+            :disabled="!currentExamId || filteredData.length === 0"
+            @click="handleExport"
+          >
             <el-icon><Download /></el-icon>
             导出成绩单(Excel)
           </el-button>
@@ -263,6 +268,7 @@ import {
 } from "@element-plus/icons-vue";
 import { useRouter, useRoute } from "vue-router";
 import { getExamPage, getGradeStudentList, getClassList } from "@/api/examTask";
+import { exportAoaToExcel } from "@/utils/exportExcel";
 
 //初始化路由
 const router = useRouter();
@@ -411,6 +417,9 @@ let questionChart = null;
 
 // 加载状态
 const loading = ref(false);
+
+// 导出状态
+const exporting = ref(false);
 
 // 分页信息
 const pagination = reactive({
@@ -573,7 +582,10 @@ const loadTableData = async () => {
   try {
     const res = await getGradeStudentList(currentExamId.value);
     const list = Array.isArray(res.data) ? res.data : [];
-    tableData.value = list.map((s, index) => ({
+    const sorted = [...list].sort(
+      (a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0)
+    );
+    tableData.value = sorted.map((s, index) => ({
       id: s.studentId,
       rank: index + 1,
       studentNo: s.studentNo,
@@ -598,21 +610,83 @@ const loadTableData = async () => {
 
 // 导出成绩单
 const handleExport = () => {
-  ElMessage.success("正在导出成绩单...");
-  // TODO: 实现Excel导出逻辑
-  setTimeout(() => {
+  if (exporting.value) return;
+  if (!currentExamId.value || filteredData.value.length === 0) {
+    ElMessage.warning("暂无可导出的成绩数据");
+    return;
+  }
+
+  const examLabel =
+    examOptions.value.find(
+      (o) => String(o.value) === String(currentExamId.value)
+    )?.label || `考试${currentExamId.value}`;
+  const classLabel =
+    currentClassId.value === "" || currentClassId.value == null
+      ? "全部班级"
+      : classOptions.value.find(
+          (o) => String(o.value) === String(currentClassId.value)
+        )?.label || `班级${currentClassId.value}`;
+
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const dateText = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const dateCode = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+
+  const rows = filteredData.value.map((s) => [
+    s.rank,
+    s.studentNo ?? "",
+    s.studentName ?? "",
+    s.className ?? "—",
+    s.objectiveScore ?? 0,
+    s.subjectiveScore ?? 0,
+    s.totalScore ?? 0,
+    s.status ?? "",
+  ]);
+
+  const stats = statistics.value;
+  const aoa = [
+    [`${examLabel} 成绩单`],
+    [`班级：${classLabel}`, `导出时间：${dateText}`],
+    [],
+    ["排名", "学号", "学生姓名", "班级", "客观题得分", "主观题得分", "总分", "状态"],
+    ...rows,
+    [],
+    ["统计摘要"],
+    ["参考人数", `${stats.totalStudents}人`],
+    ["平均分", `${stats.avgScore}分`],
+    ["最高分", stats.highestScore],
+    ["最低分", stats.lowestScore],
+    ["及格率", `${stats.passRate}%`],
+    ["优秀率", `${stats.excellentRate}%`],
+  ];
+
+  const safeName = (text) => String(text).replace(/[\\\/:*?"<>|]/g, "_");
+  const fileName = `${safeName(examLabel)}_${safeName(classLabel)}_成绩单_${dateCode}.xlsx`;
+
+  exporting.value = true;
+  try {
+    exportAoaToExcel(aoa, fileName, "成绩单", [8, 16, 12, 16, 14, 14, 10, 12]);
     ElMessage.success("导出成功");
-  }, 1500);
+  } catch (e) {
+    console.error("导出成绩单失败", e);
+    ElMessage.error("导出成绩单失败");
+  } finally {
+    exporting.value = false;
+  }
 };
 
 // 查看试卷
 const handleViewPaper = (row) => {
-  ElMessage.info(`查看 ${row.studentName} 的试卷`);
+  const examId = currentExamId.value;
+  if (!row?.id || !examId) {
+    ElMessage.error("缺少学生或考试参数");
+    return;
+  }
   router.push({
     path: "/teacher/exam-detail",
     query: {
       studentId: row.id,
-      examId: currentExamId.value,
+      examId,
     },
   });
 };

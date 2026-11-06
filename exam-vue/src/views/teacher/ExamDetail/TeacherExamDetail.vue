@@ -28,17 +28,9 @@ NEW_FILE_CODE
 
           <div class="info-right">
             <div class="score-summary">
-              <div class="score-item">
-                <span class="label">客观题</span>
-                <span class="value">{{ scores.objective }}/50</span>
-              </div>
-              <div class="score-item">
-                <span class="label">主观题</span>
-                <span class="value">{{ scores.subjective }}/50</span>
-              </div>
               <div class="score-item total">
                 <span class="label">总分</span>
-                <span class="value">{{ totalScore }}/100</span>
+                <span class="value">{{ totalScore }}<span v-if="fullScore > 0">/{{ fullScore }}</span></span>
               </div>
             </div>
 
@@ -87,8 +79,13 @@ const scores = ref({
   subjective: 0,
 });
 
+// 学生得分与试卷满分
+const earnedScore = ref(null);
+const fullScore = ref(0);
+
 // 总分数计算
 const totalScore = computed(() => {
+  if (earnedScore.value != null) return earnedScore.value;
   return scores.value.objective + scores.value.subjective;
 });
 
@@ -116,6 +113,7 @@ const loadDetail = async () => {
     ElMessage.error("缺少学生或考试参数");
     return;
   }
+  let info = null;
   try {
     const [paperRes, answerRes, studentListRes] = await Promise.all([
       getGradePaper(examId),
@@ -123,6 +121,7 @@ const loadDetail = async () => {
       getGradeStudentList(examId),
     ]);
     const paper = paperRes.data || {};
+    fullScore.value = Number(paper.totalScore) || 0;
     const answerMap = {};
     (answerRes.data || []).forEach((a) => {
       answerMap[a.questionId] = a;
@@ -151,9 +150,10 @@ const loadDetail = async () => {
       };
     });
     scores.value = { objective: obj, subjective: sub };
-    const info = (studentListRes.data || []).find(
+    info = (studentListRes.data || []).find(
       (s) => String(s.studentId) === String(studentId)
     );
+    earnedScore.value = info?.totalScore ?? null;
     studentInfo.value = {
       name: info ? info.studentName : `学生${studentId}`,
       studentNo: info ? info.studentNo : "",
@@ -165,21 +165,24 @@ const loadDetail = async () => {
     ElMessage.error("加载答卷详情失败");
     return;
   }
-  // 补充考试时间与班级信息（失败不影响主流程）
+  // 补充考试时间
   try {
     const examRes = await getExamDetailById(examId);
-    const exam = examRes.data || {};
-    studentInfo.value.startTime = exam.startTime || "";
-    try {
-      const classRes = await getClassList();
-      const classList = classRes.data || [];
-      const cls = classList.find((c) => c.id === exam.classId);
-      studentInfo.value.className = cls ? cls.name : "";
-    } catch (ce) {
-      console.error("加载班级信息失败", ce);
-    }
+    studentInfo.value.startTime = examRes.data?.startTime || "";
   } catch (ee) {
     console.error("加载考试信息失败", ee);
+  }
+  // 补充学生所属班级
+  try {
+    const classRes = await getClassList();
+    const classList = Array.isArray(classRes.data) ? classRes.data : [];
+    const classId = info?.classId;
+    const cls = classId != null
+      ? classList.find((c) => String(c.id) === String(classId))
+      : null;
+    studentInfo.value.className = cls?.className || (classId != null ? `班级 ${classId}` : "—");
+  } catch (ce) {
+    console.error("加载班级信息失败", ce);
   }
 };
 
