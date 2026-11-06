@@ -38,6 +38,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +51,7 @@ import java.util.stream.Collectors;
 import java.util.function.Function;
 
 
+@Slf4j
 @Service
 public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper, Exam> implements IExamManagementService {
 
@@ -236,6 +238,27 @@ public class ExamManagementServiceImpl extends ServiceImpl<ExamManagementMapper,
         // 如果要改变状态是批阅完成且本次考试的所有学生考试状态都不是已批阅和缺考，则不允许改变状态
         if (status == ExamEnum.REVIEW_FINISHED && !areAllStudentExamGraded(examId)) {
             throw new BusinessException(ErrorCodeEnum.EXAM_NOT_ALL_GRADED);
+        }
+        // 结束考试（流转到待批阅）时，强制收尾尚未交卷的学生，避免其永久停留在 pending
+        if (status == ExamEnum.PENDING_REVIEW) {
+            List<ExamStudent> pendingStudents = examStudentService.list(new LambdaQueryWrapper<ExamStudent>()
+                    .eq(ExamStudent::getExamId, examId)
+                    .eq(ExamStudent::getStatus, StudentExamEnum.PENDING));
+            for (ExamStudent es : pendingStudents) {
+                Integer sid = es.getStudentId();
+                try {
+                    examStudentService.forceSubmitOrMarkAbsent(examId, sid);
+                } catch (Exception e) {
+                    // 兜底：收尾失败时强制判缺考，确保不留永久 pending
+                    log.error("结束考试收尾失败，强制判缺考。examId={} studentId={}", examId, sid, e);
+                    examStudentService.lambdaUpdate()
+                            .eq(ExamStudent::getExamId, examId)
+                            .eq(ExamStudent::getStudentId, sid)
+                            .eq(ExamStudent::getStatus, StudentExamEnum.PENDING)
+                            .set(ExamStudent::getStatus, StudentExamEnum.ABSENT)
+                            .update();
+                }
+            }
         }
         // 更新
         Exam newExam = new Exam();
