@@ -1,7 +1,9 @@
 package com.ai.exam_auth_user.service.user;
 
+import com.ai.exam_common.common.pojo.result.BatchInsertResult;
 import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_auth_user.pojo.dto.UserAddDTO;
+import org.springframework.web.multipart.MultipartFile;
 import com.ai.exam_auth_user.pojo.dto.RegisterDTO;
 import com.ai.exam_auth_user.pojo.dto.UserQueryDTO;
 import com.ai.exam_auth_user.pojo.dto.UserUpdateDTO;
@@ -18,6 +20,11 @@ public interface IUserManageService {
      * 新增用户
      */
     void addUser(UserAddDTO userAddDTO);
+
+    /**
+     * 批量导入学生（仅学生）：返回成功数与失败行详情
+     */
+    BatchInsertResult importStudents(MultipartFile file);
 
     /**
      * 学生自助注册（固定角色为学生）

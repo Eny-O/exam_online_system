@@ -1,3 +1,4 @@
+import axios from "axios";
 import request from "@/utils/request";
 
 /**
@@ -40,4 +41,25 @@ export function resetUserPassword(id) {
  */
 export function getClassList() {
   return request.get("/sysClass/list");
+}
+
+/**
+ * 批量导入学生（上传 Excel）
+ */
+export function importUsers(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return request.post("/user/import", formData);
+}
+
+/**
+ * 下载学生导入模板（二进制流，走裸 axios）
+ */
+export function downloadUserTemplate() {
+  return axios({
+    url: "/api/user/template",
+    method: "GET",
+    responseType: "blob",
+    headers: { token: localStorage.getItem("token") },
+  });
 }

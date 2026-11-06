@@ -62,6 +62,9 @@
         <el-button type="primary" @click="handleAdd">
           <el-icon><Plus /></el-icon>新增用户
         </el-button>
+        <el-button @click="handleImportDialog">
+          <el-icon><Upload /></el-icon>批量导入
+        </el-button>
       </div>
     </div>
 
@@ -261,12 +264,64 @@
         </div>
       </template>
     </el-drawer>
+
+    <!-- 批量导入学生对话框 -->
+    <el-dialog
+      v-model="importDialogVisible"
+      title="批量导入学生"
+      width="500px"
+      destroy-on-close
+    >
+      <el-upload
+        drag
+        :auto-upload="false"
+        :limit="1"
+        accept=".xlsx"
+        :on-change="handleFileChange"
+        :on-remove="handleFileRemove"
+        :on-exceed="handleFileExceed"
+      >
+        <el-icon class="el-icon--upload"><Upload /></el-icon>
+        <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+        <template #tip>
+          <div class="el-upload__tip">仅支持 .xlsx 格式文件，且仅导入学生（用户类型固定为学生）</div>
+        </template>
+      </el-upload>
+
+      <el-alert
+        v-if="importResult"
+        :type="importResult.failCount > 0 ? 'warning' : 'success'"
+        :closable="false"
+        style="margin-top: 16px"
+      >
+        <div>
+          成功导入 {{ importResult.successCount }} 人
+          <span v-if="importResult.failCount > 0">，{{ importResult.failCount }} 人失败</span>
+        </div>
+        <ul v-if="importResult.failCount > 0" style="margin: 8px 0 0; padding-left: 20px; max-height: 160px; overflow: auto;">
+          <li v-for="(msg, idx) in importResult.failMessages" :key="idx" style="margin-bottom: 2px;">{{ msg }}</li>
+        </ul>
+      </el-alert>
+
+      <template #footer>
+        <el-button @click="handleDownloadTemplate">下载模板</el-button>
+        <el-button @click="importDialogVisible = false">关闭</el-button>
+        <el-button
+          type="primary"
+          :loading="importLoading"
+          :disabled="!importFile"
+          @click="handleConfirmImport"
+        >
+          确认导入
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
-import { Search, Refresh, Plus } from "@element-plus/icons-vue";
+import { Search, Refresh, Plus, Upload } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   getUserManagePage,
@@ -275,6 +330,8 @@ import {
   toggleUserStatus,
   resetUserPassword,
   getClassList,
+  importUsers,
+  downloadUserTemplate,
 } from "@/api/userManage";
 
 // ---- 搜索 ----
@@ -519,6 +576,74 @@ const handleResetPassword = (row) => {
       }
     })
     .catch(() => {});
+};
+
+// ---- 批量导入 ----
+const importDialogVisible = ref(false);
+const importFile = ref(null);
+const importResult = ref(null);
+const importLoading = ref(false);
+
+const handleImportDialog = () => {
+  importResult.value = null;
+  importFile.value = null;
+  importDialogVisible.value = true;
+};
+
+const handleFileChange = (file) => {
+  if (file.raw.size > 5 * 1024 * 1024) {
+    ElMessage.error("文件大小不能超过 5MB");
+    importFile.value = null;
+    return;
+  }
+  importFile.value = file.raw;
+  importResult.value = null;
+};
+
+const handleFileRemove = () => {
+  importFile.value = null;
+  importResult.value = null;
+};
+
+const handleFileExceed = () => {
+  ElMessage.warning("一次只能上传一个文件");
+};
+
+const handleDownloadTemplate = () => {
+  downloadUserTemplate()
+    .then((res) => {
+      const blob = new Blob([res.data]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "user_import_template.xlsx";
+      a.click();
+      window.URL.revokeObjectURL(url);
+    })
+    .catch(() => {});
+};
+
+const handleConfirmImport = async () => {
+  if (!importFile.value) {
+    ElMessage.warning("请先选择文件");
+    return;
+  }
+  importLoading.value = true;
+  try {
+    const res = await importUsers(importFile.value);
+    importResult.value = res.data;
+    if (res.data && res.data.failCount === 0) {
+      ElMessage.success(`成功导入 ${res.data.successCount} 人`);
+      importDialogVisible.value = false;
+      fetchList();
+    } else if (res.data) {
+      ElMessage.warning(`导入完成：成功 ${res.data.successCount} 人，失败 ${res.data.failCount} 人`);
+    }
+  } catch (e) {
+    // 拦截器已处理错误提示
+  } finally {
+    importLoading.value = false;
+  }
 };
 
 // ---- 初始化 ----

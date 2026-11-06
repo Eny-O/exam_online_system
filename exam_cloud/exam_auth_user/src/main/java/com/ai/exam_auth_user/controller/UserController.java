@@ -1,5 +1,8 @@
 package com.ai.exam_auth_user.controller;
 
+import com.ai.exam_common.common.enums.ErrorCodeEnum;
+import com.ai.exam_common.common.exception.BusinessException;
+import com.ai.exam_common.common.pojo.result.BatchInsertResult;
 import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_auth_user.pojo.dto.StudentQueryDTO;
@@ -16,8 +19,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -73,6 +84,34 @@ public class UserController {
         log.info("学生自助注册：{}", registerDTO.getUsername());
         userManageService.register(registerDTO);
         return ResponseResult.success("注册成功");
+    }
+
+    @Operation(summary = "批量导入学生")
+    @PreAuthorize("hasAuthority('sys:user:add')")
+    @PostMapping(value = "/import")
+    public ResponseResult<BatchInsertResult> importStudents(
+            @RequestPart @RequestParam("file") MultipartFile file) {
+        log.info("批量导入学生");
+        BatchInsertResult result = userManageService.importStudents(file);
+        return ResponseResult.success(result);
+    }
+
+    @Operation(summary = "下载学生导入模板")
+    @PreAuthorize("hasAuthority('sys:user:add')")
+    @GetMapping("/template")
+    public ResponseEntity<Resource> downloadTemplate() throws IOException {
+        ClassPathResource resource = new ClassPathResource("templates/user_import_template.xlsx");
+        if (!resource.exists()) {
+            throw new BusinessException(ErrorCodeEnum.FILE_NOT_FOUND);
+        }
+        String filename = "user_import_template.xlsx";
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + filename + "\"")
+                .contentLength(resource.contentLength())
+                .body(resource);
     }
 
     @Operation(summary = "根据班级id获取班级成员")
