@@ -14,3 +14,8 @@ export function getUserInfo() {
 export function logout() {
   return request.post("/user/logout");
 }
+
+// 学生自助注册
+export function register(data) {
+  return request.post("/user/register", data);
+}

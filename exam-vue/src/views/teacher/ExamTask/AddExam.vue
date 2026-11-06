@@ -74,10 +74,16 @@
         </div>
       </template>
 
-      <el-form label-width="100px" class="exam-form">
+      <el-form
+        ref="settingFormRef"
+        :model="settingForm"
+        :rules="settingRules"
+        label-width="100px"
+        class="exam-form"
+      >
         <el-row :gutter="24">
           <el-col :span="8">
-            <el-form-item label="考试班级">
+            <el-form-item label="考试班级" prop="classIds" :required="true">
               <el-select
                 v-model="selectedClassIds"
                 placeholder="请选择考试班级（可多选）"
@@ -99,7 +105,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="16">
-            <el-form-item label="关联试卷" :required="true">
+            <el-form-item label="关联试卷" prop="paperId" :required="true">
               <div class="paper-select-area">
                 <template v-if="!selectedPaper">
                   <el-button
@@ -331,6 +337,31 @@ const formRules = {
   ],
 };
 
+// ========== 考试设置区校验 ==========
+const settingFormRef = ref(null);
+const settingForm = reactive({ classIds: [], paperId: null });
+const settingRules = {
+  paperId: [
+    {
+      validator: (rule, value, callback) => {
+        if (selectedPaper.value) callback();
+        else callback(new Error("请选择关联试卷"));
+      },
+      trigger: "change",
+    },
+  ],
+  classIds: [
+    {
+      validator: (rule, value, callback) => {
+        if (selectedClassIds.value.length || manuallyAddedStudents.value.length)
+          callback();
+        else callback(new Error("请至少选择考试班级或添加学生"));
+      },
+      trigger: "change",
+    },
+  ],
+};
+
 // ========== 班级相关 ==========
 const selectedClassIds = ref([]);
 const classList = ref([]);
@@ -464,7 +495,7 @@ const studentDialogVisible = ref(false);
 const submitting = ref(false);
 
 const handleSubmit = async () => {
-  // 校验表单
+  // 校验基本信息
   if (!formRef.value) return;
   try {
     await formRef.value.validate();
@@ -473,9 +504,12 @@ const handleSubmit = async () => {
     return;
   }
 
-  // 校验试卷
-  if (!selectedPaper.value) {
-    ElMessage.warning("请选择关联试卷");
+  // 校验考试设置（关联试卷、考生范围）
+  if (!settingFormRef.value) return;
+  try {
+    await settingFormRef.value.validate();
+  } catch {
+    ElMessage.error("请完善考试设置");
     return;
   }
 

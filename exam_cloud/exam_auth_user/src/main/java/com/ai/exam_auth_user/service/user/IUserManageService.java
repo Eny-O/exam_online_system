@@ -2,6 +2,7 @@ package com.ai.exam_auth_user.service.user;
 
 import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_auth_user.pojo.dto.UserAddDTO;
+import com.ai.exam_auth_user.pojo.dto.RegisterDTO;
 import com.ai.exam_auth_user.pojo.dto.UserQueryDTO;
 import com.ai.exam_auth_user.pojo.dto.UserUpdateDTO;
 import com.ai.exam_auth_user.pojo.vo.UserManageVO;
@@ -17,6 +18,11 @@ public interface IUserManageService {
      * 新增用户
      */
     void addUser(UserAddDTO userAddDTO);
+
+    /**
+     * 学生自助注册（固定角色为学生）
+     */
+    void register(RegisterDTO registerDTO);
 
     /**
      * 修改用户

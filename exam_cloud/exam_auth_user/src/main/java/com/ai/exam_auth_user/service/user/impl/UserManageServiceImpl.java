@@ -7,6 +7,7 @@ import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_auth_user.pojo.dto.UserAddDTO;
 import com.ai.exam_auth_user.pojo.dto.UserQueryDTO;
 import com.ai.exam_auth_user.pojo.dto.UserUpdateDTO;
+import com.ai.exam_auth_user.pojo.dto.RegisterDTO;
 import com.ai.exam_auth_user.pojo.dos.Role;
 import com.ai.exam_auth_user.pojo.dos.User;
 import com.ai.exam_auth_user.pojo.enums.UserClassRelationEnum;
@@ -86,6 +87,21 @@ public class UserManageServiceImpl extends ServiceImpl<UserMapper, User> impleme
                 ? (dto.getClassId() == null ? Collections.emptyList() : List.of(dto.getClassId()))
                 : (dto.getClassIds() == null ? Collections.emptyList() : dto.getClassIds());
         userClassService.replaceClassIds(user.getId(), relationType, classIds);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void register(RegisterDTO dto) {
+        if (!dto.getPassword().equals(dto.getConfirmPassword())) {
+            throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "两次输入的密码不一致");
+        }
+        UserAddDTO addDTO = new UserAddDTO();
+        addDTO.setUsername(dto.getUsername());
+        addDTO.setPassword(dto.getPassword());
+        addDTO.setRealName(dto.getRealName());
+        addDTO.setPhone(dto.getPhone());
+        addDTO.setUserType(1);
+        addUser(addDTO);
     }
 
     @Override

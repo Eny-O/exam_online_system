@@ -10,32 +10,75 @@ import {
   ArrowRight,
 } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
+import { register } from "@/api/user";
 
 const router = useRouter();
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
+const loading = ref(false);
+const formRef = ref(null);
 const formData = ref({
   username: "",
-  email: "",
+  realName: "",
+  phone: "",
   password: "",
   confirmPassword: "",
 });
 
-const handleSubmit = () => {
-  // 验证密码是否一致
-  if (formData.value.password !== formData.value.confirmPassword) {
-    ElMessage.error("两次输入的密码不一致");
+const validateConfirm = (rule, value, callback) => {
+  if (value !== formData.value.password) {
+    callback(new Error("两次输入的密码不一致"));
+  } else {
+    callback();
+  }
+};
+
+const rules = {
+  username: [
+    { required: true, message: "请输入用户名", trigger: "blur" },
+    { min: 2, max: 20, message: "用户名长度为 2-20 个字符", trigger: "blur" },
+  ],
+  realName: [{ required: true, message: "请输入姓名", trigger: "blur" }],
+  phone: [
+    { required: true, message: "请输入手机号", trigger: "blur" },
+    { pattern: /^1[3-9]\d{9}$/, message: "手机号格式不正确", trigger: "blur" },
+  ],
+  password: [
+    { required: true, message: "请输入密码", trigger: "blur" },
+    { min: 6, message: "密码至少 6 位", trigger: "blur" },
+  ],
+  confirmPassword: [
+    { required: true, message: "请再次输入密码", trigger: "blur" },
+    { validator: validateConfirm, trigger: "blur" },
+  ],
+};
+
+const handleSubmit = async () => {
+  if (!formRef.value) return;
+  try {
+    await formRef.value.validate();
+  } catch {
     return;
   }
 
-  // 这里可以添加注册逻辑
-  console.log("注册信息:", formData.value);
-  ElMessage.success("注册成功");
-
-  // 注册成功后跳转到登录页
-  setTimeout(() => {
-    router.push("/login");
-  }, 1500);
+  loading.value = true;
+  try {
+    await register({
+      username: formData.value.username,
+      realName: formData.value.realName,
+      phone: formData.value.phone,
+      password: formData.value.password,
+      confirmPassword: formData.value.confirmPassword,
+    });
+    ElMessage.success("注册成功");
+    setTimeout(() => {
+      router.push("/login");
+    }, 1500);
+  } catch (e) {
+    // 错误提示已由响应拦截器统一处理
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleLogin = () => {
@@ -56,8 +99,14 @@ const handleLogin = () => {
         <p class="subtitle">注册开始您的学习之旅</p>
       </div>
 
-      <el-form @submit.prevent="handleSubmit" class="register-form">
-        <el-form-item label="用户名" class="form-item">
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="rules"
+        @submit.prevent="handleSubmit"
+        class="register-form"
+      >
+        <el-form-item label="用户名" prop="username" class="form-item">
           <el-input
             v-model="formData.username"
             placeholder="请输入用户名"
@@ -66,17 +115,25 @@ const handleLogin = () => {
           />
         </el-form-item>
 
-        <el-form-item label="邮箱" class="form-item">
+        <el-form-item label="姓名" prop="realName" class="form-item">
           <el-input
-            v-model="formData.email"
-            type="email"
-            placeholder="请输入邮箱"
+            v-model="formData.realName"
+            placeholder="请输入姓名"
+            :prefix-icon="User"
+            size="large"
+          />
+        </el-form-item>
+
+        <el-form-item label="手机号" prop="phone" class="form-item">
+          <el-input
+            v-model="formData.phone"
+            placeholder="请输入手机号"
             :prefix-icon="Message"
             size="large"
           />
         </el-form-item>
 
-        <el-form-item label="密码" class="form-item">
+        <el-form-item label="密码" prop="password" class="form-item">
           <el-input
             v-model="formData.password"
             :type="showPassword ? 'text' : 'password'"
@@ -96,7 +153,7 @@ const handleLogin = () => {
           </el-input>
         </el-form-item>
 
-        <el-form-item label="确认密码" class="form-item">
+        <el-form-item label="确认密码" prop="confirmPassword" class="form-item">
           <el-input
             v-model="formData.confirmPassword"
             :type="showConfirmPassword ? 'text' : 'password'"
@@ -120,6 +177,7 @@ const handleLogin = () => {
           type="primary"
           size="large"
           class="register-btn"
+          :loading="loading"
           @click="handleSubmit"
         >
           <span>注册</span>

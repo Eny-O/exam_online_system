@@ -4,9 +4,11 @@ import com.ai.exam_common.common.pojo.result.PageResult;
 import com.ai.exam_common.common.pojo.result.ResponseResult;
 import com.ai.exam_auth_user.pojo.dto.StudentQueryDTO;
 import com.ai.exam_auth_user.pojo.dto.UserLoginDTO;
+import com.ai.exam_auth_user.pojo.dto.RegisterDTO;
 import com.ai.exam_auth_user.pojo.vo.UserInfoVO;
 import com.ai.exam_api.pojo.vo.UStudentVO;
 import com.ai.exam_auth_user.service.user.UserService;
+import com.ai.exam_auth_user.service.user.IUserManageService;
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +30,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private IUserManageService userManageService;
 
     @Operation(summary = "获取用户信息")
     @GetMapping("/getInfo")
@@ -60,6 +65,14 @@ public class UserController {
         log.info("用户登出");
         userService.logout();
         return ResponseResult.success("登出成功");
+    }
+
+    @Operation(summary = "学生自助注册")
+    @PostMapping("/register")
+    public ResponseResult<Void> register(@Valid @RequestBody RegisterDTO registerDTO) {
+        log.info("学生自助注册：{}", registerDTO.getUsername());
+        userManageService.register(registerDTO);
+        return ResponseResult.success("注册成功");
     }
 
     @Operation(summary = "根据班级id获取班级成员")
