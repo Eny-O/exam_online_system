@@ -181,6 +181,7 @@
     </el-alert>
 
     <template #footer>
+      <el-button @click="handleDownloadTemplate">下载模板</el-button>
       <el-button @click="importDialogVisible = false">关闭</el-button>
       <el-button
         type="primary"
@@ -204,6 +205,7 @@ import {
   getQuestionCompleteById,
   deleteQuestions,
   importQuestions,
+  downloadQuestionTemplate,
 } from "@/api/questionManager";
 
 // 搜索表单
@@ -354,6 +356,23 @@ const handleConfirmImport = async () => {
     ElMessage.error(error.message || "导入失败");
   } finally {
     importLoading.value = false;
+  }
+};
+
+// 下载题目导入模板
+const handleDownloadTemplate = async () => {
+  try {
+    const res = await downloadQuestionTemplate();
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "题目导入模板.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    ElMessage.error("下载模板失败");
   }
 };
 

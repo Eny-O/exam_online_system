@@ -1,4 +1,5 @@
 import request from "@/utils/request";
+import axios from "axios";
 
 // 分页条件查询题目列表
 export function getQuestionPage(params) {
@@ -31,5 +32,15 @@ export function importQuestions(file) {
   formData.append("file", file);
   return request.post("/fileManager/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
+// 下载题目导入模板（二进制流，绕过 JSON 响应拦截器）
+export function downloadQuestionTemplate() {
+  return axios({
+    url: "/api/fileManager/template",
+    method: "GET",
+    responseType: "blob",
+    headers: { token: localStorage.getItem("token") },
   });
 }

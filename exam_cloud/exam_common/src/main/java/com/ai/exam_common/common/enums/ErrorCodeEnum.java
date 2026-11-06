@@ -62,6 +62,7 @@ public enum ErrorCodeEnum {
     FILE_EMPTY("4002", "上传文件为空"),
     FILE_PARSE_ERROR("4003", "文件解析失败，请检查文件内容"),
     FILE_CONTENT_REQUIRED_FIELD_EMPTY("4004", "文件内容有必填项为空"),
+    FILE_NOT_FOUND("4005", "模板文件不存在"),
 
     // 试卷错误码
     PAPER_NOT_EMPTY("5001", "试卷不能为空"),
