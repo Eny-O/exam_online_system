@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="exam-result-container">
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-wrapper">
@@ -83,16 +83,8 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import {
-  ArrowLeft,
-  Trophy,
-  Loading,
-} from "@element-plus/icons-vue";
-import {
-  getExamResult,
-  getExamInfo,
-  getStuAnswerReview,
-} from "@/api/examTask";
+import { ArrowLeft, Trophy, Loading } from "@element-plus/icons-vue";
+import { getExamResult, getExamInfo, getStuAnswerReview } from "@/api/examTask";
 import AnswerReview from "@/components/AnswerReview.vue";
 
 const route = useRoute();

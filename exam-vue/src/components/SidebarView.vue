@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <aside class="sidebar-container">
     <!-- 头部 Logo 区域 -->
     <div class="sidebar-header">

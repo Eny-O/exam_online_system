@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="grading-container">
     <!-- 左侧学生列表 -->
     <div class="left-panel">
@@ -234,8 +234,9 @@
               >
                 <template #title>
                   <span>
-                    AI 初评 {{ aiResults[aiKey(q.questionId)].preliminaryScore }} /
-                    再评 {{ aiResults[aiKey(q.questionId)].finalScore }} 分，分歧
+                    AI 初评
+                    {{ aiResults[aiKey(q.questionId)].preliminaryScore }} / 再评
+                    {{ aiResults[aiKey(q.questionId)].finalScore }} 分，分歧
                     {{
                       Math.round(
                         (aiResults[aiKey(q.questionId)].divergence || 0) * 100
@@ -250,7 +251,9 @@
                   "
                   class="ai-comment"
                 >
-                  {{ aiResults[aiKey(q.questionId)].reviewResult.reviewComment }}
+                  {{
+                    aiResults[aiKey(q.questionId)].reviewResult.reviewComment
+                  }}
                 </div>
               </el-alert>
               <el-alert
@@ -259,7 +262,10 @@
                 type="error"
                 :closable="false"
                 show-icon
-                :title="aiResults[aiKey(q.questionId)]?.errorMessage || 'AI 服务调用失败'"
+                :title="
+                  aiResults[aiKey(q.questionId)]?.errorMessage ||
+                  'AI 服务调用失败'
+                "
               />
             </div>
           </el-card>
@@ -728,7 +734,8 @@ const handleAiGrade = async (index) => {
     }
   } catch (e) {
     console.error("AI 评分失败:", e);
-    const errMsg = e?.response?.data?.message || e?.message || "AI 服务调用失败";
+    const errMsg =
+      e?.response?.data?.message || e?.message || "AI 服务调用失败";
     aiResults[key] = { status: "ERROR", errorMessage: errMsg };
   } finally {
     aiLoadingKey.value = null;

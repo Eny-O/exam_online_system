@@ -1,10 +1,12 @@
-<template>
+﻿<template>
   <div class="page-container">
     <!-- 顶部操作栏 -->
     <div class="page-header">
       <div class="header-left">
         <h3 class="page-title">权限管理</h3>
-        <el-tag type="info" size="small">共 {{ totalVisible }} 条权限记录</el-tag>
+        <el-tag type="info" size="small"
+          >共 {{ totalVisible }} 条权限记录</el-tag
+        >
       </div>
       <el-button type="primary" @click="handleAdd(null)">
         <el-icon><Plus /></el-icon>新增权限
@@ -48,7 +50,7 @@
 
         <el-table-column prop="path" label="路由路径" min-width="160">
           <template #default="{ row }">
-            <span>{{ row.path || '-' }}</span>
+            <span>{{ row.path || "-" }}</span>
           </template>
         </el-table-column>
 
@@ -63,7 +65,7 @@
 
         <el-table-column prop="component" label="组件路径" min-width="200">
           <template #default="{ row }">
-            <span>{{ row.component || '-' }}</span>
+            <span>{{ row.component || "-" }}</span>
           </template>
         </el-table-column>
 
@@ -72,10 +74,20 @@
             <el-button link type="primary" size="small" @click="handleAdd(row)">
               新增子级
             </el-button>
-            <el-button link type="primary" size="small" @click="handleEdit(row)">
+            <el-button
+              link
+              type="primary"
+              size="small"
+              @click="handleEdit(row)"
+            >
               编辑
             </el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">
+            <el-button
+              link
+              type="danger"
+              size="small"
+              @click="handleDelete(row)"
+            >
               删除
             </el-button>
           </template>
@@ -128,7 +140,10 @@
 
         <!-- 权限编码 -->
         <el-form-item label="权限编码" prop="permCode">
-          <el-input v-model="formData.permCode" placeholder="如：sys:user:add" />
+          <el-input
+            v-model="formData.permCode"
+            placeholder="如：sys:user:add"
+          />
         </el-form-item>
 
         <!-- 路由路径（目录和菜单显示） -->
@@ -139,7 +154,11 @@
         >
           <el-input
             v-model="formData.path"
-            :placeholder="formData.type === 1 ? '目录路径如 /system' : '菜单路径如 /system/user'"
+            :placeholder="
+              formData.type === 1
+                ? '目录路径如 /system'
+                : '菜单路径如 /system/user'
+            "
           />
         </el-form-item>
 
@@ -149,7 +168,10 @@
           label="图标"
           prop="icon"
         >
-          <el-input v-model="formData.icon" placeholder="Element Plus 图标名如 User">
+          <el-input
+            v-model="formData.icon"
+            placeholder="Element Plus 图标名如 User"
+          >
             <template #append>
               <el-icon v-if="formData.icon" :size="18">
                 <component :is="formData.icon" />
@@ -174,7 +196,11 @@
 
       <template #footer>
         <el-button @click="drawerVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">
+        <el-button
+          type="primary"
+          :loading="submitLoading"
+          @click="handleSubmit"
+        >
           确定
         </el-button>
       </template>
@@ -192,7 +218,6 @@ import {
 } from "@/api/permissionManage";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus } from "@element-plus/icons-vue";
-import * as ElementPlusIcons from "@element-plus/icons-vue";
 
 // ===== 类型标签映射 =====
 const typeTagMap = {

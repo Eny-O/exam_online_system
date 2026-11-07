@@ -1,4 +1,4 @@
-import request from "@/utils/request";
+﻿import request from "@/utils/request";
 
 // AI 智能双评主观题（exam_ai 模块，经网关 /api/ai/** 路由到 lb://exam_ai）
 // @param {{ examId: number, studentId: number, questionId: number }} data

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="class-exam-score-container">
     <!-- 顶部导航栏 -->
     <div class="nav-bar-section">
@@ -125,9 +125,9 @@
       <el-col :xs="24" :lg="12">
         <el-card shadow="hover" class="chart-card">
           <template #header>
-          <div class="card-header">
-            <span>主客观平均得分</span>
-          </div>
+            <div class="card-header">
+              <span>主客观平均得分</span>
+            </div>
           </template>
           <div ref="questionTypeChartRef" class="chart-container"></div>
         </el-card>
@@ -216,7 +216,12 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="status" label="状态" min-width="110" align="center">
+        <el-table-column
+          prop="status"
+          label="状态"
+          min-width="110"
+          align="center"
+        >
           <template #default="{ row }">
             <el-tag :type="row.status === '已阅卷' ? 'success' : 'info'">
               {{ row.status }}
@@ -365,7 +370,14 @@ const statistics = computed(() => {
   const list = filteredData.value;
   const total = list.length;
   if (total === 0) {
-    return { totalStudents: 0, avgScore: 0, highestScore: 0, lowestScore: 0, passRate: 0, excellentRate: 0 };
+    return {
+      totalStudents: 0,
+      avgScore: 0,
+      highestScore: 0,
+      lowestScore: 0,
+      passRate: 0,
+      excellentRate: 0,
+    };
   }
   const scores = list.map((s) => s.totalScore || 0);
   const sum = scores.reduce((a, b) => a + b, 0);
@@ -441,7 +453,7 @@ const initScoreDistributionChart = () => {
   if (!scoreDistributionChartRef.value) return;
 
   if (scoreChart) scoreChart.dispose();
-  const chart = scoreChart = echarts.init(scoreDistributionChartRef.value);
+  const chart = (scoreChart = echarts.init(scoreDistributionChartRef.value));
 
   const option = {
     tooltip: {
@@ -510,7 +522,7 @@ const initQuestionTypeChart = () => {
   if (!questionTypeChartRef.value) return;
 
   if (questionChart) questionChart.dispose();
-  const chart = questionChart = echarts.init(questionTypeChartRef.value);
+  const chart = (questionChart = echarts.init(questionTypeChartRef.value));
 
   const option = {
     tooltip: {
@@ -629,8 +641,12 @@ const handleExport = () => {
 
   const now = new Date();
   const pad = (n) => String(n).padStart(2, "0");
-  const dateText = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  const dateCode = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+  const dateText = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
+    now.getDate()
+  )} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const dateCode = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+    now.getDate()
+  )}`;
 
   const rows = filteredData.value.map((s) => [
     s.rank,
@@ -648,7 +664,16 @@ const handleExport = () => {
     [`${examLabel} 成绩单`],
     [`班级：${classLabel}`, `导出时间：${dateText}`],
     [],
-    ["排名", "学号", "学生姓名", "班级", "客观题得分", "主观题得分", "总分", "状态"],
+    [
+      "排名",
+      "学号",
+      "学生姓名",
+      "班级",
+      "客观题得分",
+      "主观题得分",
+      "总分",
+      "状态",
+    ],
     ...rows,
     [],
     ["统计摘要"],
@@ -661,7 +686,9 @@ const handleExport = () => {
   ];
 
   const safeName = (text) => String(text).replace(/[\\\/:*?"<>|]/g, "_");
-  const fileName = `${safeName(examLabel)}_${safeName(classLabel)}_成绩单_${dateCode}.xlsx`;
+  const fileName = `${safeName(examLabel)}_${safeName(
+    classLabel
+  )}_成绩单_${dateCode}.xlsx`;
 
   exporting.value = true;
   try {

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="user-manage-container">
     <!-- 搜索区域 -->
     <div class="filter-section">
@@ -80,37 +80,50 @@
         <el-table-column prop="username" label="用户名" width="120" />
         <el-table-column label="学号/工号" width="130">
           <template #default="scope">
-            {{ scope.row.studentNo || scope.row.staffNo || '--' }}
+            {{ scope.row.studentNo || scope.row.staffNo || "--" }}
           </template>
         </el-table-column>
         <el-table-column label="用户类型" width="100" align="center">
           <template #default="scope">
-            <el-tag :type="getUserTypeTag(scope.row.userType)" effect="light" round>
+            <el-tag
+              :type="getUserTypeTag(scope.row.userType)"
+              effect="light"
+              round
+            >
               {{ getUserTypeText(scope.row.userType) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="className" label="班级" width="140">
           <template #default="scope">
-            {{ scope.row.className || '--' }}
+            {{ scope.row.className || "--" }}
           </template>
         </el-table-column>
         <el-table-column prop="major" label="专业" min-width="140">
           <template #default="scope">
-            {{ scope.row.major || '--' }}
+            {{ scope.row.major || "--" }}
           </template>
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
           <template #default="scope">
-            <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'" effect="light" round>
-              {{ scope.row.status === 1 ? '启用' : '禁用' }}
+            <el-tag
+              :type="scope.row.status === 1 ? 'success' : 'danger'"
+              effect="light"
+              round
+            >
+              {{ scope.row.status === 1 ? "启用" : "禁用" }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="170" />
         <el-table-column label="操作" width="220" align="center" fixed="right">
           <template #default="scope">
-            <el-button link type="primary" size="small" @click="handleEdit(scope.row)">
+            <el-button
+              link
+              type="primary"
+              size="small"
+              @click="handleEdit(scope.row)"
+            >
               编辑
             </el-button>
             <el-button
@@ -119,9 +132,14 @@
               size="small"
               @click="handleToggleStatus(scope.row)"
             >
-              {{ scope.row.status === 1 ? '禁用' : '启用' }}
+              {{ scope.row.status === 1 ? "禁用" : "启用" }}
             </el-button>
-            <el-button link type="info" size="small" @click="handleResetPassword(scope.row)">
+            <el-button
+              link
+              type="info"
+              size="small"
+              @click="handleResetPassword(scope.row)"
+            >
               重置密码
             </el-button>
           </template>
@@ -259,7 +277,7 @@
         <div style="display: flex; gap: 12px; justify-content: flex-end">
           <el-button @click="drawerVisible = false">取消</el-button>
           <el-button type="primary" :loading="submitting" @click="handleSubmit">
-            {{ isEdit ? '保存' : '确定' }}
+            {{ isEdit ? "保存" : "确定" }}
           </el-button>
         </div>
       </template>
@@ -284,7 +302,9 @@
         <el-icon class="el-icon--upload"><Upload /></el-icon>
         <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
         <template #tip>
-          <div class="el-upload__tip">仅支持 .xlsx 格式文件，且仅导入学生（用户类型固定为学生）</div>
+          <div class="el-upload__tip">
+            仅支持 .xlsx 格式文件，且仅导入学生（用户类型固定为学生）
+          </div>
         </template>
       </el-upload>
 
@@ -296,10 +316,26 @@
       >
         <div>
           成功导入 {{ importResult.successCount }} 人
-          <span v-if="importResult.failCount > 0">，{{ importResult.failCount }} 人失败</span>
+          <span v-if="importResult.failCount > 0"
+            >，{{ importResult.failCount }} 人失败</span
+          >
         </div>
-        <ul v-if="importResult.failCount > 0" style="margin: 8px 0 0; padding-left: 20px; max-height: 160px; overflow: auto;">
-          <li v-for="(msg, idx) in importResult.failMessages" :key="idx" style="margin-bottom: 2px;">{{ msg }}</li>
+        <ul
+          v-if="importResult.failCount > 0"
+          style="
+            margin: 8px 0 0;
+            padding-left: 20px;
+            max-height: 160px;
+            overflow: auto;
+          "
+        >
+          <li
+            v-for="(msg, idx) in importResult.failMessages"
+            :key="idx"
+            style="margin-bottom: 2px"
+          >
+            {{ msg }}
+          </li>
         </ul>
       </el-alert>
 
@@ -637,7 +673,9 @@ const handleConfirmImport = async () => {
       importDialogVisible.value = false;
       fetchList();
     } else if (res.data) {
-      ElMessage.warning(`导入完成：成功 ${res.data.successCount} 人，失败 ${res.data.failCount} 人`);
+      ElMessage.warning(
+        `导入完成：成功 ${res.data.successCount} 人，失败 ${res.data.failCount} 人`
+      );
     }
   } catch (e) {
     // 拦截器已处理错误提示

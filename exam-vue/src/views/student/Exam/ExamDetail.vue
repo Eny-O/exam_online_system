@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="exam-detail-container">
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-wrapper">
@@ -104,7 +104,6 @@ import {
   CircleCloseFilled,
   ArrowLeft,
 } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
 import { getExamInfo } from "@/api/examTask";
 
 const route = useRoute();

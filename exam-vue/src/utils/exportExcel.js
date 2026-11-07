@@ -1,7 +1,12 @@
-import * as XLSX from "xlsx";
+﻿import * as XLSX from "xlsx";
 
 // 导出二维数组为 xlsx 文件
-export function exportAoaToExcel(aoa, fileName, sheetName = "成绩单", colWidths = []) {
+export function exportAoaToExcel(
+  aoa,
+  fileName,
+  sheetName = "成绩单",
+  colWidths = []
+) {
   const sheet = XLSX.utils.aoa_to_sheet(aoa);
   if (colWidths.length > 0) {
     sheet["!cols"] = colWidths.map((wch) => ({ wch }));

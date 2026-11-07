@@ -1,9 +1,11 @@
-<template>
+﻿<template>
   <div class="page-container">
     <div class="page-header">
       <div class="header-left">
         <h3 class="page-title">我的班级</h3>
-        <el-tag type="info" size="small">共 {{ pagination.total }} 名学生</el-tag>
+        <el-tag type="info" size="small"
+          >共 {{ pagination.total }} 名学生</el-tag
+        >
       </div>
     </div>
 
@@ -42,7 +44,12 @@
           stripe
           style="width: 100%"
         >
-          <el-table-column type="index" label="序号" width="70" align="center" />
+          <el-table-column
+            type="index"
+            label="序号"
+            width="70"
+            align="center"
+          />
           <el-table-column
             prop="studentNo"
             label="学号"
@@ -103,7 +110,8 @@ const tableData = ref([]);
 const pagination = reactive({ currentPage: 1, pageSize: 10, total: 0 });
 
 const currentClass = computed(
-  () => classOptions.value.find((item) => item.id === currentClassId.value) || null
+  () =>
+    classOptions.value.find((item) => item.id === currentClassId.value) || null
 );
 
 const fetchClasses = async () => {

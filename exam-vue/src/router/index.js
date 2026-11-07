@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from "vue-router";
+﻿import { createRouter, createWebHashHistory } from "vue-router";
 import { useUserStore } from "@/stores/user";
 
 // ========== 常量路由（不需要权限，所有用户可访问） ==========
@@ -70,8 +70,7 @@ const asyncStandaloneRoutes = [
   {
     path: "/teacher/paper-content/:id",
     name: "PaperContent",
-    component: () =>
-      import("@/views/teacher/PaperManagement/PaperContent.vue"),
+    component: () => import("@/views/teacher/PaperManagement/PaperContent.vue"),
     meta: { requiresAuth: true },
   },
   {

@@ -1,9 +1,11 @@
-<template>
+﻿<template>
   <div class="page-container">
     <div class="page-header">
       <div class="header-left">
         <h3 class="page-title">班级管理</h3>
-        <el-tag type="info" size="small">共 {{ pagination.total }} 个班级</el-tag>
+        <el-tag type="info" size="small"
+          >共 {{ pagination.total }} 个班级</el-tag
+        >
       </div>
       <el-button type="primary" @click="handleAdd">
         <el-icon><Plus /></el-icon>新增班级
@@ -34,7 +36,12 @@
     </div>
 
     <div class="table-card">
-      <el-table :data="tableData" v-loading="loading" stripe style="width: 100%">
+      <el-table
+        :data="tableData"
+        v-loading="loading"
+        stripe
+        style="width: 100%"
+      >
         <el-table-column prop="id" label="ID" width="90" />
         <el-table-column prop="className" label="班级名称" min-width="180" />
         <el-table-column prop="grade" label="年级" min-width="140">
@@ -56,15 +63,30 @@
         <el-table-column label="操作" width="160" align="center" fixed="right">
           <template #default="{ row }">
             <template v-if="isDisabled(row)">
-              <el-button link type="success" size="small" @click="handleRestore(row)">
+              <el-button
+                link
+                type="success"
+                size="small"
+                @click="handleRestore(row)"
+              >
                 恢复
               </el-button>
             </template>
             <template v-else>
-              <el-button link type="primary" size="small" @click="handleEdit(row)">
+              <el-button
+                link
+                type="primary"
+                size="small"
+                @click="handleEdit(row)"
+              >
                 编辑
               </el-button>
-              <el-button link type="danger" size="small" @click="handleDisable(row)">
+              <el-button
+                link
+                type="danger"
+                size="small"
+                @click="handleDisable(row)"
+              >
                 停用
               </el-button>
             </template>
@@ -235,15 +257,11 @@ const handleDisable = (row) => {
 };
 
 const handleRestore = (row) => {
-  ElMessageBox.confirm(
-    `确定要恢复班级「${row.className}」吗？`,
-    "恢复确认",
-    {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-    }
-  )
+  ElMessageBox.confirm(`确定要恢复班级「${row.className}」吗？`, "恢复确认", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  })
     .then(async () => {
       try {
         await restoreClass(row.id);

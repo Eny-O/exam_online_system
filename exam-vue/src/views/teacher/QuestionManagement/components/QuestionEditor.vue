@@ -1,4 +1,4 @@
-NEW_FILE_CODE
+﻿NEW_FILE_CODE
 <template>
   <el-dialog
     v-model="visible"

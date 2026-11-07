@@ -1,8 +1,11 @@
-<script setup>
+﻿<script setup>
 import { ref, reactive, watch } from "vue";
 import { Plus, Delete } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
-import { addQuestionComplete, updateQuestionComplete } from "@/api/questionManager";
+import {
+  addQuestionComplete,
+  updateQuestionComplete,
+} from "@/api/questionManager";
 
 const props = defineProps({
   visible: {
@@ -58,7 +61,7 @@ watch(
         const editType = props.editData.type;
         let options = props.editData.options ? [...props.editData.options] : [];
         let answer = props.editData.answer || "";
-        
+
         // 判断题强制使用固定选项，并转换答案值
         if (editType === "judge") {
           options = [
@@ -72,7 +75,7 @@ watch(
             answer = "B";
           }
         }
-        
+
         Object.assign(formData, {
           id: props.editData.id,
           content: props.editData.content,
@@ -219,7 +222,9 @@ const handleSubmit = async () => {
       const res = await addQuestionComplete([submitData]);
       const result = res.data;
       if (!result || result.failCount > 0) {
-        const reason = (result && result.failMessages ? result.failMessages : [])
+        const reason = (
+          result && result.failMessages ? result.failMessages : []
+        )
           .map((msg) => {
             const idx = msg.indexOf("原因：");
             return idx >= 0 ? msg.slice(idx + "原因：".length) : msg;
@@ -333,7 +338,11 @@ const resetForm = () => {
 
       <!-- 选项配置（单选、多选、判断） -->
       <template
-        v-if="formData.type === 'single' || formData.type === 'multiple' || formData.type === 'judge'"
+        v-if="
+          formData.type === 'single' ||
+          formData.type === 'multiple' ||
+          formData.type === 'judge'
+        "
       >
         <el-form-item label="选项配置">
           <div class="options-container">

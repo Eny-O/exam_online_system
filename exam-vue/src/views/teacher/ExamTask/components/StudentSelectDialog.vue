@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <el-dialog
     v-model="dialogVisible"
     title="添加学生"
@@ -69,7 +69,12 @@
       @selection-change="handleSelectionChange"
       :row-key="(row) => row.id"
     >
-      <el-table-column type="selection" width="55" align="center" reserve-selection />
+      <el-table-column
+        type="selection"
+        width="55"
+        align="center"
+        reserve-selection
+      />
       <el-table-column type="index" label="序号" width="60" align="center" />
       <el-table-column
         prop="studentNo"

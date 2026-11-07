@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="exam-taking-container">
     <!-- 顶部导航栏 -->
     <!-- 加载状态 -->

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="exam-review-container">
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-wrapper">
@@ -45,7 +45,10 @@
               <div
                 v-for="opt in q.options"
                 :key="opt.label"
-                :class="['option-item', { selected: isStudentAnswer(q.id, opt.label) }]"
+                :class="[
+                  'option-item',
+                  { selected: isStudentAnswer(q.id, opt.label) },
+                ]"
               >
                 <div class="option-left">
                   <span
@@ -58,7 +61,10 @@
                   </span>
                   <span class="option-text">{{ opt.content }}</span>
                 </div>
-                <el-icon v-if="isStudentAnswer(q.id, opt.label)" class="check-icon">
+                <el-icon
+                  v-if="isStudentAnswer(q.id, opt.label)"
+                  class="check-icon"
+                >
                   <Check />
                 </el-icon>
               </div>
@@ -67,7 +73,7 @@
             <!-- 主观题：简答 -->
             <div v-else class="essay-area">
               <div class="essay-answer-display">
-                {{ getStudentEssayAnswer(q.id) || '（未作答）' }}
+                {{ getStudentEssayAnswer(q.id) || "（未作答）" }}
               </div>
             </div>
           </div>
@@ -82,10 +88,7 @@
                 v-for="(q, index) in questions"
                 :key="q.id"
                 @click="scrollToQuestion(index)"
-                :class="[
-                  'sheet-item',
-                  { answered: hasStudentAnswer(q.id) },
-                ]"
+                :class="['sheet-item', { answered: hasStudentAnswer(q.id) }]"
               >
                 {{ index + 1 }}
               </button>

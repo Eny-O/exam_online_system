@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <header class="app-header">
     <div class="header-content">
       <!-- 右侧：用户信息和退出 -->

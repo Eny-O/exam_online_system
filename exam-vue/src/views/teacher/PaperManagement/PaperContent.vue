@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -11,12 +11,7 @@ import {
   Close,
   ArrowRight,
 } from "@element-plus/icons-vue";
-import {
-  addPaper,
-  updatePaper,
-  getPaperById,
-  savePaperQuestions,
-} from "@/api/paperManager";
+import { addPaper, updatePaper, getPaperById } from "@/api/paperManager";
 import {
   getQuestionCompleteById,
   addQuestionComplete,
@@ -46,7 +41,6 @@ const questionList = ref([]); // [{id, type, score, questions:[{...}]}]
 const selectedTypes = ref([]);
 const activePanels = ref([]);
 const nextGroupId = ref(1);
-const nextQuestionSeq = ref(1);
 const showQuestionBank = ref(false); // 题库选题弹窗
 const hasUnsavedChanges = ref(false); // 是否有未保存的编辑
 

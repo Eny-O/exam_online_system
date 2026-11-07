@@ -1,6 +1,6 @@
-<script setup>
+﻿<script setup>
 import { ref, onMounted } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import {
   listRoles,
   getPermissionTree,

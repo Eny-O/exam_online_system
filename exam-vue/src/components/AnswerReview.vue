@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="answer-review">
     <!-- 答题详情区域 -->
     <div class="questions-section fade-in-up delay-200">
@@ -63,7 +63,9 @@
                   <Check />
                 </el-icon>
                 <el-icon
-                  v-else-if="toAnswerArray(q.studentAnswer).includes(option.label)"
+                  v-else-if="
+                    toAnswerArray(q.studentAnswer).includes(option.label)
+                  "
                   class="option-icon"
                 >
                   <Close />
@@ -125,7 +127,14 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { Check, Close, User, Document, ChatDotRound, InfoFilled } from "@element-plus/icons-vue";
+import {
+  Check,
+  Close,
+  User,
+  Document,
+  ChatDotRound,
+  InfoFilled,
+} from "@element-plus/icons-vue";
 
 const props = defineProps({
   // 归一化后的题目列表（含标准答案、解析、学生作答）
@@ -157,9 +166,12 @@ const filteredQuestions = computed(() => {
   const list = props.questions || [];
   if (!props.filterable) return list;
   if (filterType.value === "all") return list;
-  if (filterType.value === "correct") return list.filter((q) => q.isCorrect === 1);
-  if (filterType.value === "wrong") return list.filter((q) => q.isCorrect === 0);
-  if (filterType.value === "subjective") return list.filter((q) => isEssay(q.type));
+  if (filterType.value === "correct")
+    return list.filter((q) => q.isCorrect === 1);
+  if (filterType.value === "wrong")
+    return list.filter((q) => q.isCorrect === 0);
+  if (filterType.value === "subjective")
+    return list.filter((q) => isEssay(q.type));
   return list;
 });
 

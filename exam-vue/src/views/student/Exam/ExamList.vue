@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="exam-list-container">
     <!-- 顶部筛选区 -->
     <div class="filter-section">
@@ -82,7 +82,9 @@
         <template #default="{ row }">
           <!-- 未开始(2) + pending = 查看详情 -->
           <el-button
-            v-if="getRealStatus(row) === 2 && row.studentExamStatus === 'pending'"
+            v-if="
+              getRealStatus(row) === 2 && row.studentExamStatus === 'pending'
+            "
             link
             type="primary"
             size="small"
@@ -92,7 +94,9 @@
           </el-button>
           <!-- 进行中(3) + pending = 进入考试 -->
           <el-button
-            v-if="getRealStatus(row) === 3 && row.studentExamStatus === 'pending'"
+            v-if="
+              getRealStatus(row) === 3 && row.studentExamStatus === 'pending'
+            "
             link
             type="success"
             size="small"
@@ -102,7 +106,9 @@
           </el-button>
           <!-- 进行中(3) + submitted = 查看考试 -->
           <el-button
-            v-if="getRealStatus(row) === 3 && row.studentExamStatus === 'submitted'"
+            v-if="
+              getRealStatus(row) === 3 && row.studentExamStatus === 'submitted'
+            "
             link
             type="info"
             size="small"
@@ -112,7 +118,10 @@
           </el-button>
           <!-- 待批阅(4) + submitted/graded = 查看考试 -->
           <el-button
-            v-if="getRealStatus(row) === 4 && ['submitted', 'graded'].includes(row.studentExamStatus)"
+            v-if="
+              getRealStatus(row) === 4 &&
+              ['submitted', 'graded'].includes(row.studentExamStatus)
+            "
             link
             type="info"
             size="small"
@@ -122,7 +131,9 @@
           </el-button>
           <!-- 批阅完成(5) + graded = 查看成绩 -->
           <el-button
-            v-if="getRealStatus(row) === 5 && row.studentExamStatus === 'graded'"
+            v-if="
+              getRealStatus(row) === 5 && row.studentExamStatus === 'graded'
+            "
             link
             type="warning"
             size="small"
@@ -132,7 +143,10 @@
           </el-button>
           <!-- 待批阅(4)/批阅完成(5) + absent = 缺考（仅展示） -->
           <el-tag
-            v-if="(getRealStatus(row) === 4 || getRealStatus(row) === 5) && row.studentExamStatus === 'absent'"
+            v-if="
+              (getRealStatus(row) === 4 || getRealStatus(row) === 5) &&
+              row.studentExamStatus === 'absent'
+            "
             type="danger"
             size="small"
           >

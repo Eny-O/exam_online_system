@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="profile-container">
     <el-card class="header-card" shadow="never">
       <div class="header-content">

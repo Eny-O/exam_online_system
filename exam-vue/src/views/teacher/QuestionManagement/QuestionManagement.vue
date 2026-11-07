@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="question-management-container">
     <!-- 顶部搜索栏 -->
     <el-card class="search-card" shadow="hover">
@@ -178,8 +178,15 @@
       <span v-if="importResult.failCount > 0"
         >，{{ importResult.failCount }} 道失败</span
       >
-      <div v-if="importResult.failMessages && importResult.failMessages.length" style="margin-top: 8px">
-        <div v-for="(msg, idx) in importResult.failMessages" :key="idx" style="line-height: 1.6">
+      <div
+        v-if="importResult.failMessages && importResult.failMessages.length"
+        style="margin-top: 8px"
+      >
+        <div
+          v-for="(msg, idx) in importResult.failMessages"
+          :key="idx"
+          style="line-height: 1.6"
+        >
           {{ msg }}
         </div>
       </div>
@@ -364,7 +371,9 @@ const handleConfirmImport = async () => {
     const res = await importQuestions(importFile.value);
     importResult.value = res.data;
     if (res.data.failCount > 0) {
-      ElMessage.warning(`导入完成，成功 ${res.data.successCount} 道，失败 ${res.data.failCount} 道`);
+      ElMessage.warning(
+        `导入完成，成功 ${res.data.successCount} 道，失败 ${res.data.failCount} 道`
+      );
     } else {
       ElMessage.success(`导入成功 ${res.data.successCount} 道题目`);
       fetchQuestionList();

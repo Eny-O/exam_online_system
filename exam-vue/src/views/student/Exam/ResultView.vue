@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="result-view-container">
     <div class="content-wrapper">
       <!-- 标题部分 -->
@@ -81,23 +81,33 @@
             <template #default="scope">
               <div class="date-cell">
                 <Calendar class="date-icon" />
-                <span>{{ scope.row.examTime ?? '--' }}</span>
+                <span>{{ scope.row.examTime ?? "--" }}</span>
               </div>
             </template>
           </el-table-column>
 
           <el-table-column label="得分/总分" width="120" align="center">
             <template #default="scope">
-              <span v-if="scope.row.studentExamStatus === 'absent'" class="text-muted">--</span>
+              <span
+                v-if="scope.row.studentExamStatus === 'absent'"
+                class="text-muted"
+                >--</span
+              >
               <span v-else :class="getScoreClass(scope.row)">
-                {{ scope.row.examScore ?? '--' }}/{{ scope.row.totalScore ?? '--' }}
+                {{ scope.row.examScore ?? "--" }}/{{
+                  scope.row.totalScore ?? "--"
+                }}
               </span>
             </template>
           </el-table-column>
 
           <el-table-column label="得分率" width="100" align="center">
             <template #default="scope">
-              <span v-if="scope.row.studentExamStatus === 'absent'" class="text-muted">--</span>
+              <span
+                v-if="scope.row.studentExamStatus === 'absent'"
+                class="text-muted"
+                >--</span
+              >
               <span v-else :class="getScoreRateClass(scope.row)">
                 {{ getScoreRate(scope.row) }}
               </span>
@@ -106,27 +116,35 @@
 
           <el-table-column label="实际用时" width="120" align="center">
             <template #default="scope">
-              <span v-if="scope.row.studentExamStatus === 'absent'" class="text-muted">--</span>
+              <span
+                v-if="scope.row.studentExamStatus === 'absent'"
+                class="text-muted"
+                >--</span
+              >
               <span v-else>{{ getActualDuration(scope.row) }}</span>
             </template>
           </el-table-column>
 
           <el-table-column label="状态" width="100" align="center">
             <template #default="scope">
-              <el-tag
-                :type="getStatusType(scope.row)"
-                effect="light"
-                round
-              >
+              <el-tag :type="getStatusType(scope.row)" effect="light" round>
                 {{ getStatusText(scope.row) }}
               </el-tag>
             </template>
           </el-table-column>
 
-          <el-table-column label="操作" width="100" align="center" fixed="right">
+          <el-table-column
+            label="操作"
+            width="100"
+            align="center"
+            fixed="right"
+          >
             <template #default="scope">
               <el-button
-                v-if="scope.row.examScore !== null && scope.row.studentExamStatus !== 'absent'"
+                v-if="
+                  scope.row.examScore !== null &&
+                  scope.row.studentExamStatus !== 'absent'
+                "
                 link
                 type="primary"
                 size="small"
@@ -140,7 +158,10 @@
         </el-table>
 
         <!-- 空状态 -->
-        <div v-if="filteredResults.length === 0 && !loading" class="empty-state">
+        <div
+          v-if="filteredResults.length === 0 && !loading"
+          class="empty-state"
+        >
           <Search class="empty-icon" />
           <p>没有找到匹配的成绩记录</p>
         </div>

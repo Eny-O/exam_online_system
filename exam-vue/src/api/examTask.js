@@ -1,4 +1,4 @@
-import request from "@/utils/request";
+﻿import request from "@/utils/request";
 
 // 分页条件查询考试列表
 export function getExamPage(params) {

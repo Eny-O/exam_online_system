@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="exam-task-container">
     <!-- 顶部筛选区 -->
     <div class="filter-section">
@@ -359,11 +359,6 @@ const handleReview = (row) => {
   });
 };
 
-// 查看成绩
-const handleViewScore = (row) => {
-  router.push(`/teacher/classExamScore?examId=${row.id}`);
-};
-
 // 发布考试
 const handlePublish = async (row) => {
   try {
@@ -428,11 +423,6 @@ const handleCancelPublish = async (row) => {
       console.error("取消发布失败:", error);
     }
   }
-};
-
-// 公布成绩
-const handlePublishScore = (row) => {
-  router.push(`/teacher/classExamScore?examId=${row.id}`);
 };
 
 // 删除

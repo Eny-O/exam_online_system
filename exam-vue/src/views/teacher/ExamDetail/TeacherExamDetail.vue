@@ -1,4 +1,4 @@
-NEW_FILE_CODE
+﻿NEW_FILE_CODE
 <template>
   <div class="teacher-exam-detail-container">
     <div class="content-wrapper">
@@ -30,7 +30,10 @@ NEW_FILE_CODE
             <div class="score-summary">
               <div class="score-item total">
                 <span class="label">总分</span>
-                <span class="value">{{ totalScore }}<span v-if="fullScore > 0">/{{ fullScore }}</span></span>
+                <span class="value"
+                  >{{ totalScore
+                  }}<span v-if="fullScore > 0">/{{ fullScore }}</span></span
+                >
               </div>
             </div>
 
@@ -53,7 +56,13 @@ import { useRouter, useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { ArrowLeft } from "@element-plus/icons-vue";
 import AnswerReview from "@/components/AnswerReview.vue";
-import { getGradePaper, getStudentAnswer, getGradeStudentList, getExamDetailById, getClassList } from "@/api/examTask";
+import {
+  getGradePaper,
+  getStudentAnswer,
+  getGradeStudentList,
+  getExamDetailById,
+  getClassList,
+} from "@/api/examTask";
 
 const router = useRouter();
 const route = useRoute();
@@ -177,10 +186,12 @@ const loadDetail = async () => {
     const classRes = await getClassList();
     const classList = Array.isArray(classRes.data) ? classRes.data : [];
     const classId = info?.classId;
-    const cls = classId != null
-      ? classList.find((c) => String(c.id) === String(classId))
-      : null;
-    studentInfo.value.className = cls?.className || (classId != null ? `班级 ${classId}` : "—");
+    const cls =
+      classId != null
+        ? classList.find((c) => String(c.id) === String(classId))
+        : null;
+    studentInfo.value.className =
+      cls?.className || (classId != null ? `班级 ${classId}` : "—");
   } catch (ce) {
     console.error("加载班级信息失败", ce);
   }

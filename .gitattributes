@@ -1,0 +1,14 @@
+# 统一以 LF 换行：强制 git 以 LF 检出，压制 Windows 上 core.autocrlf 把文件转成 CRLF 导致 Prettier/ESLint 报错
+* text=auto eol=lf
+
+# 二进制资源不参与换行转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary
