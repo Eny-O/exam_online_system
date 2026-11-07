@@ -1,6 +1,5 @@
 package com.ai.exam_spring.modules.question.service.impl;
 
-import cn.hutool.core.convert.ConvertException;
 import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import com.ai.exam_common.common.exception.BatchValidationException;
 import com.ai.exam_common.common.exception.BusinessException;
@@ -17,21 +16,27 @@ import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
 import com.ai.exam_spring.modules.question.mapper.QuestionManagementMapper;
 import com.ai.exam_spring.modules.question.mapper.QuestionOptionMapper;
 import com.ai.exam_spring.modules.validation.DeleteValidationService;
+import com.ai.exam_spring.modules.question.support.QuestionSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,15 +50,20 @@ class QuestionManagementServiceImplTest {
     private DeleteValidationService deleteValidationService;
     @Mock
     private TransactionTemplate transactionTemplate;
+    @Spy
+    private QuestionSupport questionSupport = new QuestionSupport();
 
     @InjectMocks
     private QuestionManagementServiceImpl questionManagementService;
 
     @BeforeEach
     void setUp() {
-        // 让 transactionTemplate 真正执行回调（仅 insert 用例用到，其余用例不进事务，标记为 lenient 避免严格 stubbing 报错）
         lenient().when(transactionTemplate.execute(any(TransactionCallback.class)))
                 .thenAnswer(inv -> ((TransactionCallback<?>) inv.getArgument(0)).doInTransaction(null));
+        lenient().doAnswer(inv -> new HashSet<String>())
+                .when(questionSupport).loadExistingFingerprints(anySet());
+        lenient().doAnswer(inv -> new HashSet<String>())
+                .when(questionSupport).loadExistingFingerprints(anySet(), any());
     }
 
     private QuestionAddDTO singleQuestion(String content, String answer, List<QuestionOptionAddDTO> options) {
@@ -71,6 +81,28 @@ class QuestionManagementServiceImplTest {
         o.setLabel(label);
         o.setContent(content);
         return o;
+    }
+
+    private QuestionUpdateDTO updateQuestion(String content, String difficulty, String answer,
+                                             List<QuestionOptionUpdateDTO> options) {
+        QuestionUpdateDTO dto = new QuestionUpdateDTO();
+        dto.setId(1);
+        dto.setType(QuestionTypeEnum.SINGLE.getCode());
+        dto.setContent(content);
+        dto.setDifficulty(difficulty);
+        dto.setAnswer(answer);
+        dto.setOptions(options);
+        return dto;
+    }
+
+    private List<QuestionOptionUpdateDTO> updateOptions() {
+        QuestionOptionUpdateDTO o1 = new QuestionOptionUpdateDTO();
+        o1.setLabel(OptionLabelEnum.A);
+        o1.setContent("2");
+        QuestionOptionUpdateDTO o2 = new QuestionOptionUpdateDTO();
+        o2.setLabel(OptionLabelEnum.B);
+        o2.setContent("3");
+        return List.of(o1, o2);
     }
 
     // ===================== insertQuestionComplete =====================
@@ -105,7 +137,7 @@ class QuestionManagementServiceImplTest {
     }
 
     @Test
-    @DisplayName("insertQuestionComplete 题型非法 -> 抛 BusinessException(QUESTION_TYPE_ERROR)")
+    @DisplayName("insertQuestionComplete 题型非法 -> 抛 BatchValidationException")
     void insert_invalidType() {
         QuestionAddDTO dto = new QuestionAddDTO();
         dto.setContent("题目");
@@ -114,11 +146,9 @@ class QuestionManagementServiceImplTest {
         dto.setAnswer("A");
         dto.setOptions(List.of(option(OptionLabelEnum.A, "x")));
 
-        // 真实行为：validateOptions 先抛 QUESTION_TYPE_ERROR(被收集)，但随后 BeanUtil.copyProperties
-        // 把 String 类型的 type 拷到 Question.type(枚举) 时转换失败，抛 Hutool ConvertException，
-        // 该异常未被任何业务异常包装。=> 暴露缺陷：非法题型最终表现为框架异常而非业务异常。
-        assertThrows(ConvertException.class,
+        assertThrows(BatchValidationException.class,
                 () -> questionManagementService.insertQuestionComplete(List.of(dto)));
+        verify(questionManagementMapper, never()).insert(anyList());
     }
 
     // ===================== updateQuestionComplete =====================
@@ -160,7 +190,9 @@ class QuestionManagementServiceImplTest {
         QuestionUpdateDTO dto = new QuestionUpdateDTO();
         dto.setId(99);
         dto.setType(QuestionTypeEnum.SINGLE.getCode());
-        // 必须给合法选项，否则 validateOptions 在校验 selectById 之前就拦下
+        dto.setContent("题干");
+        dto.setDifficulty("easy");
+        dto.setAnswer("A");
         QuestionOptionUpdateDTO no1 = new QuestionOptionUpdateDTO();
         no1.setLabel(OptionLabelEnum.A);
         no1.setContent("a");
@@ -226,6 +258,38 @@ class QuestionManagementServiceImplTest {
         verify(questionManagementMapper).update(any(), any());
     }
 
+    @Test
+    @DisplayName("updateQuestionComplete 难度非法 -> 抛 PARAM_ERROR，校验在事务外完成")
+    void update_invalidDifficulty() {
+        QuestionUpdateDTO dto = updateQuestion("题干", "impossible", "A", updateOptions());
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> questionManagementService.updateQuestionComplete(dto));
+        assertEquals(ErrorCodeEnum.PARAM_ERROR.getCode(), ex.getErrorCode());
+        verify(questionManagementMapper, never()).selectById(any());
+        verify(transactionTemplate, never()).execute(any(TransactionCallback.class));
+    }
+
+    @Test
+    @DisplayName("updateQuestionComplete 编辑后与题库已有题目重复 -> 抛 PARAM_ERROR，不进事务")
+    void update_duplicate() {
+        QuestionUpdateDTO dto = updateQuestion("题干", "easy", "A", updateOptions());
+        Question db = new Question();
+        db.setId(1);
+        db.setVersion(1);
+        when(questionManagementMapper.selectById(1)).thenReturn(db);
+        String fingerprint = questionSupport.buildFingerprint(QuestionTypeEnum.SINGLE.getCode(),
+                "题干", questionSupport.optionContents(dto.getOptions()));
+        doReturn(new HashSet<>(Set.of(fingerprint)))
+                .when(questionSupport).loadExistingFingerprints(anySet(), eq(1));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> questionManagementService.updateQuestionComplete(dto));
+        assertEquals(ErrorCodeEnum.PARAM_ERROR.getCode(), ex.getErrorCode());
+        verify(questionSupport).loadExistingFingerprints(anySet(), eq(1));
+        verify(transactionTemplate, never()).execute(any(TransactionCallback.class));
+    }
+
     // ===================== removeQuestionCompleteByIds =====================
 
     @Test
@@ -281,7 +345,7 @@ class QuestionManagementServiceImplTest {
     void add_batchFail() {
         QuestionAddDTO bad = new QuestionAddDTO();
         bad.setContent("题");
-        bad.setType("xxx"); // 非法题型 -> insertQuestionComplete 抛 ConvertException
+        bad.setType("xxx");
         bad.setDifficulty("easy");
         bad.setAnswer("A");
         bad.setOptions(List.of(option(OptionLabelEnum.A, "x")));
@@ -292,6 +356,36 @@ class QuestionManagementServiceImplTest {
         assertEquals(0, result.getSuccessCount());
         assertEquals(1, result.getFailCount());
         assertEquals(1, result.getFailMessages().size());
+    }
+
+    // ===================== findDuplicateMessages =====================
+
+    @Test
+    @DisplayName("findDuplicateMessages 同批次题干与选项一致 -> 返回一条重复提示")
+    void findDuplicates_withinBatch() {
+        List<QuestionOptionAddDTO> options = List.of(
+                option(OptionLabelEnum.A, "2"), option(OptionLabelEnum.B, "3"));
+        QuestionAddDTO q1 = singleQuestion("1+1=?", "A", options);
+        QuestionAddDTO q2 = singleQuestion("1+1=?", "A", options);
+
+        List<String> messages = questionManagementService.findDuplicateMessages(List.of(q1, q2));
+
+        assertEquals(1, messages.size());
+    }
+
+    @Test
+    @DisplayName("findDuplicateMessages 与题库已有题目重复 -> 返回一条重复提示")
+    void findDuplicates_inDatabase() {
+        QuestionAddDTO q = singleQuestion("1+1=?", "A",
+                List.of(option(OptionLabelEnum.A, "2"), option(OptionLabelEnum.B, "3")));
+        String fingerprint = questionSupport.buildFingerprint(QuestionTypeEnum.SINGLE.getCode(),
+                q.getContent(), questionSupport.optionContents(q.getOptions()));
+        doReturn(new HashSet<>(Set.of(fingerprint)))
+                .when(questionSupport).loadExistingFingerprints(anySet());
+
+        List<String> messages = questionManagementService.findDuplicateMessages(List.of(q));
+
+        assertEquals(1, messages.size());
     }
 
     // ===================== getQuestionComplete =====================

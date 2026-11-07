@@ -166,7 +166,7 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
             String type = questionAddDTO.getType();
             // 校验题目字段与选项
             try {
-                validateQuestionFields(questionAddDTO);
+                validateQuestionFields(questionAddDTO, options);
                 validateOptions(type, options);
             } catch (BusinessException e) {
                 errors.add("第"+(i+1)+"条: "+e.getMessage());
@@ -209,7 +209,7 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
     /**
      * 校验题干、题型、难度与答案
      */
-    private void validateQuestionFields(QuestionAddDTO dto) {
+    private void validateQuestionFields(BaseQuestionDTO dto, List<? extends BaseQuestionOptionDTO> options) {
         if (dto == null) throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
         if (StringUtils.isBlank(dto.getContent())) {
             throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "题干不能为空");
@@ -226,7 +226,7 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
         if (StringUtils.isBlank(answer)) {
             throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "正确答案不能为空");
         }
-        String answerError = questionSupport.validateAnswer(type, answer, dto.getOptions());
+        String answerError = questionSupport.validateAnswer(type, answer, options);
         if (answerError != null) {
             throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, answerError);
         }
@@ -295,16 +295,15 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
     /**
      * 更新完整题目
      * 先校验参数,选项标签和类型,使用增量更新,更新选项,最后更新题目
-     * //  TODO: 声明事务的范围太广,导致事务执行占用锁的时长过长,导致其他事务无法执行,后续若有影响应该做优化
      * // TODO: 这里可以做先删除后插入的更新操作的,现在使用的增量更新反而弄复杂了
      */
-    @Transactional(rollbackFor = Exception.class)
     @Override
     public void updateQuestionComplete(QuestionUpdateDTO questionUpdateDTO) {
         // 校验参数
         if (questionUpdateDTO == null) throw new BusinessException(ErrorCodeEnum.PARAM_ERROR);
         String type = questionUpdateDTO.getType();
         List<QuestionOptionUpdateDTO> optionDTOS = questionUpdateDTO.getOptions();
+        validateQuestionFields(questionUpdateDTO, optionDTOS);
         // 校验选项
         validateOptions(type, optionDTOS);
         // 查询题目,获取版本号并设置版本号,准备好要插入的题目
@@ -327,66 +326,69 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
         Question newQuestion = new Question();
         BeanUtil.copyProperties(questionUpdateDTO, newQuestion);
         newQuestion.setVersion(dbQuestion.getVersion());
-        // 简答题删除所有选项
-        if (type.equals(QuestionTypeEnum.ESSAY.getCode())) {
-            questionOptionMapper.delete(
-                    new LambdaQueryWrapper<QuestionOption>()
-                            .eq(QuestionOption::getQuestionId, questionId));
-        } else {
-            // 选择题型,增量更新选项
-            // 获取数据库关联的选项集
-            List<QuestionOption> dbOptions = questionOptionMapper.selectList(
-                    new LambdaQueryWrapper<QuestionOption>()
-                            .eq(QuestionOption::getQuestionId, questionId));
-            // 没有选项,是原简答题变为选择题型,执行批量插入选项
-            if (dbOptions.isEmpty()) {
-                List<QuestionOption> questionOptions = questionUpdateDTO.getOptions().stream().map(optionUpdateDTO -> {
-                    QuestionOption questionOption = new QuestionOption();
-                    BeanUtil.copyProperties(optionUpdateDTO, questionOption);
-                    questionOption.setQuestionId(questionId);
-                    return questionOption;
-                }).toList();
-
-                addOptions(questionOptions);
+        transactionTemplate.execute(status -> {
+            // 简答题删除所有选项
+            if (type.equals(QuestionTypeEnum.ESSAY.getCode())) {
+                questionOptionMapper.delete(
+                        new LambdaQueryWrapper<QuestionOption>()
+                                .eq(QuestionOption::getQuestionId, questionId));
             } else {
-                // 有选项,选择题型之间的更新
-                Map<Integer, QuestionOption> dbOptionMap = dbOptions.stream()
-                        .collect(Collectors.toMap(QuestionOption::getId, Function.identity()));
-                Set<Integer> ids = optionDTOS.stream().map(QuestionOptionUpdateDTO::getId).collect(Collectors.toSet());
-                // 数据库有的选项,但参数里没有的选项,加入删除集合
-                List<Integer> deleteIds = dbOptions.stream().map(QuestionOption::getId).filter(id -> !ids.contains(id)).toList();
-                // 参数里有的,数据库里也有的,则加入更新集合
-                List<QuestionOption> updateOptions = new ArrayList<>();
-                // 参数里有的,但数据库没有的,则加入插入集合
-                List<QuestionOption> insertOptions = new ArrayList<>();
-                optionDTOS.forEach(optionDTO -> {
-                    QuestionOption option = new QuestionOption();
-                    BeanUtil.copyProperties(optionDTO, option);
-                    option.setQuestionId(questionId);
-                    if (optionDTO.getId() != null && dbOptionMap.containsKey(optionDTO.getId())) {
-                        updateOptions.add(option);
-                    } else {
-                        // 为了调用能检验选项标签是否有错误的 addOptions方法,这里做了类型转换的封装
-                        insertOptions.add(option);
+                // 选择题型,增量更新选项
+                // 获取数据库关联的选项集
+                List<QuestionOption> dbOptions = questionOptionMapper.selectList(
+                        new LambdaQueryWrapper<QuestionOption>()
+                                .eq(QuestionOption::getQuestionId, questionId));
+                // 没有选项,是原简答题变为选择题型,执行批量插入选项
+                if (dbOptions.isEmpty()) {
+                    List<QuestionOption> questionOptions = questionUpdateDTO.getOptions().stream().map(optionUpdateDTO -> {
+                        QuestionOption questionOption = new QuestionOption();
+                        BeanUtil.copyProperties(optionUpdateDTO, questionOption);
+                        questionOption.setQuestionId(questionId);
+                        return questionOption;
+                    }).toList();
+
+                    addOptions(questionOptions);
+                } else {
+                    // 有选项,选择题型之间的更新
+                    Map<Integer, QuestionOption> dbOptionMap = dbOptions.stream()
+                            .collect(Collectors.toMap(QuestionOption::getId, Function.identity()));
+                    Set<Integer> ids = optionDTOS.stream().map(QuestionOptionUpdateDTO::getId).collect(Collectors.toSet());
+                    // 数据库有的选项,但参数里没有的选项,加入删除集合
+                    List<Integer> deleteIds = dbOptions.stream().map(QuestionOption::getId).filter(id -> !ids.contains(id)).toList();
+                    // 参数里有的,数据库里也有的,则加入更新集合
+                    List<QuestionOption> updateOptions = new ArrayList<>();
+                    // 参数里有的,但数据库没有的,则加入插入集合
+                    List<QuestionOption> insertOptions = new ArrayList<>();
+                    optionDTOS.forEach(optionDTO -> {
+                        QuestionOption option = new QuestionOption();
+                        BeanUtil.copyProperties(optionDTO, option);
+                        option.setQuestionId(questionId);
+                        if (optionDTO.getId() != null && dbOptionMap.containsKey(optionDTO.getId())) {
+                            updateOptions.add(option);
+                        } else {
+                            // 为了调用能检验选项标签是否有错误的 addOptions方法,这里做了类型转换的封装
+                            insertOptions.add(option);
+                        }
+                    });
+                    // 增量更新上述集合
+                    if (!updateOptions.isEmpty()) {
+                        questionOptionMapper.updateById(updateOptions);
                     }
-                });
-                // 增量更新上述集合
-                if (!updateOptions.isEmpty()) {
-                    questionOptionMapper.updateById(updateOptions);
-                }
-                if (!insertOptions.isEmpty()) {
-                    addOptions(insertOptions);
-                }
-                if (!deleteIds.isEmpty()) {
-                    questionOptionMapper.deleteByIds(deleteIds);
+                    if (!insertOptions.isEmpty()) {
+                        addOptions(insertOptions);
+                    }
+                    if (!deleteIds.isEmpty()) {
+                        questionOptionMapper.deleteByIds(deleteIds);
+                    }
                 }
             }
-        }
-        // 更新题目(已配置mp的基于version的乐观锁插件)
-        int i = questionManagementMapper.update(newQuestion,
-                new LambdaQueryWrapper<Question>()
-                        .eq(Question::getId, questionId));
-        if (i <= 0) throw new BusinessException(ErrorCodeEnum.DATA_ALREADY_MODIFIED_PLEASE_FLUSH_AFTER_RETRY);
+            // 更新题目(已配置mp的基于version的乐观锁插件)
+            int i = questionManagementMapper.update(newQuestion,
+                    new LambdaQueryWrapper<Question>()
+                            .eq(Question::getId, questionId));
+            if (i <= 0) throw new BusinessException(ErrorCodeEnum.DATA_ALREADY_MODIFIED_PLEASE_FLUSH_AFTER_RETRY);
+            return null;
+        });
     }
 
     /**

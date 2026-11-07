@@ -41,7 +41,7 @@ public class QuestionManagementController {
     @Operation(summary = "批量添加题目", description = "添加完整题目")
     @PreAuthorize("hasAuthority('tch:question:add')")
     @PostMapping("/addQuestionComplete")
-    public ResponseResult<BatchInsertResult> addQuestionComplete(@Validated @RequestBody List<QuestionAddDTO> questionAddDTOS){
+    public ResponseResult<BatchInsertResult> addQuestionComplete(@RequestBody List<QuestionAddDTO> questionAddDTOS){
         log.info("添加题目: {}", questionAddDTOS);
         List<String> duplicateMessages = questionManagementService.findDuplicateMessages(questionAddDTOS);
         if (!duplicateMessages.isEmpty()) {
