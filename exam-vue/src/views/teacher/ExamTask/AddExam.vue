@@ -363,7 +363,12 @@ const settingRules = {
 };
 
 // ========== 班级相关 ==========
-const selectedClassIds = ref([]);
+const selectedClassIds = computed({
+  get: () => settingForm.classIds,
+  set: (val) => {
+    settingForm.classIds = val ?? [];
+  },
+});
 const classList = ref([]);
 
 // 模拟班级列表（接口不可用时降级）
@@ -396,6 +401,7 @@ const selectedPaper = ref(null);
 // 选中试卷回调
 const handlePaperConfirm = (paper) => {
   selectedPaper.value = paper;
+  settingForm.paperId = paper.id;
 };
 
 // ========== 学生列表 ==========
@@ -568,6 +574,7 @@ const loadExamData = async (id) => {
 
     // 填充试卷（接口已直接返回试卷信息）
     selectedPaper.value = data.basePaperVO || { id: data.paperId };
+    settingForm.paperId = data.paperId;
 
     // 填充班级（设值前 isLoadingData 已为 true，不会触发 handleClassChange 重新加载）
     selectedClassIds.value = data.classIds || [];
