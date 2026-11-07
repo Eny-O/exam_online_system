@@ -11,6 +11,7 @@ import com.ai.exam_auth_user.service.user.ISysClassService;
 import com.ai.exam_auth_user.service.user.IUserClassService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +33,7 @@ import java.util.Map;
 @Tag(name = "内部用户接口")
 @RestController
 @RequestMapping("/inner")
+@Slf4j
 public class InnerUserController {
 
     @Autowired
@@ -49,6 +51,7 @@ public class InnerUserController {
     @Operation(summary = "按ID批量查询用户摘要")
     @GetMapping("/user/briefs")
     public List<UserBriefDTO> listUserBriefs(@RequestParam("userIds") List<Integer> userIds) {
+        log.info("批量查询用户摘要, count={}", userIds == null ? 0 : userIds.size());
         if (userIds == null || userIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -73,6 +76,7 @@ public class InnerUserController {
     @Operation(summary = "查询教师任教班级ID")
     @GetMapping("/user/teacher-class-ids")
     public List<Integer> listTeacherClassIds(@RequestParam("userId") Integer userId) {
+        log.info("查询教师任教班级ID: {}", userId);
         if (userId == null) {
             return Collections.emptyList();
         }
@@ -84,6 +88,7 @@ public class InnerUserController {
     @Operation(summary = "按ID批量查询班级摘要")
     @GetMapping("/class/briefs")
     public List<ClassBriefDTO> listClassBriefs(@RequestParam("classIds") List<Integer> classIds) {
+        log.info("批量查询班级摘要, count={}", classIds == null ? 0 : classIds.size());
         if (classIds == null || classIds.isEmpty()) {
             return Collections.emptyList();
         }

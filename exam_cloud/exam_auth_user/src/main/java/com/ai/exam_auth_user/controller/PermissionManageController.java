@@ -28,6 +28,7 @@ public class PermissionManageController {
     @PreAuthorize("hasAuthority('sys:perm:view')")
     @GetMapping("/tree")
     public ResponseResult<List<PermissionTreeVO>> getPermissionTree() {
+        log.info("查询权限树形列表");
         return ResponseResult.success(permissionManageService.getPermissionTree());
     }
 
@@ -35,6 +36,7 @@ public class PermissionManageController {
     @PreAuthorize("hasAuthority('sys:perm:add')")
     @PostMapping("/add")
     public ResponseResult<Void> addPermission(@Valid @RequestBody PermissionAddDTO dto) {
+        log.info("新增权限: {}", dto.getPermCode());
         permissionManageService.addPermission(dto);
         return ResponseResult.success();
     }
@@ -43,6 +45,7 @@ public class PermissionManageController {
     @PreAuthorize("hasAuthority('sys:perm:edit')")
     @PutMapping("/update")
     public ResponseResult<Void> updatePermission(@Valid @RequestBody PermissionUpdateDTO dto) {
+        log.info("修改权限: {}", dto.getId());
         permissionManageService.updatePermission(dto);
         return ResponseResult.success();
     }
@@ -51,6 +54,7 @@ public class PermissionManageController {
     @PreAuthorize("hasAuthority('sys:perm:delete')")
     @DeleteMapping("/delete")
     public ResponseResult<Void> deletePermission(@RequestParam Integer id) {
+        log.info("删除权限: {}", id);
         permissionManageService.deletePermission(id);
         return ResponseResult.success();
     }

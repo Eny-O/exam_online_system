@@ -42,6 +42,7 @@ public class FileManagementController {
     @PreAuthorize("hasAuthority('tch:file:upload')")
     @GetMapping("/template")
     public ResponseEntity<Resource> downloadTemplate() throws IOException {
+        log.info("下载题目导入模板");
         ClassPathResource resource = new ClassPathResource("templates/question_import_template.xlsx");
         if (!resource.exists()) {
             throw new BusinessException(ErrorCodeEnum.FILE_NOT_FOUND);

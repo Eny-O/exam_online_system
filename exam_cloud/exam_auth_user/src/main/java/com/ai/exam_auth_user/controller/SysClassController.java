@@ -46,6 +46,7 @@ public class SysClassController {
     @PreAuthorize("hasAuthority('tch:class:view')")
     @GetMapping("/list")
     public ResponseResult<List<SysClassVO>> list() {
+        log.info("获取班级列表");
         List<Integer> scopedClassIds = teacherClassScope.scopedClassIds();
         List<SysClass> list;
         if (scopedClassIds == null) {
@@ -68,6 +69,7 @@ public class SysClassController {
     @PreAuthorize("hasAuthority('sys:class:view')")
     @GetMapping("/page")
     public ResponseResult<PageResult<SysClassVO>> page(ClassQueryDTO classQueryDTO) {
+        log.info("分页查询班级: {}", classQueryDTO);
         return ResponseResult.success(sysClassService.pageClass(classQueryDTO));
     }
 
@@ -75,6 +77,7 @@ public class SysClassController {
     @PreAuthorize("hasAuthority('sys:class:add')")
     @PostMapping("/add")
     public ResponseResult<Void> add(@Valid @RequestBody ClassAddDTO classAddDTO) {
+        log.info("新增班级: {}", classAddDTO.getClassName());
         sysClassService.addClass(classAddDTO);
         return ResponseResult.success();
     }
@@ -83,6 +86,7 @@ public class SysClassController {
     @PreAuthorize("hasAuthority('sys:class:edit')")
     @PutMapping("/update")
     public ResponseResult<Void> update(@Valid @RequestBody ClassUpdateDTO classUpdateDTO) {
+        log.info("编辑班级: {}", classUpdateDTO.getId());
         sysClassService.updateClass(classUpdateDTO);
         return ResponseResult.success();
     }
@@ -91,6 +95,7 @@ public class SysClassController {
     @PreAuthorize("hasAuthority('sys:class:delete')")
     @DeleteMapping("/delete")
     public ResponseResult<Void> delete(@RequestParam Integer id) {
+        log.info("停用班级: {}", id);
         sysClassService.deleteClass(id);
         return ResponseResult.success();
     }
@@ -99,6 +104,7 @@ public class SysClassController {
     @PreAuthorize("hasAuthority('sys:class:edit')")
     @PutMapping("/restore")
     public ResponseResult<Void> restore(@RequestParam Integer id) {
+        log.info("恢复班级: {}", id);
         sysClassService.restoreClass(id);
         return ResponseResult.success();
     }

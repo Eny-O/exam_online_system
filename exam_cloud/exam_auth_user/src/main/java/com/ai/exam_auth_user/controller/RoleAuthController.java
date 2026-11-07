@@ -27,6 +27,7 @@ public class RoleAuthController {
     @PreAuthorize("hasAuthority('sys:perm:view')")
     @GetMapping("/list")
     public ResponseResult<List<Role>> listRoles() {
+        log.info("查询所有角色");
         return ResponseResult.success(roleAuthService.listRoles());
     }
 
@@ -34,6 +35,7 @@ public class RoleAuthController {
     @PreAuthorize("hasAuthority('sys:perm:view')")
     @GetMapping("/permissions")
     public ResponseResult<List<PermissionTreeVO>> getPermissionTree() {
+        log.info("查询完整权限树");
         return ResponseResult.success(roleAuthService.getPermissionTree());
     }
 
@@ -41,6 +43,7 @@ public class RoleAuthController {
     @PreAuthorize("hasAuthority('sys:perm:view')")
     @GetMapping("/permissions/{roleId}")
     public ResponseResult<List<Integer>> getRolePermissionIds(@PathVariable Integer roleId) {
+        log.info("查询角色已分配的权限ID: {}", roleId);
         return ResponseResult.success(roleAuthService.getRolePermissionIds(roleId));
     }
 
@@ -48,6 +51,7 @@ public class RoleAuthController {
     @PreAuthorize("hasAuthority('sys:perm:edit')")
     @PutMapping("/assign")
     public ResponseResult<Void> assignPermissions(@RequestBody AssignDTO dto) {
+        log.info("为角色分配权限: {}", dto.getRoleId());
         roleAuthService.assignPermissions(dto.getRoleId(), dto.getPermissionIds());
         return ResponseResult.success();
     }

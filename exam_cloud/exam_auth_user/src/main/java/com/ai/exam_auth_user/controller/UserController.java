@@ -56,7 +56,7 @@ public class UserController {
     @SentinelResource(value = "login", blockHandler = "loginBlocked")
     @PostMapping("/login")
     public ResponseResult<HashMap<String,String>> login(@Valid @RequestBody UserLoginDTO userLoginDTO) {
-        log.info("用户登录：{}", userLoginDTO);
+        log.info("用户登录：{}", userLoginDTO.getUsername());
         return ResponseResult.success(userService.login(userLoginDTO));
     }
 
@@ -100,6 +100,7 @@ public class UserController {
     @PreAuthorize("hasAuthority('sys:user:add')")
     @GetMapping("/template")
     public ResponseEntity<Resource> downloadTemplate() throws IOException {
+        log.info("下载学生导入模板");
         ClassPathResource resource = new ClassPathResource("templates/user_import_template.xlsx");
         if (!resource.exists()) {
             throw new BusinessException(ErrorCodeEnum.FILE_NOT_FOUND);

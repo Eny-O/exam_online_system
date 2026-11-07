@@ -8,6 +8,7 @@ import com.ai.exam_spring.modules.exam.service.IExamClassService;
 import com.ai.exam_spring.modules.grade.service.IStudentAnswerService;
 import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
 import com.ai.exam_spring.modules.question.service.QuestionManagementService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +22,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/inner")
+@Slf4j
 public class InnerDataController {
 
     @Autowired
@@ -34,6 +36,7 @@ public class InnerDataController {
 
     @GetMapping("/question/batch")
     public ResponseResult<List<QuestionBriefDTO>> listQuestions(@RequestParam("ids") List<Integer> ids) {
+        log.info("批量查询题目摘要, count={}", ids == null ? 0 : ids.size());
         List<QuestionCompleteVO> questions = questionManagementService.getQuestionCompleteByIds(ids);
         List<QuestionBriefDTO> dtos = questions.stream().map(q -> {
             QuestionBriefDTO dto = new QuestionBriefDTO();
@@ -51,6 +54,7 @@ public class InnerDataController {
     @GetMapping("/student-answer")
     public ResponseResult<List<StudentAnswerDTO>> listStudentAnswers(@RequestParam("examId") Integer examId,
                                                                      @RequestParam("studentId") Integer studentId) {
+        log.info("查询学生答卷: examId={}, studentId={}", examId, studentId);
         List<StudentAnswer> answers = studentAnswerService.listByExamAndStudent(examId, studentId);
         List<StudentAnswerDTO> dtos = answers.stream().map(a -> {
             StudentAnswerDTO dto = new StudentAnswerDTO();
@@ -70,6 +74,7 @@ public class InnerDataController {
 
     @GetMapping("/class/exam-refs")
     public ResponseResult<Boolean> hasClassReference(@RequestParam("classId") Integer classId) {
+        log.info("查询班级考试引用: classId={}", classId);
         return ResponseResult.success(examClassService.hasClassReference(classId));
     }
 }

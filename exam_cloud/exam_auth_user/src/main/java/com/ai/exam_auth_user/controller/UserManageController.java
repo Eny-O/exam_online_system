@@ -28,6 +28,7 @@ public class UserManageController {
     @PreAuthorize("hasAuthority('sys:user:view')")
     @GetMapping("/page")
     public ResponseResult<PageResult<UserManageVO>> pageUser(UserQueryDTO userQueryDTO) {
+        log.info("分页查询人员: {}", userQueryDTO);
         return ResponseResult.success(userManageService.pageUser(userQueryDTO));
     }
 
@@ -35,6 +36,7 @@ public class UserManageController {
     @PreAuthorize("hasAuthority('sys:user:add')")
     @PostMapping("/add")
     public ResponseResult<Void> addUser(@Valid @RequestBody UserAddDTO userAddDTO) {
+        log.info("新增用户: {}", userAddDTO.getUsername());
         userManageService.addUser(userAddDTO);
         return ResponseResult.success();
     }
@@ -43,6 +45,7 @@ public class UserManageController {
     @PreAuthorize("hasAuthority('sys:user:edit')")
     @PutMapping("/update")
     public ResponseResult<Void> updateUser(@Valid @RequestBody UserUpdateDTO userUpdateDTO) {
+        log.info("修改用户: {}", userUpdateDTO.getId());
         userManageService.updateUser(userUpdateDTO);
         return ResponseResult.success();
     }
@@ -51,6 +54,7 @@ public class UserManageController {
     @PreAuthorize("hasAuthority('sys:user:status')")
     @PutMapping("/toggleStatus")
     public ResponseResult<Void> toggleStatus(@RequestParam Integer id) {
+        log.info("切换用户状态: {}", id);
         userManageService.toggleStatus(id);
         return ResponseResult.success();
     }
@@ -59,6 +63,7 @@ public class UserManageController {
     @PreAuthorize("hasAuthority('sys:user:reset')")
     @PutMapping("/resetPassword")
     public ResponseResult<Void> resetPassword(@RequestParam Integer id) {
+        log.info("重置用户密码: {}", id);
         userManageService.resetPassword(id);
         return ResponseResult.success("密码已重置为 123456");
     }
