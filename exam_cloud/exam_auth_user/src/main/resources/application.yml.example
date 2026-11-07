@@ -1,0 +1,93 @@
+# ============================================================
+# 本地开发配置模板（.example）
+# ============================================================
+# 用法：
+#   copy application.yml.example application.yml    # Windows CMD
+#   cp application.yml.example application.yml      # Linux / macOS / Git Bash
+# 然后修改下面的数据库密码、Redis 地址、内部接口密钥等本地环境相关项。
+#
+# 注意：application.yml 本身已被 .gitignore 排除（含数据库密码等敏感信息），
+#      不会提交到仓库；本模板仅提供字段结构参考。
+# ============================================================
+spring:
+  application:
+    name: exam-auth-user
+  cloud:
+    openfeign:
+      client:
+        config:
+          exam-core:
+            connectTimeout: 2000
+            readTimeout: 5000
+  datasource:
+    # 数据库需提前创建：CREATE DATABASE exam_auth_db DEFAULT CHARSET utf8mb3;
+    # 端口说明：docker-compose --profile full 起的 MySQL 容器，宿主端口映射为 13306。
+    #   本模板默认指向容器端口；若你本地另装了 MySQL 且用默认 3306，改回 localhost:3306。
+    url: jdbc:mysql://127.0.0.1:13306/exam_auth_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true
+    username: root
+    password: your_password          # ← 改成你的 MySQL 密码（容器默认 123456）
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      connection-timeout: 10000
+      idle-timeout: 300000
+      max-lifetime: 900000
+  data:
+    redis:
+      # docker-compose --profile full 起的 Redis 容器，宿主端口映射为 16379。
+      #   若你本地另装了 Redis 且用默认 6379，改回 localhost / 6379。
+      host: 127.0.0.1
+      port: 16379
+      database: 1
+
+server:
+  port: 8082
+  tomcat:
+    accept-count: 300
+    threads:
+      max: 300
+      min-spare: 20
+
+logging:
+  level:
+    org.springframework.security: WARN
+    com.ai.exam_auth_user: DEBUG
+  pattern:
+    dateformat: HH:mm:ss
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted # 避免逻辑删除干扰
+  type-aliases-package: com.ai.exam_auth_user.pojo.dos
+  mapper-locations: classpath*:mapper/*.xml
+
+springdoc:
+  default-flat-param-object: true
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-swagger-models: true
+    swagger-model-name: 实体类列表
+
+# 内部接口调用方鉴权密钥：必须与 exam-core 侧 exam.internal-api-key 保持一致
+exam:
+  internal-api-key: your-internal-api-key   # ← 开发阶段可与 exam-core 写成同一值
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  metrics:
+    tags:
+      application: exam-auth-user
+  endpoint:
+    prometheus:
+      enabled: true

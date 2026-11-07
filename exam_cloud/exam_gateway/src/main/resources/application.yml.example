@@ -1,0 +1,113 @@
+# ============================================================
+# 本地开发配置模板（.example）
+# ============================================================
+# 用法：
+#   copy application.yml.example application.yml    # Windows CMD
+#   cp application.yml.example application.yml      # Linux / macOS / Git Bash
+#
+# 说明：网关不含数据库密码等敏感信息，仓库已直接提交 application.yml，
+#      本模板仅用于统一「复制即用」工作流；二者内容一致。
+# ============================================================
+server:
+  port: 8080
+
+spring:
+  application:
+    name: exam-gateway
+  cloud:
+    gateway:
+      # 关闭"服务自动路由"，只用下面显式声明的路由
+      discovery:
+        locator:
+          enabled: false
+      routes:
+        # /api/user|permission|role|sysClass/** 必须放在 /api/** 之前
+        - id: exam-auth-user
+          uri: lb://exam-auth-user
+          predicates:
+            - Path=/api/user/**,/api/permission/**,/api/role/**,/api/sysClass/**
+          filters:
+            - StripPrefix=1
+        # AI 批阅服务必须放在 /api/** (exam-core) 之前，否则 /api/ai/** 会被 exam-core 路由吞掉
+        - id: exam-ai
+          uri: lb://exam-ai
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - StripPrefix=1
+          metadata:
+            response-timeout: 300s
+        - id: exam-core
+          uri: lb://exam-core
+          predicates:
+            - Path=/api/**
+          filters:
+            - StripPrefix=1
+        # Knife4j 聚合文档转发：带前缀的路径转发到对应后端（StripPrefix=1 去掉前缀）
+        - id: exam-auth-user-doc
+          uri: lb://exam-auth-user
+          predicates:
+            - Path=/auth-user/**
+          filters:
+            - StripPrefix=1
+        - id: exam-core-doc
+          uri: lb://exam-core
+          predicates:
+            - Path=/exam-core/**
+          filters:
+            - StripPrefix=1
+        - id: exam-ai-doc
+          uri: lb://exam-ai
+          predicates:
+            - Path=/exam-ai/**
+          filters:
+            - StripPrefix=1
+
+      # 网关级 CORS（后端 CorsConfig 是 MVC 的，两套机制，互不冲突）
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      httpclient:
+        # 后端慢接口的响应超时（默认 0 = 不超时，建议显式设）
+        response-timeout: 30s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    gateway:
+      # 打开后可访问 /actuator/gateway/routes 查看生效的路由
+      enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+
+# Knife4j 网关聚合文档：访问 http://localhost:8080/doc.html，在「文档管理 -> 聚合文档」切换微服务
+knife4j:
+  gateway:
+    enabled: true
+    routes:
+      # url 必须是「网关侧可达、能区分服务」的路径；contextPath 填 /api 以命中网关路由
+      - name: 用户与权限服务
+        serviceName: exam-auth-user
+        url: /auth-user/v3/api-docs
+        contextPath: /api
+        order: 1
+      - name: 考试核心服务
+        serviceName: exam-core
+        url: /exam-core/v3/api-docs
+        contextPath: /api
+        order: 2
+      - name: AI 批阅服务
+        serviceName: exam_ai
+        url: /exam-ai/v3/api-docs
+        contextPath: /api
+        order: 3

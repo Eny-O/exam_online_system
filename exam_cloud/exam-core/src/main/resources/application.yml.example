@@ -4,7 +4,7 @@
 # 用法：
 #   copy application.yml.example application.yml    # Windows CMD
 #   cp application.yml.example application.yml      # Linux / macOS / Git Bash
-# 然后修改下面的数据库账号密码、Redis 地址等本地环境相关项。
+# 然后修改下面的数据库账号密码、Redis 地址、内部接口密钥等本地环境相关项。
 #
 # 注意：application.yml 本身已被 .gitignore 排除（含数据库密码等敏感信息），
 #      不会提交到仓库；本模板仅提供字段结构参考。
@@ -12,11 +12,24 @@
 spring:
   application:
     name: exam-core
+  cloud:
+    openfeign:
+      client:
+        config:
+          # 跨服务调用 auth-user 的超时
+          exam-auth-user:
+            connectTimeout: 2000
+            readTimeout: 5000
+    sentinel:
+      transport:
+        dashboard: 127.0.0.1:18858
   datasource:
-    # 数据库需提前创建：CREATE DATABASE exam_online_system DEFAULT CHARSET utf8mb4;
-    url: jdbc:mysql://localhost:3306/exam_online_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true
+    # 数据库需提前创建：CREATE DATABASE exam_core_db DEFAULT CHARSET utf8mb3;
+    # 端口说明：docker-compose --profile full 起的 MySQL 容器，宿主端口映射为 13306。
+    #   本模板默认指向容器端口；若你本地另装了 MySQL 且用默认 3306，改回 localhost:3306。
+    url: jdbc:mysql://127.0.0.1:13306/exam_core_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true
     username: root
-    password: your_password          # ← 改成你的 MySQL 密码
+    password: your_password          # ← 改成你的 MySQL 密码（容器默认 123456）
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 150
@@ -26,9 +39,22 @@ spring:
       max-lifetime: 900000
   data:
     redis:
-      host: localhost
-      port: 6379
+      # docker-compose --profile full 起的 Redis 容器，宿主端口映射为 16379。
+      #   若你本地另装了 Redis 且用默认 6379，改回 localhost / 6379。
+      host: 127.0.0.1
+      port: 16379
       database: 1
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+feign:
+  # 关闭 Sentinel 对 Feign 的包装：当前 sentinel 适配器与 OpenFeign 13 不兼容，启用会导致 @FeignClient 启动失败
+  sentinel:
+    enabled: false
+exam:
+  # 内部接口调用方鉴权密钥：必须与 exam-auth-user 侧 exam.internal-api-key 保持一致
+  internal-api-key: your-internal-api-key   # ← 与 exam-auth-user 保持一致
 
 server:
   port: 8081
@@ -62,7 +88,7 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
-    enable-swagger-models: true  # 在 UI 底部显示实体类（Swagger Models）列表
+    enable-swagger-models: true
     swagger-model-name: 实体类列表
 
 management:

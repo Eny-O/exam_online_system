@@ -26,6 +26,12 @@ services:
     environment:
       - MODE=standalone          # 单机模式
       - NACOS_AUTH_ENABLE=false  # 本地 dev 关鉴权
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8848/nacos/actuator/health >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
     restart: unless-stopped
 
   sentinel:
@@ -90,3 +96,53 @@ services:
       - ./rocketmq/store:/home/rocketmq/store      # 消息存储：重启不丢
       - ./rocketmq/logs:/home/rocketmq/logs
     restart: unless-stopped
+
+  # ==================== 数据存储层（profile: full）====================
+  # 默认 `docker compose up` 只起中间件；`docker compose --profile full up`
+  # 额外拉起 MySQL 与 Redis，把数据层也容器化，方便一键起整套依赖。
+  #
+  # 初始化挂载：官方 MySQL 镜像在首次启动时会按文件名字母序执行
+  # /docker-entrypoint-initdb.d/ 下的 *.sql。若直接挂 schema.sql / init-data.sql，
+  # 字母序 i < s 会让 init-data 先于 schema 执行而报错。这里把两个源文件以
+  # 01-/02- 前缀挂载进容器，既保留仓库内友好文件名，又保证「先建表、后灌数据」。
+  #
+  # 账号/端口与 exam_auth_user、exam-core 的 datasource 保持一致：
+  #   root / 123456，宿主 13306 → 容器 3306（避开本机已装的 3306）。
+
+  mysql:
+    image: mysql:8.0.31
+    container_name: exam-mysql
+    profiles: ["full"]
+    ports:
+      - "13306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_DATABASE=exam_auth_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./sql/init-data.sql:/docker-entrypoint-initdb.d/02-init-data.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$$MYSQL_ROOT_PASSWORD", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: exam-redis
+    profiles: ["full"]
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
