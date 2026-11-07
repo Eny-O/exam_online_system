@@ -141,6 +141,7 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
                 validateOptions(type, options);
             } catch (BusinessException e) {
                 errors.add("第"+(i+1)+"条: "+e.getMessage());
+                continue;
             }
             // 添加题目和选项
             Question question = new Question();

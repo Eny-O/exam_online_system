@@ -170,7 +170,7 @@
     <!-- 导入结果展示 -->
     <el-alert
       v-if="importResult"
-      type="success"
+      :type="importResult.failCount > 0 ? 'warning' : 'success'"
       :closable="false"
       style="margin-top: 16px"
     >
@@ -178,6 +178,11 @@
       <span v-if="importResult.failCount > 0"
         >，{{ importResult.failCount }} 道失败</span
       >
+      <div v-if="importResult.failMessages && importResult.failMessages.length" style="margin-top: 8px">
+        <div v-for="(msg, idx) in importResult.failMessages" :key="idx" style="line-height: 1.6">
+          {{ msg }}
+        </div>
+      </div>
     </el-alert>
 
     <template #footer>
@@ -358,8 +363,13 @@ const handleConfirmImport = async () => {
   try {
     const res = await importQuestions(importFile.value);
     importResult.value = res.data;
-    ElMessage.success(`导入成功 ${res.data.successCount} 道题目`);
-    fetchQuestionList();
+    if (res.data.failCount > 0) {
+      ElMessage.warning(`导入完成，成功 ${res.data.successCount} 道，失败 ${res.data.failCount} 道`);
+    } else {
+      ElMessage.success(`导入成功 ${res.data.successCount} 道题目`);
+      fetchQuestionList();
+      importDialogVisible.value = false;
+    }
   } catch (error) {
     ElMessage.error(error.message || "导入失败");
   } finally {

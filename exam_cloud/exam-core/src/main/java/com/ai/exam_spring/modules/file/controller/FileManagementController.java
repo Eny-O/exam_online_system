@@ -35,10 +35,7 @@ public class FileManagementController {
     public ResponseResult<BatchInsertResult> upload(@RequestPart @RequestParam("file")MultipartFile file){
         log.info("上传文件");
         BatchInsertResult batchInsertResult = fileManagementService.uploadFile(file);
-        if (batchInsertResult.getSuccessCount() == batchInsertResult.getTotalCount()) {
-            return ResponseResult.success(batchInsertResult);
-        }
-        return ResponseResult.error(batchInsertResult);
+        return ResponseResult.success(batchInsertResult);
     }
 
     @Operation(summary = "下载题目导入模板")
