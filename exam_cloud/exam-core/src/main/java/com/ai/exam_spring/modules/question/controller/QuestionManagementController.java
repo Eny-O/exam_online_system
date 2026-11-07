@@ -44,9 +44,6 @@ public class QuestionManagementController {
     public ResponseResult<BatchInsertResult> addQuestionComplete(@Validated @RequestBody List<QuestionAddDTO> questionAddDTOS){
         log.info("添加题目: {}", questionAddDTOS);
         BatchInsertResult batchInsertResult = questionManagementService.addQuestionComplete(questionAddDTOS);
-        if (batchInsertResult.getSuccessCount() != batchInsertResult.getTotalCount()) {
-            return ResponseResult.error(batchInsertResult);
-        }
         return ResponseResult.success(batchInsertResult);
     }
     @Operation(summary = "更新题目", description = "更新完整题目")

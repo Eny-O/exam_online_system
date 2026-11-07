@@ -128,12 +128,12 @@ const handleTypeChange = () => {
 
 // 添加选项
 const addOption = () => {
-  const labels = ["A", "B", "C", "D", "E", "F", "G", "H"];
+  const labels = ["A", "B", "C", "D", "E", "F"];
   const nextLabel = labels[formData.options.length];
   if (nextLabel) {
     formData.options.push({ label: nextLabel, content: "" });
   } else {
-    ElMessage.warning("最多只能添加8个选项");
+    ElMessage.warning("最多只能添加6个选项");
   }
 };
 
@@ -145,7 +145,7 @@ const deleteOption = (index) => {
   }
   formData.options.splice(index, 1);
   // 重新计算标签
-  const labels = ["A", "B", "C", "D", "E", "F", "G", "H"];
+  const labels = ["A", "B", "C", "D", "E", "F"];
   formData.options.forEach((opt, idx) => {
     opt.label = labels[idx];
   });
@@ -161,7 +161,7 @@ const getMultipleAnswerArray = () => {
 
 // 设置多选题答案
 const setMultipleAnswer = (checkedValues) => {
-  formData.answer = checkedValues.join(",");
+  formData.answer = [...checkedValues].sort().join(",");
 };
 
 // 提交表单
@@ -216,7 +216,18 @@ const handleSubmit = async () => {
       ElMessage.success("修改成功");
     } else {
       // 批量新增接口接收数组
-      await addQuestionComplete([submitData]);
+      const res = await addQuestionComplete([submitData]);
+      const result = res.data;
+      if (!result || result.failCount > 0) {
+        const reason = (result && result.failMessages ? result.failMessages : [])
+          .map((msg) => {
+            const idx = msg.indexOf("原因：");
+            return idx >= 0 ? msg.slice(idx + "原因：".length) : msg;
+          })
+          .join("；");
+        ElMessage.error(reason || "新增失败，请检查题目内容");
+        return;
+      }
       ElMessage.success("新增成功");
     }
 
