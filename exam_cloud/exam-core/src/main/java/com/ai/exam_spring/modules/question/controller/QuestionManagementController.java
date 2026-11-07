@@ -43,6 +43,11 @@ public class QuestionManagementController {
     @PostMapping("/addQuestionComplete")
     public ResponseResult<BatchInsertResult> addQuestionComplete(@Validated @RequestBody List<QuestionAddDTO> questionAddDTOS){
         log.info("添加题目: {}", questionAddDTOS);
+        List<String> duplicateMessages = questionManagementService.findDuplicateMessages(questionAddDTOS);
+        if (!duplicateMessages.isEmpty()) {
+            int total = questionAddDTOS == null ? 0 : questionAddDTOS.size();
+            return ResponseResult.success(new BatchInsertResult(total, 0, total, duplicateMessages));
+        }
         BatchInsertResult batchInsertResult = questionManagementService.addQuestionComplete(questionAddDTOS);
         return ResponseResult.success(batchInsertResult);
     }

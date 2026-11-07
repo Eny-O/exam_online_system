@@ -4,17 +4,13 @@ import com.ai.exam_common.common.enums.ErrorCodeEnum;
 import com.ai.exam_common.common.exception.BusinessException;
 import com.ai.exam_common.common.pojo.result.BatchInsertResult;
 import com.ai.exam_spring.modules.file.service.FileManagementService;
-import com.ai.exam_spring.modules.question.mapper.QuestionManagementMapper;
-import com.ai.exam_spring.modules.question.mapper.QuestionOptionMapper;
-import com.ai.exam_spring.modules.question.pojo.dos.Question;
-import com.ai.exam_spring.modules.question.pojo.dos.QuestionOption;
 import com.ai.exam_spring.modules.question.pojo.dto.QuestionAddDTO;
 import com.ai.exam_spring.modules.question.pojo.dto.QuestionOptionAddDTO;
 import com.ai.exam_spring.modules.question.pojo.enums.OptionLabelEnum;
 import com.ai.exam_spring.modules.question.pojo.enums.QuestionTypeEnum;
 import com.ai.exam_spring.modules.question.service.QuestionManagementService;
+import com.ai.exam_spring.modules.question.support.QuestionSupport;
 import com.ai.exam_spring.utils.ExcelUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
@@ -26,12 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -39,9 +32,6 @@ public class FileManagementServiceImpl implements FileManagementService {
 
     // 上传文件大小上限 5MB
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
-
-    // 允许导入的难度值
-    private static final Set<String> ALLOWED_DIFFICULTIES = Set.of("easy", "medium", "hard");
 
     // 单次导入有效数据行上限
     private static final int MAX_IMPORT_ROWS = 2000;
@@ -53,10 +43,7 @@ public class FileManagementServiceImpl implements FileManagementService {
     private QuestionManagementService questionManagementService;
 
     @Autowired
-    private QuestionManagementMapper questionManagementMapper;
-
-    @Autowired
-    private QuestionOptionMapper questionOptionMapper;
+    private QuestionSupport questionSupport;
 
     /**
      * 将上传的文件用poi读取，并保存到数据库中
@@ -102,7 +89,7 @@ public class FileManagementServiceImpl implements FileManagementService {
             if (validRowCount == 0) {
                 return new BatchInsertResult(0, 0, 1, List.of("未读取到有效数据行，请检查表头与内容"));
             }
-            Set<String> existingFingerprints = loadExistingFingerprints(contents);
+            Set<String> existingFingerprints = questionSupport.loadExistingFingerprints(contents);
             for (int i = firstRowNum; i <= lastRowNum; i++) {
                 XSSFRow row = sheet.getRow(i);
                 if (row == null) continue;
@@ -129,7 +116,7 @@ public class FileManagementServiceImpl implements FileManagementService {
                     failMessages.add("第" + (i + 1) + "行：题目类型[" + type + "]无效，只允许 single/multiple/judge/essay");
                     continue;
                 }
-                if (!ALLOWED_DIFFICULTIES.contains(difficulty)) {
+                if (!questionSupport.isDifficultyAllowed(difficulty)) {
                     failMessages.add("第" + (i + 1) + "行：难度[" + difficulty + "]无效，只允许 easy/medium/hard");
                     continue;
                 }
@@ -152,16 +139,14 @@ public class FileManagementServiceImpl implements FileManagementService {
                 }
                 questionAddDTO.setOptions(options);
                 String answer = getCellStringValue(row.getCell(4));
-                String answerError = validateAnswer(type, answer, options);
+                String answerError = questionSupport.validateAnswer(type, answer, options);
                 if (answerError != null) {
                     failMessages.add("第" + (i + 1) + "行：" + answerError);
                     continue;
                 }
                 questionAddDTO.setAnswer(answer.trim());
-                List<String> optionContents = options.stream()
-                        .map(QuestionOptionAddDTO::getContent)
-                        .toList();
-                String fingerprint = buildFingerprint(type, content, optionContents);
+                String fingerprint = questionSupport.buildFingerprint(type, content,
+                        questionSupport.optionContents(options));
                 if (existingFingerprints.contains(fingerprint)) {
                     failMessages.add("第" + (i + 1) + "行：题目重复（题干与选项内容与题库或本文件已有题目一致）");
                     continue;
@@ -187,39 +172,6 @@ public class FileManagementServiceImpl implements FileManagementService {
 
     }
 
-    private Set<String> loadExistingFingerprints(Set<String> contents) {
-        Set<String> fingerprints = new HashSet<>();
-        if (contents.isEmpty()) return fingerprints;
-        List<Question> candidates = questionManagementMapper.selectList(
-                new LambdaQueryWrapper<Question>()
-                        .select(Question::getId, Question::getContent, Question::getType)
-                        .in(Question::getContent, contents));
-        if (candidates.isEmpty()) return fingerprints;
-        List<Integer> ids = candidates.stream().map(Question::getId).toList();
-        List<QuestionOption> dbOptions = questionOptionMapper.selectList(
-                new LambdaQueryWrapper<QuestionOption>()
-                        .select(QuestionOption::getQuestionId, QuestionOption::getContent)
-                        .in(QuestionOption::getQuestionId, ids));
-        Map<Integer, List<String>> optionMap = dbOptions.stream()
-                .collect(Collectors.groupingBy(
-                        QuestionOption::getQuestionId,
-                        Collectors.mapping(QuestionOption::getContent, Collectors.toList())));
-        for (Question question : candidates) {
-            String type = question.getType() == null ? "" : question.getType().getCode();
-            fingerprints.add(buildFingerprint(type, question.getContent(),
-                    optionMap.getOrDefault(question.getId(), List.of())));
-        }
-        return fingerprints;
-    }
-
-    private String buildFingerprint(String type, String content, List<String> optionContents) {
-        String sortedOptions = optionContents.stream()
-                .map(value -> value == null ? "" : value.trim())
-                .sorted()
-                .collect(Collectors.joining("\u0001"));
-        return type + "\u0001" + content.trim() + "\u0001" + sortedOptions;
-    }
-
     private boolean headerMatched(XSSFRow headerRow) {
         for (int i = 0; i < EXPECTED_HEADERS.length; i++) {
             if (!EXPECTED_HEADERS[i].equals(getCellStringValue(headerRow.getCell(i)))) {
@@ -227,33 +179,6 @@ public class FileManagementServiceImpl implements FileManagementService {
             }
         }
         return true;
-    }
-
-    private String validateAnswer(String type, String answer, List<QuestionOptionAddDTO> options) {
-        if (answer == null || answer.trim().isEmpty()) return "正确答案不能为空";
-        String value = answer.trim();
-        if (QuestionTypeEnum.ESSAY.getCode().equals(type)) return null;
-        if (!value.matches("[A-F](,[A-F])*")) {
-            return "答案[" + value + "]格式错误，应为大写选项标签（判断题填 A 或 B），多选用半角逗号分隔且升序（如 A,C,D）";
-        }
-        String[] parts = value.split(",");
-        Set<String> labels = options.stream()
-                .map(option -> option.getLabel().getCode())
-                .collect(Collectors.toSet());
-        if (QuestionTypeEnum.SINGLE.getCode().equals(type)
-                || QuestionTypeEnum.JUDGE.getCode().equals(type)) {
-            if (parts.length != 1) return "单选题/判断题答案只能是一个选项标签，实际为[" + value + "]";
-            if (!labels.contains(parts[0])) return "答案标签[" + parts[0] + "]在本行选项中不存在";
-            return null;
-        }
-        String normalized = Arrays.stream(parts).distinct().sorted().collect(Collectors.joining(","));
-        if (!normalized.equals(value)) {
-            return "多选题答案需为升序且不重复的标签（如 A,C,D），实际为[" + value + "]";
-        }
-        for (String part : parts) {
-            if (!labels.contains(part)) return "答案标签[" + part + "]在本行选项中不存在";
-        }
-        return null;
     }
 
     private String getCellStringValue(Cell cell) {

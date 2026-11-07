@@ -18,6 +18,7 @@ import com.ai.exam_spring.modules.question.pojo.vo.QuestionCompleteVO;
 import com.ai.exam_spring.modules.question.mapper.QuestionOptionMapper;
 import com.ai.exam_spring.modules.validation.DeleteValidationService;
 import com.ai.exam_spring.modules.question.service.QuestionManagementService;
+import com.ai.exam_spring.modules.question.support.QuestionSupport;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -51,8 +52,8 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
     @Autowired
     TransactionTemplate transactionTemplate;
 
-    // 允许的题目难度值
-    private static final Set<String> ALLOWED_DIFFICULTIES = Set.of("easy", "medium", "hard");
+    @Autowired
+    private QuestionSupport questionSupport;
 
 
     /**
@@ -78,6 +79,30 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
                 questionVOList,
                 queryDTO.getPageNum(),
                 queryDTO.getPageSize());
+    }
+
+    /**
+     * 检查待添加题目是否与题库或本批次已有题目重复
+     */
+    @Override
+    public List<String> findDuplicateMessages(List<QuestionAddDTO> questionAddDTOS) {
+        if (questionAddDTOS == null || questionAddDTOS.isEmpty()) return List.of();
+        Set<String> contents = questionAddDTOS.stream()
+                .map(dto -> dto == null || dto.getContent() == null ? "" : dto.getContent().trim())
+                .filter(content -> !content.isEmpty())
+                .collect(Collectors.toSet());
+        Set<String> existing = questionSupport.loadExistingFingerprints(contents);
+        List<String> messages = new ArrayList<>();
+        for (int i = 0; i < questionAddDTOS.size(); i++) {
+            QuestionAddDTO dto = questionAddDTOS.get(i);
+            if (dto == null || StringUtils.isBlank(dto.getContent()) || dto.getType() == null) continue;
+            String fingerprint = questionSupport.buildFingerprint(dto.getType(), dto.getContent(),
+                    questionSupport.optionContents(dto.getOptions()));
+            if (!existing.add(fingerprint)) {
+                messages.add("第" + (i + 1) + "条：题目重复（题干与选项内容与题库或本批次已有题目一致）");
+            }
+        }
+        return messages;
     }
 
     /**
@@ -194,47 +219,17 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
             throw new BusinessException(ErrorCodeEnum.QUESTION_TYPE_ERROR);
         }
         String difficulty = dto.getDifficulty();
-        if (difficulty == null || !ALLOWED_DIFFICULTIES.contains(difficulty)) {
+        if (!questionSupport.isDifficultyAllowed(difficulty)) {
             throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "难度无效，只允许 easy/medium/hard");
         }
         String answer = dto.getAnswer();
         if (StringUtils.isBlank(answer)) {
             throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, "正确答案不能为空");
         }
-        String answerError = validateAnswer(type, answer, dto.getOptions());
+        String answerError = questionSupport.validateAnswer(type, answer, dto.getOptions());
         if (answerError != null) {
             throw new BusinessException(ErrorCodeEnum.PARAM_ERROR, answerError);
         }
-    }
-
-    /**
-     * 校验答案格式与选项标签
-     */
-    private String validateAnswer(String type, String answer, List<QuestionOptionAddDTO> options) {
-        String value = answer.trim();
-        if (QuestionTypeEnum.ESSAY.getCode().equals(type)) return null;
-        if (!value.matches("[A-F](,[A-F])*")) {
-            return "答案[" + value + "]格式错误，应为大写选项标签（判断题填 A 或 B），多选用半角逗号分隔且升序（如 A,C,D）";
-        }
-        String[] parts = value.split(",");
-        Set<String> labels = options == null ? Set.of() : options.stream()
-                .filter(option -> option.getLabel() != null)
-                .map(option -> option.getLabel().getCode())
-                .collect(Collectors.toSet());
-        if (QuestionTypeEnum.SINGLE.getCode().equals(type)
-                || QuestionTypeEnum.JUDGE.getCode().equals(type)) {
-            if (parts.length != 1) return "单选题/判断题答案只能是一个选项标签，实际为[" + value + "]";
-            if (!labels.contains(parts[0])) return "答案标签[" + parts[0] + "]在选项中不存在";
-            return null;
-        }
-        String normalized = Arrays.stream(parts).distinct().sorted().collect(Collectors.joining(","));
-        if (!normalized.equals(value)) {
-            return "多选题答案需为升序且不重复的标签（如 A,C,D），实际为[" + value + "]";
-        }
-        for (String part : parts) {
-            if (!labels.contains(part)) return "答案标签[" + part + "]在选项中不存在";
-        }
-        return null;
     }
 
     /**
@@ -316,6 +311,19 @@ public class QuestionManagementServiceImpl implements QuestionManagementService 
         Integer questionId = questionUpdateDTO.getId();
         Question dbQuestion = questionManagementMapper.selectById(questionId);
         if (dbQuestion == null) throw new BusinessException(ErrorCodeEnum.QUESTION_NOT_EXIST);
+        // 校验编辑后的题目是否与题库其他题目重复
+        String updateContent = questionUpdateDTO.getContent() == null ? "" : questionUpdateDTO.getContent().trim();
+        if (!updateContent.isEmpty()) {
+            List<String> optionContents = QuestionTypeEnum.ESSAY.getCode().equals(type)
+                    ? List.of()
+                    : questionSupport.optionContents(questionUpdateDTO.getOptions());
+            String fingerprint = questionSupport.buildFingerprint(type, updateContent, optionContents);
+            Set<String> existing = questionSupport.loadExistingFingerprints(Set.of(updateContent), questionId);
+            if (existing.contains(fingerprint)) {
+                throw new BusinessException(ErrorCodeEnum.PARAM_ERROR,
+                        "题目重复（题干与选项内容与题库已有题目一致）");
+            }
+        }
         Question newQuestion = new Question();
         BeanUtil.copyProperties(questionUpdateDTO, newQuestion);
         newQuestion.setVersion(dbQuestion.getVersion());

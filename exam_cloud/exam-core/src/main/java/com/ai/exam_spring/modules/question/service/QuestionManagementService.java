@@ -25,6 +25,11 @@ public interface QuestionManagementService {
     BatchInsertResult addQuestionComplete(List<QuestionAddDTO> questionAddDTOS);
 
     /**
+     * 检查待添加题目是否与题库或本批次已有题目重复
+     */
+    List<String> findDuplicateMessages(List<QuestionAddDTO> questionAddDTOS);
+
+    /**
      * 根据题目ID查询完整题目
      */
     QuestionCompleteVO getQuestionComplete(Integer id);
