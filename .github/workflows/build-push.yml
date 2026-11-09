@@ -66,11 +66,11 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-gateway:latest
 
-      # ---------- 前端（构建上下文为 exam-vue）----------
+      # ---------- 前端（与后端一致：上下文为仓库根，file 相对仓库根）----------
       - name: Build and push exam-vue
         uses: docker/build-push-action@v6
         with:
-          context: ./exam-vue
-          file: Dockerfile
+          context: .
+          file: exam-vue/Dockerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-vue:latest

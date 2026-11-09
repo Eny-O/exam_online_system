@@ -1,0 +1,5 @@
+# 仓库根 .dockerignore：所有以 context: . 构建的镜像（4 后端 + 前端）共用
+# 仅排除与构建无关的目录，不能排除 exam_cloud / exam-vue / docker，否则 COPY 失败。
+.git
+**/node_modules
+**/.git
