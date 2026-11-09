@@ -89,13 +89,13 @@
 
 ## 七、容器化一键部署（2026-11-09 实施）
 
-为让他人快速跑起来，已落地全容器化方案，默认路径：`docker compose up -d` 拉起全套（中间件 + MySQL/Redis + 4 后端 + 前端，应用镜像来自阿里云 ACR，无需本机构建）。
+为让他人快速跑起来，已落地全容器化方案，默认路径：`docker compose up -d` 拉起全套（中间件 + MySQL/Redis + 4 后端 + 前端，应用镜像来自 GitHub Container Registry，无需本机构建）。
 
 **已落地内容：**
 - 各后端服务新增 `application-docker.yml` + `bootstrap-docker.yml`（激活 `SPRING_PROFILES_ACTIVE=docker`），把 `localhost` 系地址改写为容器服务名（`mysql`/`redis`/`rmqnamesrv`/`nacos`/`sentinel`）；`exam_ai` 的 `api-key` 改为读 `${AI_API_KEY}` 环境变量。
 - `docker/` 下 4 个多阶段 Dockerfile（maven 构建 → JRE 运行）；`exam-vue/` 下 Dockerfile（node 构建 → nginx 托管）+ `nginx.conf`（静态托管 + `/api` 代理到 `gateway:8080`）+ `.dockerignore`。
 - 根 `docker-compose.yml` 整合全套，`mysql`/`redis` 去掉 `profiles:["full"]` 限制；应用服务用 `depends_on` + 健康检查保证启动顺序。
-- `.github/workflows/build-push.yml`：GitHub Actions 构建并推送 5 个应用镜像到**阿里云 ACR**（需在 GitHub 仓库 Secrets 配置 `ALIYUN_USER`/`ALIYUN_PASSWORD`/`ACR_NAMESPACE`）。
+- `.github/workflows/build-push.yml`：GitHub Actions 构建并推送 5 个应用镜像到 **GitHub Container Registry（ghcr.io）**，使用自动注入的 `GITHUB_TOKEN`（工作流声明 `packages: write`），**无需任何外部密钥 / 阿里云账号**。
 
 **已知待优化 / 注意点（非阻塞）：**
 - **AI 密钥**：不提供 `AI_API_KEY` 时 `exam-ai` 仍可启动，但调用大模型批阅会失败，属预期。需在项目根 `.env` 提供密钥。

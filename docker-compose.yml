@@ -1,21 +1,23 @@
 # 全容器化一键部署：中间件 + 数据层 + 5 个应用服务
 #
-# 用法（镜像已推送到阿里云 ACR，别人零构建）：
+# 用法（镜像由 GitHub Actions 推送到 GHCR，别人零构建）：
 #   1) （可选）项目根创建 .env，写入：
-#        IMAGE_PREFIX=registry.cn-hangzhou.aliyuncs.com/<你的ACR命名空间>
+#        IMAGE_PREFIX=ghcr.io/eny-o
 #        AI_API_KEY=你的SiliconFlow密钥
-#      不写 IMAGE_PREFIX 时默认用 registry.cn-hangzhou.aliyuncs.com/exam_online_system
+#      不写 IMAGE_PREFIX 时默认用 ghcr.io/eny-o
 #   2) docker compose up -d          # compose 会自动拉取各应用镜像
 #   3) 浏览器访问 http://localhost:8080 （前端）
 #
 # 设计要点：
-#   - 应用镜像由 CI 构建并推到阿里云 ACR；本地不再 build，故无 Maven/Docker Hub 依赖。
+#   - 应用镜像由 GitHub Actions（.github/workflows/build-push.yml）构建并推到
+#     GitHub Container Registry（ghcr.io），使用自动注入的 GITHUB_TOKEN，无需任何外部密钥。
 #   - 各微服务通过 SPRING_PROFILES_ACTIVE=docker 激活各自的 *-docker.yml，
 #     把 localhost 系地址改写为容器服务名（mysql / redis / rmqnamesrv / nacos / sentinel）。
 #   - 前端 nginx 把 /api 代理到网关服务名 gateway:8080（保留 /api 前缀，由网关剥离）。
 #   - 不依赖 Nacos 配置中心存放配置值（本地 docker profile 文件即配置源），
 #     因此克隆下来即可一键启动，无需手动导入配置。
 #   - 密码/内key 均沿用仓库内明文默认值（演示用）；生产请改镜像内配置或注入环境变量。
+#   - GHCR 镜像默认私有；首次推送后请在 GHCR 包设置里把 5 个镜像改为「Public」，否则他人无法匿名 pull。
 
 services:
   # ==================== 注册/配置中心 ====================
@@ -135,11 +137,10 @@ services:
     networks: [exam-net]
     restart: unless-stopped
 
-  # ==================== 应用服务（镜像来自阿里云 ACR） ====================
-  # IMAGE_PREFIX 默认 registry.cn-hangzhou.aliyuncs.com/exam_online_system，
-  # 实际使用时在 .env 中改成你自己的 ACR 命名空间前缀。
+  # ==================== 应用服务（镜像来自 GHCR） ====================
+  # IMAGE_PREFIX 默认 ghcr.io/eny-o，一般无需修改。
   exam-auth-user:
-    image: ${IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/exam_online_system}/exam-auth-user:latest
+    image: ${IMAGE_PREFIX:-ghcr.io/eny-o}/exam-auth-user:latest
     container_name: exam-auth-user
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -155,7 +156,7 @@ services:
     restart: unless-stopped
 
   exam-core:
-    image: ${IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/exam_online_system}/exam-core:latest
+    image: ${IMAGE_PREFIX:-ghcr.io/eny-o}/exam-core:latest
     container_name: exam-core
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -173,7 +174,7 @@ services:
     restart: unless-stopped
 
   exam-ai:
-    image: ${IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/exam_online_system}/exam-ai:latest
+    image: ${IMAGE_PREFIX:-ghcr.io/eny-o}/exam-ai:latest
     container_name: exam-ai
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -187,7 +188,7 @@ services:
     restart: unless-stopped
 
   exam-gateway:
-    image: ${IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/exam_online_system}/exam-gateway:latest
+    image: ${IMAGE_PREFIX:-ghcr.io/eny-o}/exam-gateway:latest
     container_name: exam-gateway
     ports:
       - "18080:8080"   # 对外暴露网关，便于直接调 API / 看 Knife4j 文档
@@ -207,7 +208,7 @@ services:
     restart: unless-stopped
 
   exam-vue:
-    image: ${IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/exam_online_system}/exam-vue:latest
+    image: ${IMAGE_PREFIX:-ghcr.io/eny-o}/exam-vue:latest
     container_name: exam-vue
     ports:
       - "8080:80"      # 用户访问入口

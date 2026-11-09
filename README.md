@@ -42,7 +42,7 @@
 ```
 exam_online_system/                # 仓库根
 ├── docker-compose.yml             # 全套编排（中间件 + 数据层 + 应用）
-├── .github/workflows/build-push.yml # GitHub Actions：构建并推送应用镜像到阿里云 ACR
+├── .github/workflows/build-push.yml # GitHub Actions：构建并推送应用镜像到 GHCR
 ├── docker/                        # 各后端服务多阶段 Dockerfile
 ├── assets/                        # 项目预览截图
 ├── sql/                           # 建库建表 + 种子数据
@@ -91,7 +91,7 @@ exam_online_system/                # 仓库根
 docker compose up -d
 ```
 
-- 首次会从阿里云 ACR 拉取 5 个应用镜像（4 后端 + 1 前端），无需本机构建；中间件同样拉取官方镜像。
+- 首次会从 GitHub Container Registry（GHCR）拉取 5 个应用镜像（4 后端 + 1 前端），无需本机构建；中间件同样拉取官方镜像。
 - 拉取完成后按依赖顺序启动：Nacos / Sentinel / RocketMQ / MySQL / Redis → 后端服务 → 网关 → 前端。
 - 浏览器访问 `http://localhost:8080` 即为前端入口；网关对外地址 `http://localhost:18080`（便于直接调 API / 看 Knife4j）。
 
@@ -114,10 +114,10 @@ docker compose down -v         # 连数据卷一起删（清空所有数据）
 
 ### 4.4 镜像来源与 CI
 
-- 应用镜像由 **GitHub Actions**（`.github/workflows/build-push.yml`）构建并推送到**阿里云 ACR**（个人版免费）：在 GitHub 仓库「Settings → Secrets and variables → Actions」配置 `ALIYUN_USER` / `ALIYUN_PASSWORD` / `ACR_NAMESPACE` 三个仓库密钥后，每次 push 到 master/main 自动构建并推送 5 个应用镜像。
-- 别人 `git clone` 后直接 `docker compose up -d` 即可，**无需本机安装 JDK / Maven / Node，也无需 Docker Hub**；镜像前缀通过根目录 `.env` 的 `IMAGE_PREFIX` 指定，默认 `registry.cn-hangzhou.aliyuncs.com/exam_online_system`（参考 `.env.example`）。
+- 应用镜像由 **GitHub Actions**（`.github/workflows/build-push.yml`）构建并推送到 **GitHub Container Registry（GHCR，`ghcr.io`）**：无需任何外部密钥——推送使用 Actions 自动注入的 `GITHUB_TOKEN`（工作流已声明 `packages: write` 权限）。每次 push 到 master/main 自动构建并推送 5 个应用镜像。
+- 别人 `git clone` 后直接 `docker compose up -d` 即可，**无需本机安装 JDK / Maven / Node，也无需 Docker Hub / 阿里云账号**；镜像前缀通过根目录 `.env` 的 `IMAGE_PREFIX` 指定，默认 `ghcr.io/eny-o`（参考 `.env.example`）。
 - 中间件（Nacos / Sentinel / RocketMQ / MySQL / Redis）均使用官方镜像，无需构建。
-- 若不想用 CI / ACR，也可自行本地构建：把 `docker-compose.yml` 中各服务的 `image:` 换回对应的 `build:` 块（参考 `docker/Dockerfile.*` 与 `exam-vue/Dockerfile`），再 `docker compose up -d --build`。此时需本机能拉基础镜像（已配 registry-mirrors）并下载 Maven 依赖。
+- 若不想用 CI / GHCR，也可自行本地构建：把 `docker-compose.yml` 中各服务的 `image:` 换回对应的 `build:` 块（参考 `docker/Dockerfile.*` 与 `exam-vue/Dockerfile`），再 `docker compose up -d --build`。此时需本机能拉基础镜像（已配 registry-mirrors）并下载 Maven 依赖。
 
 ### 4.5 配置覆盖原理（给想改的人）
 
