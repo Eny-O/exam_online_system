@@ -1,0 +1,96 @@
+# Docker 容器化部署 profile（SPRING_PROFILES_ACTIVE=docker）
+# 完整配置集：连接地址使用 compose 服务名，其余与本地 application.yml 一致。
+spring:
+  application:
+    name: exam-core
+  cloud:
+    openfeign:
+      client:
+        config:
+          exam-auth-user:
+            connectTimeout: 2000
+            readTimeout: 5000
+    sentinel:
+      transport:
+        dashboard: sentinel:8858
+  datasource:
+    url: jdbc:mysql://mysql:3306/exam_core_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 150
+      minimum-idle: 20
+      connection-timeout: 10000
+      idle-timeout: 300000
+      max-lifetime: 900000
+  data:
+    redis:
+      host: redis
+      port: 6379
+      database: 1
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+feign:
+  sentinel:
+    enabled: false
+
+exam:
+  # 内部接口调用方鉴权密钥
+  internal-api-key: dev-inner-token-2026
+
+server:
+  port: 8081
+  tomcat:
+    accept-count: 300
+    threads:
+      max: 500
+      min-spare: 50
+
+logging:
+  level:
+    org.springframework.security: WARN
+    com.ai.exam_spring: DEBUG
+  pattern:
+    dateformat: HH:mm:ss
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted
+  type-aliases-package: com.ai.exam_spring.entity
+
+springdoc:
+  default-flat-param-object: true
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-swagger-models: true
+    swagger-model-name: 实体类列表
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  metrics:
+    tags:
+      application: exam-core
+  endpoint:
+    prometheus:
+      enabled: true
+
+rocketmq:
+  name-server: rmqnamesrv:9876
+  producer:
+    group: exam-producer-group
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 3

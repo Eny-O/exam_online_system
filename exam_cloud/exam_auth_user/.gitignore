@@ -2,3 +2,6 @@
 # 与 exam_spring 保持一致：本地配置文件不入库，避免数据库密码 / 内部调用密钥泄露到 Git 历史
 src/main/resources/application.yml
 src/main/resources/application-*.yml
+# application-docker.yml 仅含部署连接信息（不含数据库密码之外的敏感项），允许入仓，
+# 使 CI 构建的镜像自带 docker profile 配置，实现 clone 即 docker compose up。
+!src/main/resources/application-docker.yml

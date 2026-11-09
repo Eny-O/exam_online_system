@@ -35,3 +35,6 @@ build/
 ### 本地敏感配置（含 LLM api-key / 内部调用密钥，不入库） ###
 src/main/resources/application.yml
 src/main/resources/application-*.yml
+# application-docker.yml 仅含部署连接信息（不含数据库密码之外的敏感项），允许入仓，
+# 使 CI 构建的镜像自带 docker profile 配置，实现 clone 即 docker compose up。
+!src/main/resources/application-docker.yml

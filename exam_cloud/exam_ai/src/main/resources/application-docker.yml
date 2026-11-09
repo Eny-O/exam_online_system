@@ -1,0 +1,35 @@
+# Docker 容器化部署 profile（SPRING_PROFILES_ACTIVE=docker）
+# 完整配置集：连接地址使用 compose 服务名，AI 密钥由环境变量注入，其余与本地 application.yml 一致。
+spring:
+  application:
+    name: exam_ai
+
+server:
+  port: 8083
+
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://api.siliconflow.cn/v1
+      api-key: ${AI_API_KEY}
+      model-name: deepseek-ai/DeepSeek-V4.1-Flash
+      temperature: 0.2
+      timeout: 180s
+      max-retries: 1
+
+feign:
+  sentinel:
+    enabled: true
+
+exam:
+  # 内部接口调用方鉴权密钥
+  internal-api-key: dev-inner-token-2026
+  ai:
+    memory:
+      max-messages: 20
+    grading:
+      divergence-threshold: 0.30
+    observability:
+      enabled: true
+      max-message-length: 1500
+      print-full-history: false
