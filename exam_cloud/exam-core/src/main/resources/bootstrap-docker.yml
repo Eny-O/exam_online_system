@@ -1,0 +1,14 @@
+# Docker 容器化部署专用 profile（激活：SPRING_PROFILES_ACTIVE=docker）
+# 仅覆盖运行环境相关的连接项，其余沿用 bootstrap.yml 默认值。
+spring:
+  cloud:
+    nacos:
+      server-addr: nacos:8848
+      discovery:
+        # 容器内由框架自动探测并注册可达 IP
+        ip: ""
+      config:
+        server-addr: nacos:8848
+    sentinel:
+      transport:
+        dashboard: sentinel:8858

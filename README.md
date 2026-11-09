@@ -41,12 +41,14 @@
 
 ```
 exam_online_system/                # 仓库根
-├── docker-compose.yml             # 中间件编排
+├── docker-compose.yml             # 全套编排（中间件 + 数据层 + 应用）
+├── .github/workflows/build-push.yml # GitHub Actions：构建并推送应用镜像到阿里云 ACR
+├── docker/                        # 各后端服务多阶段 Dockerfile
 ├── assets/                        # 项目预览截图
 ├── sql/                           # 建库建表 + 种子数据
 │   ├── schema.sql                 # 双库 + 14 张表
 │   └── init-data.sql              # 角色/权限/班级/默认账号 种子数据
-├── scripts/                       # 一键起中间件
+├── scripts/                       # 一键起全套（等价于 docker compose up）
 │   ├── up.sh                      # Linux / macOS
 │   └── up.bat                     # Windows
 ├── exam_cloud/                    # 后端微服务
@@ -71,23 +73,75 @@ exam_online_system/                # 仓库根
 | Sentinel | 8858 / 8719 | **18858** / 18719 | 控制台 + 客户端心跳 |
 | RocketMQ NameServer | 9876 | 9876 | 路由发现 |
 | RocketMQ Broker | 10909 / 10911 / 10912 | 10909 / 10911 / 10912 | 标准端口，未做映射 |
-| MySQL | 3306 | **13306** | 仅 `full` profile |
-| Redis | 6379 | **16379** | 仅 `full` profile，无密码 |
+| MySQL | 3306 | **13306** | 随 `docker compose up` 一起启动 |
+| Redis | 6379 | **16379** | 随 `docker compose up` 一起启动，无密码 |
 
 > MySQL / Redis 用高位端口（`13306` / `16379`）是为了不和你本机已安装的 3306 / 6379 冲突；Nacos / Sentinel 同理避让 Windows 保留段。
 
 ---
 
-## 四、快速开始
+## 四、容器化一键部署（推荐）
 
-### 4.1 环境要求
+适合想快速把整套系统（中间件 + 数据库 + 4 个后端服务 + 前端）跑起来的人。无需本机安装 JDK / Maven / Node，只要装好 Docker 与 Docker Compose。
+
+### 4.1 拉起全套
+
+```bash
+# 克隆后，在项目根执行：
+docker compose up -d
+```
+
+- 首次会从阿里云 ACR 拉取 5 个应用镜像（4 后端 + 1 前端），无需本机构建；中间件同样拉取官方镜像。
+- 拉取完成后按依赖顺序启动：Nacos / Sentinel / RocketMQ / MySQL / Redis → 后端服务 → 网关 → 前端。
+- 浏览器访问 `http://localhost:8080` 即为前端入口；网关对外地址 `http://localhost:18080`（便于直接调 API / 看 Knife4j）。
+
+### 4.2 配置 AI 密钥（可选）
+
+`exam_ai` 的阅卷辅助依赖大模型密钥。不配置也能启动，只是调用批阅时会失败（预期行为）。在项目根创建 `.env`：
+
+```bash
+echo "AI_API_KEY=你的SiliconFlow密钥" > .env
+```
+
+`docker-compose.yml` 会把宿主 `.env` 的 `AI_API_KEY` 注入到 `exam-ai` 容器（`application-docker.yml` 中 `langchain4j.open-ai.chat-model.api-key: ${AI_API_KEY}`）。
+
+### 4.3 停止 / 清理
+
+```bash
+docker compose down            # 停服务（保留 MySQL 数据卷）
+docker compose down -v         # 连数据卷一起删（清空所有数据）
+```
+
+### 4.4 镜像来源与 CI
+
+- 应用镜像由 **GitHub Actions**（`.github/workflows/build-push.yml`）构建并推送到**阿里云 ACR**（个人版免费）：在 GitHub 仓库「Settings → Secrets and variables → Actions」配置 `ALIYUN_USER` / `ALIYUN_PASSWORD` / `ACR_NAMESPACE` 三个仓库密钥后，每次 push 到 master/main 自动构建并推送 5 个应用镜像。
+- 别人 `git clone` 后直接 `docker compose up -d` 即可，**无需本机安装 JDK / Maven / Node，也无需 Docker Hub**；镜像前缀通过根目录 `.env` 的 `IMAGE_PREFIX` 指定，默认 `registry.cn-hangzhou.aliyuncs.com/exam_online_system`（参考 `.env.example`）。
+- 中间件（Nacos / Sentinel / RocketMQ / MySQL / Redis）均使用官方镜像，无需构建。
+- 若不想用 CI / ACR，也可自行本地构建：把 `docker-compose.yml` 中各服务的 `image:` 换回对应的 `build:` 块（参考 `docker/Dockerfile.*` 与 `exam-vue/Dockerfile`），再 `docker compose up -d --build`。此时需本机能拉基础镜像（已配 registry-mirrors）并下载 Maven 依赖。
+
+### 4.5 配置覆盖原理（给想改的人）
+
+每个后端服务都有 `application-docker.yml` + `bootstrap-docker.yml`（激活方式 `SPRING_PROFILES_ACTIVE=docker`）：
+
+- `bootstrap-docker.yml`：把 Nacos / Sentinel 地址从 `127.0.0.1:18848` 改为容器服务名 `nacos:8848` / `sentinel:8858`，并让服务注册 IP 自动探测。
+- `application-docker.yml`：把 `localhost:3306` / `localhost:6379` / `localhost:9876` 改为容器服务名 `mysql` / `redis` / `rmqnamesrv`。
+
+配置不走 Nacos 配置中心，仓库内的 docker profile 文件即配置源，因此克隆即可一键启动，无需手动导入配置。
+
+---
+
+## 五、本地开发启动（手动分步）
+
+适合要在本机改代码、单独调试各服务的场景。
+
+### 5.1 环境要求
 
 - JDK 17+
 - Maven 3.9+
 - Node.js 18+
-- Docker + Docker Compose
+- Docker + Docker Compose（仅起中间件/数据层时需要）
 
-### 4.2 启动中间件
+### 5.2 启动中间件与数据层
 
 ```bash
 # Windows
@@ -97,22 +151,21 @@ scripts\up.bat
 bash scripts/up.sh
 ```
 
-脚本等价于 `docker compose --profile full up -d`，并在启动后等待依赖就绪（Nacos / MySQL / Redis 健康检查 + RocketMQ 端口探活），最后打印后端启动顺序。
+脚本等价于 `docker compose up -d`，并在启动后等待依赖就绪（Nacos / MySQL / Redis 健康检查 + RocketMQ 端口探活），最后打印后端启动顺序。
 
-- 默认 `docker compose up -d`（不带 `--profile full`）只起 **Nacos / Sentinel / RocketMQ**。
-- 加 `--profile full` 会**额外拉起 MySQL 与 Redis**，并把 `sql/schema.sql`、`sql/init-data.sql` 自动挂载进 MySQL 容器初始化目录执行（文件名前缀 `01-` / `02-` 控制顺序）。
+`docker compose up -d` 默认即拉起全套：中间件 + MySQL + Redis + 4 个后端服务 + 前端。若只想起中间件做本地开发，用 `docker compose up -d nacos sentinel rmqnamesrv rmqbroker` 限定。
 
-### 4.3 初始化数据
+### 5.3 初始化数据
 
-使用 `--profile full` 启动 MySQL 后，**无需手动执行任何 SQL**：
+随 `docker compose up` 启动 MySQL 后，**无需手动执行任何 SQL**：
 
 - `schema.sql`：创建双库（`exam_auth_db` / `exam_core_db`）与全部 14 张表；
-- `init-data.sql`：写入角色、菜单/按钮权限、一个班级，以及三名默认账号（见 4.6）；
+- `init-data.sql`：写入角色、菜单/按钮权限、一个班级，以及三名默认账号（见 5.6）；
 - 数据持久化在 `mysql_data` 卷中，容器重启不会重复初始化。
 
 > 若你本机已自行安装 MySQL / Redis 并希望复用，把各服务的 `application.yml` 中数据源地址改回 `localhost:3306` / `localhost:6379` 即可。
 
-### 4.4 配置后端服务
+### 5.4 配置后端服务
 
 每个服务都提供了 `application.yml.example`（可入库的样例，**不含敏感信息**）。复制为 `application.yml` 后填值：
 
@@ -134,7 +187,7 @@ done
 
 > `application.yml` 本身被 `.gitignore` 排除，不会入库；请基于 `.example` 在本地生成。
 
-### 4.5 启动服务与前端
+### 5.5 启动服务与前端
 
 **后端（按依赖顺序）：**
 
@@ -153,7 +206,7 @@ npm install
 npm run dev        # 启动后访问终端输出的本地地址
 ```
 
-### 4.6 默认账号
+### 5.6 默认账号
 
 所有默认账号密码均为 `123456`（已用 BCrypt 加密写入种子数据）：
 
@@ -163,18 +216,18 @@ npm run dev        # 启动后访问终端输出的本地地址
 | `teacher` | 张老师 | ROLE_TEACHER | 题库 / 试卷 / 考试 / 阅卷 / 班级 |
 | `student` | 李同学 | ROLE_STUDENT | 考试中心 / 成绩查询 / 个人中心 |
 
-### 4.7 常用访问地址
+### 5.7 常用访问地址
 
 | 地址 | 说明 |
 |------|------|
 | `http://localhost:8080` | API 网关入口（前端通过该地址访问后端） |
-| `http://localhost:8082/doc.html` 等 | 各服务 Knife4j 接口文档（端口对应 4.5） |
+| `http://localhost:18080/doc.html` 等 | 各服务 Knife4j 接口文档（网关 18080 或各后端端口） |
 | `http://127.0.0.1:18848/nacos` | Nacos 控制台（nacos / nacos） |
 | `http://127.0.0.1:18858` | Sentinel 控制台 |
 
 ---
 
-## 五、Windows 端口说明（排障）
+## 六、Windows 端口说明（排障）
 
 若中间件在 Windows 上偶发「端口被占用 / 连不上」，常见根因是 **TCP 动态端口范围被设得过宽**（如 `1024-65535`），导致 Hyper-V / `winnat` 的排除段吞掉项目端口。永久修复（管理员 PowerShell / CMD）：
 
@@ -188,7 +241,7 @@ netsh int ipv6 set dynamicport tcp start=49152 num=16383
 
 ---
 
-## 六、说明
+## 七、说明
 
 本项目为个人学习与作品展示用途，架构决策围绕「渐进式演进」展开，部署与排障细节见上方各章节。
 

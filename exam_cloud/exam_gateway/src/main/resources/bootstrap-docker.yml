@@ -1,0 +1,11 @@
+# Docker 容器化部署专用 profile（激活：SPRING_PROFILES_ACTIVE=docker）
+# 网关无数据源依赖，只需把 Nacos 注册中心地址改为容器服务名；
+# 其余路由配置（application.yml）已使用 lb://服务名，无需改动。
+spring:
+  cloud:
+    nacos:
+      server-addr: nacos:8848
+      discovery:
+        ip: ""
+      config:
+        server-addr: nacos:8848

@@ -1,0 +1,70 @@
+name: Build and Push Images
+
+# 触发：推送到 master/main 时自动构建并推送 5 个应用镜像到阿里云 ACR
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:        # 允许在 Actions 页面手动触发
+
+env:
+  REGISTRY: registry.cn-hangzhou.aliyuncs.com
+  NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Aliyun ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ALIYUN_USER }}
+          password: ${{ secrets.ALIYUN_PASSWORD }}
+
+      # ---------- 后端服务（构建上下文为仓库根）----------
+      - name: Build and push exam-auth-user
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.exam-auth-user
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/exam-auth-user:latest
+
+      - name: Build and push exam-core
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.exam-core
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/exam-core:latest
+
+      - name: Build and push exam-ai
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.exam-ai
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/exam-ai:latest
+
+      - name: Build and push exam-gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.exam-gateway
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/exam-gateway:latest
+
+      # ---------- 前端（构建上下文为 exam-vue）----------
+      - name: Build and push exam-vue
+        uses: docker/build-push-action@v6
+        with:
+          context: ./exam-vue
+          file: Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/exam-vue:latest

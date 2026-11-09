@@ -1,21 +1,24 @@
-# 本地开发用中间件：Nacos（注册/配置中心）+ Sentinel Dashboard（流控熔断）
+# 全容器化一键部署：中间件 + 数据层 + 5 个应用服务
 #
-#   端口说明（Windows 特有坑）：
-#   本机 netsh 显示 TCP 排除端口段 8798-9197（Hyper-V/WSL 动态预留），
-#   标准端口 8848 / 8858 正落在该区段内，容器绑定会报
-#   "ports are not available ... forbidden by its access permissions"。
-#   因此宿主端口统一改到 1xxxx 段。
+# 用法（镜像已推送到阿里云 ACR，别人零构建）：
+#   1) （可选）项目根创建 .env，写入：
+#        IMAGE_PREFIX=registry.cn-hangzhou.aliyuncs.com/<你的ACR命名空间>
+#        AI_API_KEY=你的SiliconFlow密钥
+#      不写 IMAGE_PREFIX 时默认用 registry.cn-hangzhou.aliyuncs.com/exam_online_system
+#   2) docker compose up -d          # compose 会自动拉取各应用镜像
+#   3) 浏览器访问 http://localhost:8080 （前端）
 #
-#   Nacos 2.x 客户端规则：gRPC 端口 = HTTP 端口 + 1000
-#     宿主 HTTP 18848  → 容器 8848
-#     宿主 gRPC 19848  → 容器 9848   (= 18848 + 1000，客户端自动推导，勿改)
-#     宿主 gRPC 19849  → 容器 9849   (集群 gRPC，单机也需保留)
-#
-#   Sentinel Dashboard：容器内 server.port=8858，传输/命令端口 csp.sentinel.api.port=8719
-#     宿主 18858 → 容器 8858  (控制台 UI)
-#     宿主 18719 → 容器 8719  (客户端心跳/规则下发通道)
+# 设计要点：
+#   - 应用镜像由 CI 构建并推到阿里云 ACR；本地不再 build，故无 Maven/Docker Hub 依赖。
+#   - 各微服务通过 SPRING_PROFILES_ACTIVE=docker 激活各自的 *-docker.yml，
+#     把 localhost 系地址改写为容器服务名（mysql / redis / rmqnamesrv / nacos / sentinel）。
+#   - 前端 nginx 把 /api 代理到网关服务名 gateway:8080（保留 /api 前缀，由网关剥离）。
+#   - 不依赖 Nacos 配置中心存放配置值（本地 docker profile 文件即配置源），
+#     因此克隆下来即可一键启动，无需手动导入配置。
+#   - 密码/内key 均沿用仓库内明文默认值（演示用）；生产请改镜像内配置或注入环境变量。
 
 services:
+  # ==================== 注册/配置中心 ====================
   nacos:
     image: nacos/nacos-server:v2.3.2
     container_name: nacos
@@ -32,19 +35,16 @@ services:
       timeout: 5s
       retries: 12
       start_period: 90s
+    networks: [exam-net]
     restart: unless-stopped
 
+  # ==================== 流控熔断控制台 ====================
   sentinel:
     image: bladex/sentinel-dashboard:1.8.6
     container_name: sentinel
     ports:
       - "18858:8858"   # Dashboard 控制台 UI
-      - "18719:8719"   # 客户端上报通道：Spring 应用连这个端口才能上报心跳/拉取规则
-    # 本地 dev 关鉴权（与 Nacos 的 NACOS_AUTH_ENABLE=false 保持一致）：
-    #   Dashboard 默认 auth.enabled=true，UI 与 API 都需要登录，
-    #   置 false 后走 FakeAuthServiceImpl 直接放行，便于本机配置流控规则。
-    #   属性来自 com.alibaba.csp.sentinel.dashboard.config.AuthProperties（prefix="auth"）。
-    #   镜像 entrypoint 是写死的 java 命令，不读 JAVA_OPTS，只能整体覆盖。
+      - "18719:8719"   # 客户端心跳/规则下发通道
     entrypoint:
       - java
       - -Djava.security.egd=file:/dev/./urandom
@@ -55,15 +55,10 @@ services:
       - -Dauth.enabled=false
       - -jar
       - app.jar
+    networks: [exam-net]
     restart: unless-stopped
 
   # ==================== RocketMQ ====================
-  # 端口说明：9876 / 10909 / 10911 / 10912 均不在 Windows 保留端口段
-  # （保留段为 8798-9197、9201-9400、50000-50059），因此可直接沿用标准端口。
-  #
-  # 关键：broker.conf 里 brokerIP1=127.0.0.1，宿主机上的 Spring 应用
-  #      通过 10911 端口映射回到容器，勿改成容器 IP（172.x.x.x 会连不上）。
-
   rmqnamesrv:
     image: apache/rocketmq:5.3.2
     container_name: rmqnamesrv
@@ -72,6 +67,13 @@ services:
       - "9876:9876"    # NameServer：客户端查路由
     environment:
       - JAVA_OPT_EXT=-server -Xms256m -Xmx512m -Xmn128m
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/localhost/9876'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks: [exam-net]
     restart: unless-stopped
 
   rmqbroker:
@@ -79,7 +81,6 @@ services:
     container_name: rmqbroker
     depends_on:
       - rmqnamesrv
-    # 显式指定配置文件，不依赖官方镜像 entrypoint 的隐式行为
     command: sh mqbroker -c /home/rocketmq/rocketmq-5.3.2/conf/broker.conf
     ports:
       - "10909:10909"  # VIP 通道
@@ -89,32 +90,21 @@ services:
       - NAMESRV_ADDR=rmqnamesrv:9876
       - JAVA_OPT_EXT=-server -Xms512m -Xmx1g -Xmn256m
     volumes:
-      # broker.conf 不加 :ro —— broker 启动时会回写自身配置，只读挂载会失败
       - ./rocketmq/broker.conf:/home/rocketmq/rocketmq-5.3.2/conf/broker.conf
-      # 用宿主目录 bind mount，而非 named volume：
-      # named volume 新建时属主是 root:root，而镜像以 rocketmq(uid 3000) 运行 → 写不进去 → 启动 NPE
       - ./rocketmq/store:/home/rocketmq/store      # 消息存储：重启不丢
       - ./rocketmq/logs:/home/rocketmq/logs
+    networks: [exam-net]
     restart: unless-stopped
 
-  # ==================== 数据存储层（profile: full）====================
-  # 默认 `docker compose up` 只起中间件；`docker compose --profile full up`
-  # 额外拉起 MySQL 与 Redis，把数据层也容器化，方便一键起整套依赖。
-  #
-  # 初始化挂载：官方 MySQL 镜像在首次启动时会按文件名字母序执行
-  # /docker-entrypoint-initdb.d/ 下的 *.sql。若直接挂 schema.sql / init-data.sql，
-  # 字母序 i < s 会让 init-data 先于 schema 执行而报错。这里把两个源文件以
-  # 01-/02- 前缀挂载进容器，既保留仓库内友好文件名，又保证「先建表、后灌数据」。
-  #
-  # 账号/端口与 exam_auth_user、exam-core 的 datasource 保持一致：
-  #   root / 123456，宿主 13306 → 容器 3306（避开本机已装的 3306）。
-
+  # ==================== 数据存储层 ====================
+  # 初始化挂载：官方 MySQL 镜像首次启动按文件名字母序执行
+  # /docker-entrypoint-initdb.d/ 下的 *.sql。以 01-/02- 前缀保证「先建表、后灌数据」。
+  # schema.sql 会自建 exam_auth_db 与 exam_core_db 两个库。
   mysql:
     image: mysql:8.0.31
     container_name: exam-mysql
-    profiles: ["full"]
     ports:
-      - "13306:3306"
+      - "13306:3306"   # 避开本机可能已装的 3306
     environment:
       - MYSQL_ROOT_PASSWORD=123456
       - MYSQL_DATABASE=exam_auth_db
@@ -128,12 +118,12 @@ services:
       timeout: 5s
       retries: 12
       start_period: 60s
+    networks: [exam-net]
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     container_name: exam-redis
-    profiles: ["full"]
     ports:
       - "16379:6379"
     healthcheck:
@@ -142,7 +132,93 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    networks: [exam-net]
     restart: unless-stopped
+
+  # ==================== 应用服务（镜像来自阿里云 ACR） ====================
+  # IMAGE_PREFIX 默认 registry.cn-hangzhou.aliyuncs.com/exam_online_system，
+  # 实际使用时在 .env 中改成你自己的 ACR 命名空间前缀。
+  exam-auth-user:
+    image: ${IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/exam_online_system}/exam-auth-user:latest
+    container_name: exam-auth-user
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - TZ=Asia/Shanghai
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks: [exam-net]
+    restart: unless-stopped
+
+  exam-core:
+    image: ${IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/exam_online_system}/exam-core:latest
+    container_name: exam-core
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - TZ=Asia/Shanghai
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      rmqnamesrv:
+        condition: service_healthy
+    networks: [exam-net]
+    restart: unless-stopped
+
+  exam-ai:
+    image: ${IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/exam_online_system}/exam-ai:latest
+    container_name: exam-ai
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - TZ=Asia/Shanghai
+      # AI 密钥从宿主 .env（或 shell 环境变量）注入；未提供时应用仍可启动
+      - AI_API_KEY=${AI_API_KEY:}
+    depends_on:
+      nacos:
+        condition: service_healthy
+    networks: [exam-net]
+    restart: unless-stopped
+
+  exam-gateway:
+    image: ${IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/exam_online_system}/exam-gateway:latest
+    container_name: exam-gateway
+    ports:
+      - "18080:8080"   # 对外暴露网关，便于直接调 API / 看 Knife4j 文档
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - TZ=Asia/Shanghai
+    depends_on:
+      nacos:
+        condition: service_healthy
+      exam-auth-user:
+        condition: service_started
+      exam-core:
+        condition: service_started
+      exam-ai:
+        condition: service_started
+    networks: [exam-net]
+    restart: unless-stopped
+
+  exam-vue:
+    image: ${IMAGE_PREFIX:-registry.cn-hangzhou.aliyuncs.com/exam_online_system}/exam-vue:latest
+    container_name: exam-vue
+    ports:
+      - "8080:80"      # 用户访问入口
+    depends_on:
+      - exam-gateway
+    networks: [exam-net]
+    restart: unless-stopped
+
+networks:
+  exam-net:
+    driver: bridge
 
 volumes:
   mysql_data:
