@@ -3,8 +3,9 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY exam_cloud ./exam_cloud
+WORKDIR /app/exam_cloud
 # -am 连带构建依赖模块（exam_common / exam_api）
-RUN mvn -q -pl exam_ai -am package -DskipTests
+RUN mvn -B -q -pl exam_ai -am package -DskipTests
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
