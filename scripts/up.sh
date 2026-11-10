@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# 本地一键起依赖（中间件 + MySQL）
+# 本地开发一键起依赖层（中间件 + MySQL + Redis）
 #
-# 该脚本只负责「依赖层」：
-#   - 常驻中间件：Nacos / Sentinel / RocketMQ（始终启动）
-#   - 数据存储：MySQL（仅 --profile full 时启动，会按 sql/ 里的
-#     01-schema.sql、02-init-data.sql 自动建库建表并灌入初始数据）
+# 显式指定服务名，只启动 compose 中的依赖层：
+#   nacos / sentinel / rmqnamesrv / rmqbroker / mysql / redis
+# MySQL 首次启动会按 sql/ 里的 01-schema.sql、02-init-data.sql
+# 自动建库建表并灌入初始数据。
 # 然后等待依赖就绪，并打印「业务服务 + 前端」的启动顺序。
-# 业务服务（auth-user/core/ai/gateway）与前端在宿主机运行，不在 compose 内。
+# 业务服务（auth-user/core/ai/gateway）与前端在宿主机运行，不在此脚本内启动。
 #
 # 用法（在仓库根目录执行）：
 #   bash scripts/up.sh
 #
 # 说明：
 #   - 若使用老版本 Docker（docker-compose 连字符），把下面 DOCKER_COMPOSE 改成 docker-compose
-#   - Redis 目前未纳入 compose（app 仍连 localhost:6379），需本地另起或后续补充
+#   - 一键部署全套（含 4 个后端与前端）请直接在仓库根执行 docker compose up -d
 
 set -euo pipefail
 
@@ -22,8 +22,8 @@ DOCKER_COMPOSE="docker compose"
 # 切到仓库根目录（本文件位于 <repo>/scripts/ 下）
 cd "$(dirname "$0")/.."
 
-echo "==> 启动中间件（含 profile=full 的 MySQL）"
-$DOCKER_COMPOSE --profile full up -d
+echo "==> 启动依赖层（中间件 + MySQL + Redis）"
+$DOCKER_COMPOSE up -d nacos sentinel rmqnamesrv rmqbroker mysql redis
 
 # 等待 docker health 变为 healthy（带超时，超时仅告警不中断）
 wait_health() {
@@ -56,6 +56,7 @@ wait_port() {
 }
 
 wait_health nacos 150
+wait_port 127.0.0.1 18858 150 "Sentinel Dashboard"
 wait_health exam-mysql 150
 wait_port 127.0.0.1 9876 150 "RocketMQ NameServer"
 wait_port 127.0.0.1 10911 150 "RocketMQ Broker"
@@ -72,7 +73,7 @@ echo " 4) gateway     端口 8080   cd exam_cloud/exam_gateway && mvn spring-boo
 echo " 5) 前端        cd exam-vue && npm install && npm run dev"
 echo "------------------------------------------------------------"
 echo " 注意：MySQL、Redis 与 Nacos 均已容器化；"
-echo "       app 当前仍按 localhost:3306 / localhost:6379 连接，"
-echo "       若改用容器映射端口，需把 datasource/redis 改为"
-echo "       127.0.0.1:13306 / 127.0.0.1:16379（或加 Spring profile）。"
+echo "       本地开发的 application.yml 需把数据源 / Redis 指向"
+echo "       127.0.0.1:13306 / 127.0.0.1:16379，"
+echo "       Nacos 指向 127.0.0.1:18848（见 README 5.4）。"
 echo "============================================================"

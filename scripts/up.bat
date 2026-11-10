@@ -1,7 +1,7 @@
 @echo off
-REM 本地一键起依赖（中间件 + MySQL）
+REM 本地开发一键起依赖层（中间件 + MySQL + Redis）
 REM
-REM 只负责「依赖层」：Nacos / Sentinel / RocketMQ（常驻）+ MySQL（profile:full）。
+REM 只启动 compose 中的依赖服务：nacos / sentinel / rmqnamesrv / rmqbroker / mysql / redis。
 REM 业务服务（auth-user/core/ai/gateway）与前端在宿主机运行，见末尾启动顺序。
 REM
 REM 用法（仓库根目录）： scripts\up.bat
@@ -10,11 +10,12 @@ REM 若使用老版本 Docker，把下面 DOCKER_COMPOSE 改为 docker-compose
 set "DOCKER_COMPOSE=docker compose"
 cd /d "%~dp0.."
 
-echo ==^> 启动中间件（含 profile=full 的 MySQL）
-%DOCKER_COMPOSE% --profile full up -d
+echo ==^> 启动依赖层（中间件 + MySQL + Redis）
+%DOCKER_COMPOSE% up -d nacos sentinel rmqnamesrv rmqbroker mysql redis
 
 echo ==^> 等待依赖就绪...
 call :wait_health nacos 150
+call :wait_port 127.0.0.1 18858 150 "Sentinel Dashboard"
 call :wait_health exam-mysql 150
 call :wait_port 127.0.0.1 9876 150 "RocketMQ NameServer"
 call :wait_port 127.0.0.1 10911 150 "RocketMQ Broker"
@@ -31,9 +32,9 @@ echo  4^) gateway     端口 8080   cd exam_cloud\exam_gateway ^&^& mvn spring-b
 echo  5^) 前端        cd exam-vue ^&^& npm install ^&^& npm run dev
 echo ------------------------------------------------------------
 echo  注意：MySQL、Redis 与 Nacos 均已容器化；
-echo         app 当前仍按 localhost:3306 / localhost:6379 连接，
-echo         若改用容器映射端口，需把 datasource/redis 改为
-echo         127.0.0.1:13306 / 127.0.0.1:16379（或加 Spring profile）。
+echo         本地开发的 application.yml 需把数据源 / Redis 指向
+echo         127.0.0.1:13306 / 127.0.0.1:16379，
+echo         Nacos 指向 127.0.0.1:18848（见 README 5.4）。
 echo ============================================================
 goto :eof
 
