@@ -1,9 +1,21 @@
 name: Build and Push Images
 
-# 触发：推送到 master/main 时自动构建并推送 5 个应用镜像到 GitHub Container Registry (GHCR)
+# 触发：master/main 上涉及镜像内容的改动自动构建并推送 5 个应用镜像到 GHCR
 on:
   push:
     branches: [master, main]
+    # 不进入镜像层的路径：文档、运行时挂载脚本与编排文件
+    paths-ignore:
+      - 'README.md'
+      - '**/*.md'
+      - 'docs/**'
+      - 'assets/**'
+      - 'sql/**'
+      - 'rocketmq/**'
+      - 'scripts/**'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - '.gitignore'
   workflow_dispatch:        # 允许在 Actions 页面手动触发
 
 # GITHUB_TOKEN 默认无 packages 写权限，必须显式声明
@@ -40,7 +52,9 @@ jobs:
           context: .
           file: docker/Dockerfile.exam-auth-user
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-auth-user:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-auth-user:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-auth-user:${{ github.sha }}
 
       - name: Build and push exam-core
         uses: docker/build-push-action@v6
@@ -48,7 +62,9 @@ jobs:
           context: .
           file: docker/Dockerfile.exam-core
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-core:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-core:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-core:${{ github.sha }}
 
       - name: Build and push exam-ai
         uses: docker/build-push-action@v6
@@ -56,7 +72,9 @@ jobs:
           context: .
           file: docker/Dockerfile.exam-ai
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-ai:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-ai:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-ai:${{ github.sha }}
 
       - name: Build and push exam-gateway
         uses: docker/build-push-action@v6
@@ -64,7 +82,9 @@ jobs:
           context: .
           file: docker/Dockerfile.exam-gateway
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-gateway:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-gateway:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-gateway:${{ github.sha }}
 
       # ---------- 前端（与后端一致：上下文为仓库根，file 相对仓库根）----------
       - name: Build and push exam-vue
@@ -73,4 +93,6 @@ jobs:
           context: .
           file: exam-vue/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-vue:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-vue:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/exam-vue:${{ github.sha }}
