@@ -3,7 +3,7 @@
 #      需引入 spring-cloud-starter-bootstrap 才会生效（见 pom.xml）
 spring:
   application:
-    name: exam_ai
+    name: exam-ai
   cloud:
     nacos:
       # Docker 中 Nacos 映射：宿主 18848 -> 容器 8848

@@ -107,7 +107,7 @@ knife4j:
         contextPath: /api
         order: 2
       - name: AI 批阅服务
-        serviceName: exam_ai
+        serviceName: exam-ai
         url: /exam-ai/v3/api-docs
         contextPath: /api
         order: 3

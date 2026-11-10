@@ -2,7 +2,7 @@
 # 完整配置集：连接地址使用 compose 服务名，AI 密钥由环境变量注入，其余与本地 application.yml 一致。
 spring:
   application:
-    name: exam_ai
+    name: exam-ai
 
 server:
   port: 8083
