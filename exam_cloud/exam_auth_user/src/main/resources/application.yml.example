@@ -21,7 +21,7 @@ spring:
             readTimeout: 5000
   datasource:
     # 数据库需提前创建：CREATE DATABASE exam_auth_db DEFAULT CHARSET utf8mb3;
-    # 端口说明：docker-compose --profile full 起的 MySQL 容器，宿主端口映射为 13306。
+    # 端口说明：docker compose 启动的 MySQL 容器，宿主端口映射为 13306。
     #   本模板默认指向容器端口；若你本地另装了 MySQL 且用默认 3306，改回 localhost:3306。
     url: jdbc:mysql://127.0.0.1:13306/exam_auth_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&allowMultiQueries=true
     username: root
@@ -35,7 +35,7 @@ spring:
       max-lifetime: 900000
   data:
     redis:
-      # docker-compose --profile full 起的 Redis 容器，宿主端口映射为 16379。
+      # docker compose 启动的 Redis 容器，宿主端口映射为 16379。
       #   若你本地另装了 Redis 且用默认 6379，改回 localhost / 6379。
       host: 127.0.0.1
       port: 16379

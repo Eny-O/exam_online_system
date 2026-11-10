@@ -74,11 +74,13 @@ exam_online_system/                # 仓库根
 | Nacos | 8848 / 9848 / 9849 | **18848** / 19848 / 19849 | Nacos 2.x gRPC 端口 = HTTP + 1000 |
 | Sentinel | 8858 / 8719 | **18858** / 18719 | 控制台 + 客户端心跳 |
 | RocketMQ NameServer | 9876 | 9876 | 路由发现 |
-| RocketMQ Broker | 10909 / 10911 / 10912 | 10909 / 10911 / 10912 | 标准端口，未做映射 |
+| RocketMQ Broker | 10909 / 10911 / 10912 | 10909 / 10911 / 10912 | VIP / 主端口 / HA，同端口映射未做避让 |
 | MySQL | 3306 | **13306** | 随 `docker compose up` 一起启动 |
 | Redis | 6379 | **16379** | 随 `docker compose up` 一起启动，无密码 |
 
 > MySQL / Redis 用高位端口（`13306` / `16379`）是为了不和你本机已安装的 3306 / 6379 冲突；Nacos / Sentinel 同理避让 Windows 保留段。
+
+> **RocketMQ Broker 对外地址**：`rocketmq/broker.conf` 中 `brokerIP1 = host.docker.internal`，由 compose 的 `rmqbroker.extra_hosts: host.docker.internal:host-gateway` 提供解析。NameServer 只负责返回路由（容器内服务用 `rmqnamesrv:9876`，宿主机本地开发用 `localhost:9876`），客户端拿到路由后直连 `host.docker.internal:10911` 收发消息。Linux 宿主若无法解析 `host.docker.internal`，需在 `/etc/hosts` 补映射或把 `brokerIP1` 改为宿主 LAN IP。
 
 ---
 
