@@ -1,4 +1,6 @@
-# 在线考试系统（Exam Online System）
+# 在线考试系统（Online Exam System）
+
+**微服务架构与 AI 主观题批阅**
 
 > **项目简介：**基于 Spring Boot3 + Spring Cloud Alibaba + LangChain4j + Vue3 的微服务在线考试平台，拆分为用户权限、考试核心、AI 批阅三个服务独立分库，覆盖题库管理、组卷、在线作答与客观题自动批改、主观题 AI 辅助批阅全流程。
 
